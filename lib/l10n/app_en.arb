@@ -80,6 +80,7 @@
     }
   },
   "unknownEmoteOwner": "Unavailable channel",
+  "copyMessage": "Copy",
   "replyToMessage": "Reply",
   "deleteMessage": "Delete message",
   "replyingTo": "Replying to {user}",

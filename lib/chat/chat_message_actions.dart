@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 
@@ -7,6 +8,7 @@ class ChatMessageActions extends StatefulWidget {
   const ChatMessageActions({
     required this.child,
     required this.messageId,
+    this.copyText,
     this.onReply,
     this.onDelete,
     this.deleting = false,
@@ -14,6 +16,7 @@ class ChatMessageActions extends StatefulWidget {
   });
   final Widget child;
   final String messageId;
+  final String? copyText;
   final VoidCallback? onReply;
   final VoidCallback? onDelete;
   final bool deleting;
@@ -28,7 +31,11 @@ class _ChatMessageActionsState extends State<ChatMessageActions> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.onReply == null && widget.onDelete == null) return widget.child;
+    if (widget.copyText == null &&
+        widget.onReply == null &&
+        widget.onDelete == null) {
+      return widget.child;
+    }
     final l10n = AppLocalizations.of(context);
     final visible = _hovering || _focused || widget.deleting;
     return MouseRegion(
@@ -57,14 +64,25 @@ class _ChatMessageActionsState extends State<ChatMessageActions> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ChatIconButton(
-                          key: ValueKey('reply-${widget.messageId}'),
-                          label: l10n.replyToMessage,
-                          icon: Icons.reply_rounded,
-                          size: 26,
-                          iconSize: 17,
-                          onPressed: widget.onReply,
-                        ),
+                        if (widget.copyText case final text?)
+                          ChatIconButton(
+                            key: ValueKey('copy-${widget.messageId}'),
+                            label: l10n.copyMessage,
+                            icon: Icons.copy_rounded,
+                            size: 26,
+                            iconSize: 15,
+                            onPressed: () =>
+                                Clipboard.setData(ClipboardData(text: text)),
+                          ),
+                        if (widget.onReply != null)
+                          ChatIconButton(
+                            key: ValueKey('reply-${widget.messageId}'),
+                            label: l10n.replyToMessage,
+                            icon: Icons.reply_rounded,
+                            size: 26,
+                            iconSize: 17,
+                            onPressed: widget.onReply,
+                          ),
                         if (widget.onDelete != null)
                           ChatIconButton(
                             key: ValueKey('delete-${widget.messageId}'),

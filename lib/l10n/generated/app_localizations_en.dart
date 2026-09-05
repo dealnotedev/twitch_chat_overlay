@@ -187,6 +187,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownEmoteOwner => 'Unavailable channel';
 
   @override
+  String get copyMessage => 'Copy';
+
+  @override
   String get replyToMessage => 'Reply';
 
   @override

@@ -80,6 +80,7 @@
     }
   },
   "unknownEmoteOwner": "Недоступний канал",
+  "copyMessage": "Скопіювати",
   "replyToMessage": "Відповісти",
   "deleteMessage": "Видалити",
   "replyingTo": "Відповідь {user}",

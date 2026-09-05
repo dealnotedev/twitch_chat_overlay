@@ -197,6 +197,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get unknownEmoteOwner => 'Недоступний канал';
 
   @override
+  String get copyMessage => 'Скопіювати';
+
+  @override
   String get replyToMessage => 'Відповісти';
 
   @override

@@ -398,6 +398,12 @@ abstract class AppLocalizations {
   /// **'Unavailable channel'**
   String get unknownEmoteOwner;
 
+  /// No description provided for @copyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copyMessage;
+
   /// No description provided for @replyToMessage.
   ///
   /// In en, this message translates to:

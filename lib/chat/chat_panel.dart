@@ -284,6 +284,7 @@ class _ChatPanelState extends State<ChatPanel> {
               elapsed: _entranceElapsed(items[index].id),
               child: _ChatItemView(
                 item: items[index],
+                canCopy: widget.interactive,
                 badges: widget.chatState.badges,
                 userColor: switch (items[index]) {
                   ChatRewardRedemption(:final userId) => userColors[userId],
@@ -582,6 +583,7 @@ class _ChatItemView extends StatelessWidget {
   const _ChatItemView({
     required this.item,
     required this.badges,
+    this.canCopy = false,
     this.userColor,
     this.onReply,
     this.onDelete,
@@ -591,6 +593,7 @@ class _ChatItemView extends StatelessWidget {
   final ChatItem item;
   final TwitchBadges badges;
   final Color? userColor;
+  final bool canCopy;
   final ValueChanged<ChatUserMessage>? onReply;
   final ValueChanged<ChatUserMessage>? onDelete;
   final bool deleting;
@@ -605,6 +608,9 @@ class _ChatItemView extends StatelessWidget {
       ChatRaid raid => RaidCard(raid: raid),
       ChatUserMessage message => ChatMessageActions(
         messageId: message.id,
+        copyText: canCopy
+            ? message.fragments.map((fragment) => fragment.text).join()
+            : null,
         onReply: onReply == null ? null : () => onReply!(message),
         onDelete: onDelete == null ? null : () => onDelete!(message),
         deleting: deleting,
