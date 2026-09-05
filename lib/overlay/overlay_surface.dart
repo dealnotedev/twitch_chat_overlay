@@ -442,7 +442,8 @@ class _ResizeHandle extends StatelessWidget {
   });
 
   static const double _thickness = 14;
-  static const double _edgeInset = 10;
+  static const double _cornerSize = 28;
+  static const double _edgeInset = _cornerSize - _thickness / 2;
 
   final ResizeHandle handle;
   final ValueChanged<Offset> onResize;
@@ -477,8 +478,8 @@ class _ResizeHandle extends StatelessWidget {
           : vertical
           ? _edgeInset
           : null,
-      width: corner || vertical ? _thickness : null,
-      height: corner || horizontal ? _thickness : null,
+      width: corner ? _cornerSize : (vertical ? _thickness : null),
+      height: corner ? _cornerSize : (horizontal ? _thickness : null),
       child: MouseRegion(
         cursor: _cursor(handle),
         child: GestureDetector(
@@ -486,14 +487,12 @@ class _ResizeHandle extends StatelessWidget {
           onPanUpdate: (details) => onResize(details.delta),
           onPanEnd: (_) => onGestureEnd(),
           child: corner
-              ? const Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFF9146FF),
-                      shape: BoxShape.circle,
-                    ),
-                    child: SizedBox.square(dimension: 9),
+              ? CustomPaint(
+                  painter: _CornerGripPainter(
+                    flipX: _onRight(handle),
+                    flipY: _onBottom(handle),
                   ),
+                  child: const SizedBox.expand(),
                 )
               : const SizedBox.expand(),
         ),
@@ -547,4 +546,31 @@ class _ResizeHandle extends StatelessWidget {
       ResizeHandle.right => SystemMouseCursors.resizeLeftRight,
     };
   }
+}
+
+class _CornerGripPainter extends CustomPainter {
+  const _CornerGripPainter({required this.flipX, required this.flipY});
+
+  final bool flipX;
+  final bool flipY;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF9146FF)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    canvas.save();
+    canvas.translate(flipX ? size.width : 0, flipY ? size.height : 0);
+    canvas.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+    // The frame sits 7 px inside the handle; keep both strokes inside its arc.
+    canvas.drawLine(const Offset(13, 21), const Offset(21, 13), paint);
+    canvas.drawLine(const Offset(13, 16), const Offset(16, 13), paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_CornerGripPainter oldDelegate) =>
+      flipX != oldDelegate.flipX || flipY != oldDelegate.flipY;
 }
