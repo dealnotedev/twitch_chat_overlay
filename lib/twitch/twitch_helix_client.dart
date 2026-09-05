@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
@@ -209,8 +210,10 @@ final class TwitchHelixClient {
     required String message,
     String? replyParentMessageId,
   }) async {
-    final response = await _post(
+    final response = await _request(
       '/chat/messages',
+      method: 'POST',
+      actorUserId: senderId,
       data: {
         'broadcaster_id': broadcasterId,
         'sender_id': senderId,
@@ -230,6 +233,41 @@ final class TwitchHelixClient {
     );
   }
 
+  Future<void> deleteMessage({
+    required String broadcasterId,
+    required String moderatorId,
+    required String messageId,
+  }) async {
+    // Omitting message_id clears the entire room: this API only deletes one.
+    if (messageId.trim().isEmpty ||
+        broadcasterId.trim().isEmpty ||
+        moderatorId.trim().isEmpty) {
+      throw ArgumentError('A channel, moderator and message ID are required');
+    }
+    try {
+      await _request(
+        '/moderation/chat',
+        method: 'DELETE',
+        actorUserId: moderatorId,
+        requiredScope: TwitchAuthClient.moderationScope,
+        queryParameters: {
+          'broadcaster_id': broadcasterId,
+          'moderator_id': moderatorId,
+          'message_id': messageId,
+        },
+      );
+    } on DioException catch (error) {
+      final failure = switch (error.response?.statusCode) {
+        400 || 403 => TwitchChatActionFailure.forbidden,
+        404 => TwitchChatActionFailure.messageUnavailable,
+        401 => TwitchChatActionFailure.permissionRequired,
+        _ => null,
+      };
+      if (failure != null) throw TwitchChatActionException(failure);
+      rethrow;
+    }
+  }
+
   Future<Response<Map<String, Object?>>> _post(
     String path, {
     required Map<String, Object?> data,
@@ -241,9 +279,21 @@ final class TwitchHelixClient {
     Map<String, Object?>? data,
     Map<String, Object?>? queryParameters,
     String? emoteUserId,
+    String? actorUserId,
+    String? requiredScope,
   }) async {
     var token = await _auth.validToken();
     for (var attempt = 0; ; attempt++) {
+      if (actorUserId != null && token.userId != actorUserId) {
+        throw const TwitchChatActionException(
+          TwitchChatActionFailure.sessionChanged,
+        );
+      }
+      if (requiredScope != null && !token.scopes.contains(requiredScope)) {
+        throw const TwitchChatActionException(
+          TwitchChatActionFailure.permissionRequired,
+        );
+      }
       if (emoteUserId != null) {
         if (token.userId != emoteUserId) {
           throw StateError('Sender changed while loading emotes');

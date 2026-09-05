@@ -1,42 +1,113 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
-import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
 
 class RewardRedemptionCard extends StatelessWidget {
   const RewardRedemptionCard({
     required this.redemption,
-    this.appearance,
+    this.userColor,
     super.key,
   });
 
   final ChatRewardRedemption redemption;
-  final TwitchRewardAppearance? appearance;
+  final Color? userColor;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final hex = appearance?.backgroundColor?.replaceFirst('#', '');
-    final rgb = hex == null ? null : int.tryParse(hex, radix: 16);
-    return _EventCard(
-      accent: rgb == null ? const Color(0xFF9146FF) : Color(0xFF000000 | rgb),
-      imageUrl: appearance?.imageUrl,
-      imageLabel: redemption.rewardTitle,
-      children: [
-        Text(l10n.rewardRedeemedBy(redemption.userName), style: _captionStyle),
-        const SizedBox(height: 3),
-        Text(redemption.rewardTitle, style: _titleStyle),
-        const SizedBox(height: 3),
-        Text(l10n.channelPointsCost(redemption.cost), style: _captionStyle),
-        if (redemption.userInput.isNotEmpty) ...[
-          const SizedBox(height: 7),
-          Text(redemption.userInput, style: const TextStyle(fontSize: 13)),
-        ],
-      ],
+    const foreground = Color(0xFFCECED6);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: BackgroundOpacity.colorOf(context, const Color(0x149146FF)),
+        borderRadius: BorderRadius.circular(6),
+        // Keep the reward outline visible even with a transparent background.
+        border: Border.all(color: const Color(0x809F7AEA)),
+      ),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: redemption.userName,
+              style: TextStyle(
+                color: userColor ?? Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            TextSpan(text: ' ${l10n.rewardRedemptionAction} '),
+            TextSpan(
+              text: redemption.rewardTitle,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            TextSpan(text: ' ${l10n.rewardRedemptionFor} '),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: ExcludeSemantics(
+                child: CustomPaint(
+                  size: Size.square(MediaQuery.textScalerOf(context).scale(13)),
+                  painter: const _ChannelPointsPainter(color: foreground),
+                ),
+              ),
+            ),
+            TextSpan(
+              text: '\u00a0${redemption.cost}',
+              semanticsLabel: l10n.channelPointsCost(redemption.cost),
+            ),
+            if (redemption.userInput.isNotEmpty)
+              TextSpan(text: ' — ${redemption.userInput}'),
+          ],
+        ),
+        style: chatReadableStyle.merge(
+          const TextStyle(fontSize: 13.5, height: 1.32, color: foreground),
+        ),
+      ),
     );
   }
+}
+
+class _ChannelPointsPainter extends CustomPainter {
+  const _ChannelPointsPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final unit = size.shortestSide;
+    final center = size.center(Offset.zero);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    void draw(Color color, double strokeWidth) {
+      paint
+        ..color = color
+        ..strokeWidth = strokeWidth;
+      canvas.drawCircle(center, unit * 0.42, paint);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: unit * 0.27),
+        -math.pi / 2,
+        math.pi / 2,
+        false,
+        paint,
+      );
+    }
+
+    // Match the text contour so the icon stays legible over a game.
+    draw(Colors.black, unit * 0.085 + 1.5);
+    draw(color, unit * 0.085);
+  }
+
+  @override
+  bool shouldRepaint(_ChannelPointsPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class RaidCard extends StatelessWidget {

@@ -39,8 +39,8 @@
   "gifUnavailable": "GIF unavailable",
   "twitchPermissionsChanged": "Sign in to Twitch again to enable Channel Points rewards.",
   "rewardSubscriptionFailed": "Channel Points rewards are unavailable. Reconnect Twitch to retry.",
-  "rewardRedeemedBy": "{user} redeemed a reward",
-  "@rewardRedeemedBy": {"placeholders": {"user": {"type": "String"}}},
+  "rewardRedemptionAction": "redeems",
+  "rewardRedemptionFor": "for",
   "channelPointsCost": "{cost} Channel Points",
   "@channelPointsCost": {"placeholders": {"cost": {"type": "int"}}},
   "raidFrom": "{user} is raiding!",
@@ -79,5 +79,17 @@
       "status": {"type": "String"}
     }
   },
-  "unknownEmoteOwner": "Unavailable channel"
+  "unknownEmoteOwner": "Unavailable channel",
+  "replyToMessage": "Reply",
+  "deleteMessage": "Delete message",
+  "replyingTo": "Replying to {user}",
+  "cancelReply": "Cancel reply",
+  "replyUnavailable": "The message you were replying to is no longer available. Your draft is saved.",
+  "deleteFailed": "Could not delete the message. Try again.",
+  "deleteNotAllowed": "Twitch does not allow deleting this message.",
+  "messageUnavailable": "The message was deleted or is too old to delete.",
+  "moderationPermissionRequired": "Allow message deletion in Twitch to use this action.",
+  "enableModeration": "Enable deletion",
+  "dismiss": "Dismiss",
+  "@replyingTo": {"placeholders": {"user": {"type": "String"}}}
 }

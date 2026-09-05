@@ -332,11 +332,17 @@ abstract class AppLocalizations {
   /// **'Channel Points rewards are unavailable. Reconnect Twitch to retry.'**
   String get rewardSubscriptionFailed;
 
-  /// No description provided for @rewardRedeemedBy.
+  /// No description provided for @rewardRedemptionAction.
   ///
   /// In en, this message translates to:
-  /// **'{user} redeemed a reward'**
-  String rewardRedeemedBy(String user);
+  /// **'redeems'**
+  String get rewardRedemptionAction;
+
+  /// No description provided for @rewardRedemptionFor.
+  ///
+  /// In en, this message translates to:
+  /// **'for'**
+  String get rewardRedemptionFor;
 
   /// No description provided for @channelPointsCost.
   ///
@@ -391,6 +397,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unavailable channel'**
   String get unknownEmoteOwner;
+
+  /// No description provided for @replyToMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get replyToMessage;
+
+  /// No description provided for @deleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete message'**
+  String get deleteMessage;
+
+  /// No description provided for @replyingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Replying to {user}'**
+  String replyingTo(String user);
+
+  /// No description provided for @cancelReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel reply'**
+  String get cancelReply;
+
+  /// No description provided for @replyUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The message you were replying to is no longer available. Your draft is saved.'**
+  String get replyUnavailable;
+
+  /// No description provided for @deleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete the message. Try again.'**
+  String get deleteFailed;
+
+  /// No description provided for @deleteNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Twitch does not allow deleting this message.'**
+  String get deleteNotAllowed;
+
+  /// No description provided for @messageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The message was deleted or is too old to delete.'**
+  String get messageUnavailable;
+
+  /// No description provided for @moderationPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow message deletion in Twitch to use this action.'**
+  String get moderationPermissionRequired;
+
+  /// No description provided for @enableModeration.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable deletion'**
+  String get enableModeration;
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
 }
 
 class _AppLocalizationsDelegate

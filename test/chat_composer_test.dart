@@ -114,7 +114,7 @@ void main() {
       await primeEmoteImages(tester);
       await tester.pumpWidget(
         app(
-          onSend: (message) async {
+          onSend: (message, {String? replyTo}) async {
             messages.add(message);
             return sent;
           },
@@ -287,7 +287,9 @@ void main() {
   testWidgets('a completed send does not erase a newer draft', (tester) async {
     final pending = Completer<SendChatResult>();
     await primeEmoteImages(tester);
-    await tester.pumpWidget(app(onSend: (_) => pending.future));
+    await tester.pumpWidget(
+      app(onSend: (_, {String? replyTo}) => pending.future),
+    );
     await tester.enterText(messageInput, 'first');
     await tester.tap(find.byTooltip('Send'));
     await tester.pump();
@@ -325,7 +327,7 @@ Widget app({
   bool interactive = true,
   Future<List<TwitchEmote>> Function({bool refresh})? load,
   Future<void> Function()? authorize,
-  Future<SendChatResult> Function(String)? onSend,
+  Future<SendChatResult> Function(String, {String? replyTo})? onSend,
 }) => MaterialApp(
   scrollBehavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
   locale: const Locale('en'),
@@ -357,7 +359,7 @@ Widget app({
           interactive: interactive,
           onSignIn: authorize ?? () async {},
           onSignOut: () async {},
-          onSend: onSend ?? (_) async => sent,
+          onSend: onSend ?? (_, {String? replyTo}) async => sent,
           onLoadEmotes: load ?? ({bool refresh = false}) async => library,
         ),
       ),

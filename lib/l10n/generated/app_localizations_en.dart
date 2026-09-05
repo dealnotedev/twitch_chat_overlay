@@ -132,9 +132,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Channel Points rewards are unavailable. Reconnect Twitch to retry.';
 
   @override
-  String rewardRedeemedBy(String user) {
-    return '$user redeemed a reward';
-  }
+  String get rewardRedemptionAction => 'redeems';
+
+  @override
+  String get rewardRedemptionFor => 'for';
 
   @override
   String channelPointsCost(int cost) {
@@ -184,4 +185,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unknownEmoteOwner => 'Unavailable channel';
+
+  @override
+  String get replyToMessage => 'Reply';
+
+  @override
+  String get deleteMessage => 'Delete message';
+
+  @override
+  String replyingTo(String user) {
+    return 'Replying to $user';
+  }
+
+  @override
+  String get cancelReply => 'Cancel reply';
+
+  @override
+  String get replyUnavailable =>
+      'The message you were replying to is no longer available. Your draft is saved.';
+
+  @override
+  String get deleteFailed => 'Could not delete the message. Try again.';
+
+  @override
+  String get deleteNotAllowed => 'Twitch does not allow deleting this message.';
+
+  @override
+  String get messageUnavailable =>
+      'The message was deleted or is too old to delete.';
+
+  @override
+  String get moderationPermissionRequired =>
+      'Allow message deletion in Twitch to use this action.';
+
+  @override
+  String get enableModeration => 'Enable deletion';
+
+  @override
+  String get dismiss => 'Dismiss';
 }

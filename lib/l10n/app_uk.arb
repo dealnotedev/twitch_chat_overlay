@@ -39,8 +39,8 @@
   "gifUnavailable": "GIF недоступна",
   "twitchPermissionsChanged": "Увійдіть у Twitch ще раз, щоб увімкнути нагороди за бали каналу.",
   "rewardSubscriptionFailed": "Нагороди за бали каналу недоступні. Перепідключіть Twitch, щоб повторити спробу.",
-  "rewardRedeemedBy": "{user} отримує нагороду",
-  "@rewardRedeemedBy": {"placeholders": {"user": {"type": "String"}}},
+  "rewardRedemptionAction": "бере",
+  "rewardRedemptionFor": "за",
   "channelPointsCost": "{cost, plural, one{{cost} бал каналу} few{{cost} бали каналу} many{{cost} балів каналу} other{{cost} бала каналу}}",
   "@channelPointsCost": {"placeholders": {"cost": {"type": "int"}}},
   "raidFrom": "{user} починає рейд!",
@@ -79,5 +79,17 @@
       "status": {"type": "String"}
     }
   },
-  "unknownEmoteOwner": "Недоступний канал"
+  "unknownEmoteOwner": "Недоступний канал",
+  "replyToMessage": "Відповісти",
+  "deleteMessage": "Видалити",
+  "replyingTo": "Відповідь {user}",
+  "cancelReply": "Скасувати відповідь",
+  "replyUnavailable": "Повідомлення, на яке ви відповідали, більше недоступне. Чернетку збережено.",
+  "deleteFailed": "Не вдалося видалити повідомлення. Спробуйте ще раз.",
+  "deleteNotAllowed": "Twitch не дозволяє видалити це повідомлення.",
+  "messageUnavailable": "Повідомлення вже видалено або термін його видалення минув.",
+  "moderationPermissionRequired": "Надайте дозвіл Twitch на видалення повідомлень.",
+  "enableModeration": "Увімкнути видалення",
+  "dismiss": "Закрити",
+  "@replyingTo": {"placeholders": {"user": {"type": "String"}}}
 }

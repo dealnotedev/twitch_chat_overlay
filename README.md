@@ -50,13 +50,12 @@ gifts, announcements, raids, and other `channel.chat.notification` events.
 Message deletion, user-message clearing, and full chat clearing are applied to
 the timeline.
 
-Custom Channel Points redemptions have dedicated cards showing the viewer,
-reward title, price paid and optional input, including rewards with no chat text.
-Reward artwork and its accent color come from Helix (custom image or Twitch's
-default image). Cards remain readable if artwork cannot be loaded. The reward
-catalog is loaded on connection and refreshed on redemptions at most once a
-minute; failed image metadata requests retry on later events after 30 seconds.
-Redemption IDs prevent repeated deliveries from adding duplicate cards.
+Custom Channel Points redemptions appear as a compact inline sentence with
+the viewer's latest known chat color (bold white when unavailable), a bold
+reward title and a painted Channel Points icon beside the price. Optional input
+continues in the same paragraph, including rewards with no separate chat text.
+The sentence wraps to the overlay width and follows the chat text size.
+Redemption IDs prevent repeated deliveries from adding duplicate messages.
 Raids and Shared Chat raids have dedicated cards with the raider's Twitch
 avatar, name, viewer count and shared origin, using the existing chat notification
 subscription without subscribing to a second raid event stream.
@@ -92,6 +91,28 @@ signed in without this optional permission. Open the emote picker and select
 **Connect emotes** to authorize it once. Errors have a retry action and do not
 prevent typing or sending ordinary messages.
 
+### Reply and delete actions
+
+In setup mode, hover a message (or focus its actions with the keyboard) to reveal
+Reply and Delete. The buttons float over the message, preserving its width and
+line wrapping when setup mode changes. Reply shows a cancellable author/quote preview above the input
+and sends Twitch's `reply_parent_message_id`. Escape closes the emote picker
+first, then cancels a reply. Drafts survive failed sends and cancelled replies;
+a newer draft/reply is retained when an earlier send completes.
+
+The current app connects to the signed-in broadcaster's own channel. Delete is
+available for eligible viewer messages there and calls Helix with an explicit
+message ID; it never clears the whole room. Twitch does not allow deleting the
+broadcaster's or other moderators' messages, or messages older than six hours.
+Only successful deletion removes a message locally; EventSub also synchronizes
+moderation from Twitch. Missing/replaced reply targets are cleared from the
+composer without clearing its draft.
+
+New authorizations also request optional `moderator:manage:chat_messages`.
+Existing sessions stay signed in. If deletion needs permission, use **Enable
+deletion** in the error prompt, authorize Twitch, then click Delete again.
+Authorization itself never replays a pending deletion.
+
 ### Session recovery (1.0.1)
 
 Startup validation refreshes rejected access tokens before requesting login.
@@ -115,7 +136,7 @@ upgrading cannot recover deleted tokens.
   are not implemented. These require separate events/API handling.
 - AutoMod held-message queues, suspicious-user/moderator notices, chat mode
   updates and whispers are not subscribed to or rendered.
-- Reply context is shown, but there is no thread navigation or reply composer UI.
+- Reply context and a reply composer are supported; thread navigation is not implemented.
 - There is no previous chat history on connection, or third-party emote support.
 
 ## Run

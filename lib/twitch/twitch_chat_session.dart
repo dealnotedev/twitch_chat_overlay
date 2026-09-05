@@ -9,6 +9,7 @@ import 'package:twitch_chat_overlay/chat/chat_mutation.dart';
 import 'package:twitch_chat_overlay/chat/chat_timeline.dart';
 import 'package:twitch_chat_overlay/twitch/chat_event_mapper.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
@@ -22,6 +23,7 @@ final class ChatState {
     required this.status,
     required this.items,
     this.error,
+    this.broadcasterId,
     this.badges = const TwitchBadges(),
     this.rewards = const {},
     this.rewardSubscriptionFailed = false,
@@ -33,11 +35,13 @@ final class ChatState {
       badges = const TwitchBadges(),
       rewards = const {},
       rewardSubscriptionFailed = false,
+      broadcasterId = null,
       error = null;
 
   final ChatConnectionStatus status;
   final List<ChatItem> items;
   final String? error;
+  final String? broadcasterId;
   final TwitchBadges badges;
   final Map<String, TwitchRewardAppearance> rewards;
   final bool rewardSubscriptionFailed;
@@ -51,6 +55,7 @@ abstract interface class TwitchChatSession {
   Future<void> leave();
   Future<List<TwitchEmote>> loadEmotes({bool refresh = false});
   Future<SendChatResult> send(String message, {String? replyTo});
+  Future<void> deleteMessage(String messageId);
 }
 
 final class EventSubTwitchChatSession implements TwitchChatSession {
@@ -157,14 +162,66 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   @override
   Future<SendChatResult> send(String message, {String? replyTo}) async {
     final broadcasterId = _broadcasterId;
+    final generation = _generation;
     if (broadcasterId == null) throw StateError('Chat is not connected');
     final token = await _auth.validToken();
+    if (generation != _generation) {
+      throw const TwitchChatActionException(
+        TwitchChatActionFailure.sessionChanged,
+      );
+    }
+    if (replyTo != null &&
+        !_timeline.items.any(
+          (item) => item is ChatUserMessage && item.id == replyTo,
+        )) {
+      throw const TwitchChatActionException(
+        TwitchChatActionFailure.messageUnavailable,
+      );
+    }
     return _helix.sendMessage(
       broadcasterId: broadcasterId,
       senderId: token.userId,
       message: message,
       replyParentMessageId: replyTo,
     );
+  }
+
+  @override
+  Future<void> deleteMessage(String messageId) async {
+    final broadcasterId = _broadcasterId;
+    final generation = _generation;
+    if (broadcasterId == null) {
+      throw const TwitchChatActionException(
+        TwitchChatActionFailure.sessionChanged,
+      );
+    }
+    final token = await _auth.validToken();
+    if (generation != _generation) {
+      throw const TwitchChatActionException(
+        TwitchChatActionFailure.sessionChanged,
+      );
+    }
+    final message = _timeline.items
+        .whereType<ChatUserMessage>()
+        .where((item) => item.id == messageId)
+        .firstOrNull;
+    if (message == null) {
+      throw const TwitchChatActionException(
+        TwitchChatActionFailure.messageUnavailable,
+      );
+    }
+    if (!canDeleteTwitchMessage(message, broadcasterId)) {
+      throw const TwitchChatActionException(TwitchChatActionFailure.forbidden);
+    }
+    await _helix.deleteMessage(
+      broadcasterId: broadcasterId,
+      moderatorId: token.userId,
+      messageId: messageId,
+    );
+    if (generation == _generation &&
+        _timeline.apply(DeleteChatMessage(messageId))) {
+      _emit(_state.status, error: _state.error);
+    }
   }
 
   Future<void> _connect(
@@ -439,6 +496,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   void _emit(ChatConnectionStatus status, {String? error}) {
     final next = ChatState(
       status: status,
+      broadcasterId: _broadcasterId,
       items: _timeline.items,
       error: error,
       badges: TwitchBadges(Map.unmodifiable(_badgeChannels)),

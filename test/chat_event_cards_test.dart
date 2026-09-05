@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_event_card.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
@@ -120,20 +121,61 @@ void main() {
     expect(images['missing']?.imageUrl, isNull);
   });
 
-  testWidgets('reward card is readable before artwork loads', (tester) async {
-    await tester.pumpWidget(
-      _app(RewardRedemptionCard(redemption: reward('Play this song'))),
-    );
-    expect(find.text('Viewer redeemed a reward'), findsOneWidget);
-    expect(find.text('Choose a song'), findsOneWidget);
-    expect(find.text('1500 Channel Points'), findsOneWidget);
-    expect(find.text('Play this song'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(_app(RewardRedemptionCard(redemption: reward(''))));
-    expect(find.text('Choose a song'), findsOneWidget);
-    expect(find.text('Play this song'), findsNothing);
+  testWidgets('reward redemption is one compact, wrapping paragraph', (
+    tester,
+  ) async {
+    await (FontLoader('Inter')
+          ..addFont(rootBundle.load('assets/fonts/inter/Inter-Regular.ttf'))
+          ..addFont(rootBundle.load('assets/fonts/inter/Inter-Bold.ttf')))
+        .load();
+    for (final locale in ['en', 'uk']) {
+      for (final width in [240.0, 120.0]) {
+        for (final textScale in [1.0, 2.0]) {
+          for (final input in ['', 'Play this song']) {
+            final color = input.isEmpty ? const Color(0xFF70DDBB) : null;
+            await tester.pumpWidget(
+              _app(
+                RewardRedemptionCard(
+                  redemption: reward(input),
+                  userColor: color,
+                ),
+                locale: Locale(locale),
+                width: width,
+                textScale: textScale,
+              ),
+            );
+            final paragraph = find.descendant(
+              of: find.byType(RewardRedemptionCard),
+              matching: find.byType(Text),
+            );
+            expect(paragraph, findsOneWidget);
+            final text = tester.widget<Text>(paragraph);
+            final span = text.textSpan! as TextSpan;
+            final plain = span.toPlainText(includeSemanticsLabels: false);
+            final action = locale == 'uk' ? 'бере' : 'redeems';
+            final preposition = locale == 'uk' ? 'за' : 'for';
+            expect(
+              plain,
+              'Viewer $action Choose a song $preposition \uFFFC\u00a01500'
+              '${input.isEmpty ? '' : ' — $input'}',
+            );
+            final name = span.children!.first as TextSpan;
+            expect(name.style!.fontWeight, FontWeight.w700);
+            expect(name.style!.color, color ?? Colors.white);
+            final title = span.children![2] as TextSpan;
+            expect(title.style!.fontWeight, FontWeight.w700);
+            if (width == 240 && textScale == 1 && input.isEmpty) {
+              expect(
+                tester.getSize(find.byType(RewardRedemptionCard)).height,
+                lessThan(55),
+              );
+            }
+            expect(tester.takeException(), isNull);
+          }
+        }
+      }
+    }
   });
-
   testWidgets('raid viewer plurals and shared origin fit a narrow overlay', (
     tester,
   ) async {
@@ -163,12 +205,22 @@ Map<String, Object?> _event(String type, Map<String, Object?> event) => {
   'payload': {'event': event},
 };
 
-Widget _app(Widget child, {Locale locale = const Locale('en')}) => MaterialApp(
+Widget _app(
+  Widget child, {
+  Locale locale = const Locale('en'),
+  double width = 240,
+  double textScale = 1,
+}) => MaterialApp(
   locale: locale,
   localizationsDelegates: AppLocalizations.localizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
-  theme: ThemeData.dark(),
+  theme: ThemeData(brightness: Brightness.dark, fontFamily: 'Inter'),
   home: Scaffold(
-    body: Center(child: SizedBox(width: 240, child: child)),
+    body: MediaQuery(
+      data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+      child: Center(
+        child: SizedBox(width: width, child: child),
+      ),
+    ),
   ),
 );

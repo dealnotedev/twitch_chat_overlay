@@ -132,9 +132,10 @@ class AppLocalizationsUk extends AppLocalizations {
       'Нагороди за бали каналу недоступні. Перепідключіть Twitch, щоб повторити спробу.';
 
   @override
-  String rewardRedeemedBy(String user) {
-    return '$user отримує нагороду';
-  }
+  String get rewardRedemptionAction => 'бере';
+
+  @override
+  String get rewardRedemptionFor => 'за';
 
   @override
   String channelPointsCost(int cost) {
@@ -194,4 +195,43 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get unknownEmoteOwner => 'Недоступний канал';
+
+  @override
+  String get replyToMessage => 'Відповісти';
+
+  @override
+  String get deleteMessage => 'Видалити';
+
+  @override
+  String replyingTo(String user) {
+    return 'Відповідь $user';
+  }
+
+  @override
+  String get cancelReply => 'Скасувати відповідь';
+
+  @override
+  String get replyUnavailable =>
+      'Повідомлення, на яке ви відповідали, більше недоступне. Чернетку збережено.';
+
+  @override
+  String get deleteFailed =>
+      'Не вдалося видалити повідомлення. Спробуйте ще раз.';
+
+  @override
+  String get deleteNotAllowed => 'Twitch не дозволяє видалити це повідомлення.';
+
+  @override
+  String get messageUnavailable =>
+      'Повідомлення вже видалено або термін його видалення минув.';
+
+  @override
+  String get moderationPermissionRequired =>
+      'Надайте дозвіл Twitch на видалення повідомлень.';
+
+  @override
+  String get enableModeration => 'Увімкнути видалення';
+
+  @override
+  String get dismiss => 'Закрити';
 }

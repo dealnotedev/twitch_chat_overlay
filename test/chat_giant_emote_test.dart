@@ -153,7 +153,7 @@ Widget _app(ChatUserMessage message, {double width = 320}) => MaterialApp(
           interactive: false,
           onSignIn: () async {},
           onSignOut: () async {},
-          onSend: (_) async =>
+          onSend: (_, {String? replyTo}) async =>
               throw StateError('Sending is not used in this test'),
           onLoadEmotes: ({bool refresh = false}) async => [],
         ),

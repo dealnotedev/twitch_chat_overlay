@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 
@@ -37,6 +38,8 @@ class ChatComposer extends StatefulWidget {
     required this.onSignOut,
     required this.onToggleEmotes,
     required this.onCloseEmotes,
+    required this.onCancelReply,
+    this.replyTo,
     super.key,
   });
 
@@ -50,6 +53,8 @@ class ChatComposer extends StatefulWidget {
   final VoidCallback onSignOut;
   final VoidCallback onToggleEmotes;
   final VoidCallback onCloseEmotes;
+  final VoidCallback onCancelReply;
+  final ChatReply? replyTo;
 
   @override
   State<ChatComposer> createState() => _ChatComposerState();
@@ -81,6 +86,66 @@ class _ChatComposerState extends State<ChatComposer> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (widget.replyTo case final reply?)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 40,
+                    right: 42,
+                    bottom: 6,
+                  ),
+                  child: Container(
+                    key: const ValueKey('reply-preview'),
+                    padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4),
+                    decoration: BoxDecoration(
+                      color: BackgroundOpacity.colorOf(
+                        context,
+                        const Color(0x269146FF),
+                      ),
+                      border: const Border(
+                        left: BorderSide(color: Color(0xFF9146FF), width: 2),
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.replyingTo(reply.parentUserName),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFBF94FF),
+                                ),
+                              ),
+                              Text(
+                                reply.parentMessageBody,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFFADADB8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ChatIconButton(
+                          key: const ValueKey('cancel-reply'),
+                          label: l10n.cancelReply,
+                          icon: Icons.close_rounded,
+                          size: 26,
+                          iconSize: 15,
+                          onPressed: widget.onCancelReply,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (widget.error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
@@ -141,7 +206,13 @@ class _ChatComposerState extends State<ChatComposer> {
                                     ): _submit,
                                     const SingleActivator(
                                       LogicalKeyboardKey.escape,
-                                    ): widget.onCloseEmotes,
+                                    ): () {
+                                      if (widget.emotesOpen) {
+                                        widget.onCloseEmotes();
+                                      } else {
+                                        widget.onCancelReply();
+                                      }
+                                    },
                                   },
                                   child: TextField(
                                     key: const ValueKey('chat-message-input'),
@@ -216,6 +287,9 @@ class ChatIconButton extends StatelessWidget {
     this.selected = false,
     this.busy = false,
     this.showTooltip = true,
+    this.size = 36,
+    this.iconSize = 19,
+    this.destructive = false,
     super.key,
   });
 
@@ -226,11 +300,14 @@ class ChatIconButton extends StatelessWidget {
   final bool selected;
   final bool busy;
   final bool showTooltip;
+  final double size;
+  final double iconSize;
+  final bool destructive;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 36,
-    height: 36,
+    width: size,
+    height: size,
     child: IconButton(
       tooltip: showTooltip ? label : null,
       onPressed: onPressed,
@@ -243,6 +320,8 @@ class ChatIconButton extends StatelessWidget {
         foregroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.disabled)
               ? const Color(0xFF85858F)
+              : destructive && states.contains(WidgetState.hovered)
+              ? const Color(0xFFFF7676)
               : const Color(0xFFEFEFF1),
         ),
         backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -268,7 +347,11 @@ class ChatIconButton extends StatelessWidget {
                 color: Color(0xFFBF94FF),
               ),
             )
-          : Icon(icon, size: 19, semanticLabel: showTooltip ? null : label),
+          : Icon(
+              icon,
+              size: iconSize,
+              semanticLabel: showTooltip ? null : label,
+            ),
     ),
   );
 }

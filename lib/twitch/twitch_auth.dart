@@ -72,7 +72,12 @@ final class TwitchAuthClient implements TwitchAuth {
   ];
 
   static const emotesScope = 'user:read:emotes';
-  static const authorizationScopes = [...requiredScopes, emotesScope];
+  static const moderationScope = 'moderator:manage:chat_messages';
+  static const authorizationScopes = [
+    ...requiredScopes,
+    emotesScope,
+    moderationScope,
+  ];
 
   final TwitchTokenStore _tokenStore;
   final Dio _dio;
