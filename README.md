@@ -20,7 +20,7 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 - EventSub WebSocket with keepalive, deduplication, reconnect URL, and backoff.
 - Message sending through the Helix Chat API.
 - Compact Twitch-style composer with sender-specific emote search and cursor insertion.
-- 500-item bounded timeline with moderation mutations.
+- Session timeline without a message-count cap, with moderation mutations.
 - Optional message lifetime from 1 to 60 minutes with a smooth fade-out.
   The default is unlimited ("∞"), selected one step below 1 minute.
   Setup mode provides compact minus/plus controls and saves the setting.
@@ -30,6 +30,15 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 
 The native renderer supports text, mentions, Twitch emotes (static and
 animated), GIF fragments, replies, official Twitch badges, and shared-chat origin.
+Messages addressing the broadcaster use a soft purple gradient, an opaque left
+accent and a compact @ marker. Broadcaster mentions are brighter and bold.
+Detection uses Twitch user IDs for mentions and replies, with case-insensitive
+@login matching for plain text; longer usernames and self-mentions do not trigger
+it. The accent stays visible at zero background opacity, and Channel Points and
+Power-up styling is retained. History has no item-count limit within the current
+session; the optional lifetime still controls fading, and history is not restored
+after restarting or joining a channel again.
+
 Global and channel badge catalogs are loaded through Helix using the existing
 OAuth token (no extra scopes). Channel images override global versions by
 `set_id` + `id`; Shared Chat uses the source channel's badges. Catalogs are cached

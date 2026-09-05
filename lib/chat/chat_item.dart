@@ -176,12 +176,14 @@ final class ChatReply {
     required this.parentUserName,
     required this.parentMessageBody,
     this.parentUserLogin,
+    this.parentUserId,
   });
 
   final String parentMessageId;
   final String parentUserName;
   final String parentMessageBody;
   final String? parentUserLogin;
+  final String? parentUserId;
 }
 
 sealed class ChatFragment {

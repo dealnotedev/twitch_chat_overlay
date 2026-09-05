@@ -14,6 +14,7 @@ import 'package:twitch_chat_overlay/chat/chat_message_entrance.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
+import 'package:twitch_chat_overlay/chat/streamer_mention.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
 import 'package:twitch_chat_overlay/chat/chat_event_card.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
@@ -282,6 +283,14 @@ class _ChatPanelState extends State<ChatPanel> {
             : _parseColor(message.color),
     };
     final items = recentItems.reversed.toList(growable: false);
+    final broadcasterId = widget.chatState.broadcasterId;
+    final token = widget.authState.token;
+    final mentionTarget = broadcasterId == null
+        ? null
+        : StreamerMentionTarget(
+            userId: broadcasterId,
+            login: token?.userId == broadcasterId ? token?.userLogin : null,
+          );
     final itemIndices = {
       for (var index = 0; index < items.length; index++) items[index].id: index,
     };
@@ -311,6 +320,7 @@ class _ChatPanelState extends State<ChatPanel> {
                     item: items[index],
                     canCopy: widget.interactive,
                     badges: widget.chatState.badges,
+                    mentionTarget: mentionTarget,
                     userColor: switch (items[index]) {
                       ChatRewardRedemption(:final userId) => userColors[userId],
                       ChatPowerUp(:final userId) => userColors[userId],
@@ -747,6 +757,7 @@ class _ChatItemView extends StatelessWidget {
     this.onReply,
     this.onDelete,
     this.deleting = false,
+    this.mentionTarget,
   });
 
   final ChatItem item;
@@ -756,6 +767,7 @@ class _ChatItemView extends StatelessWidget {
   final ValueChanged<ChatUserMessage>? onReply;
   final ValueChanged<ChatUserMessage>? onDelete;
   final bool deleting;
+  final StreamerMentionTarget? mentionTarget;
 
   @override
   Widget build(BuildContext context) {
@@ -777,7 +789,11 @@ class _ChatItemView extends StatelessWidget {
         onReply: onReply == null ? null : () => onReply!(message),
         onDelete: onDelete == null ? null : () => onDelete!(message),
         deleting: deleting,
-        child: _UserMessageView(message: message, badges: badges),
+        child: _UserMessageView(
+          message: message,
+          badges: badges,
+          mentionTarget: mentionTarget,
+        ),
       ),
       ChatNotice notice => _NoticeView(notice: notice, badges: badges),
       ChatSubscriptionRevoked revoked => _SubscriptionRevokedView(
@@ -788,10 +804,15 @@ class _ChatItemView extends StatelessWidget {
 }
 
 class _UserMessageView extends StatelessWidget {
-  const _UserMessageView({required this.message, required this.badges});
+  const _UserMessageView({
+    required this.message,
+    required this.badges,
+    this.mentionTarget,
+  });
 
   final ChatUserMessage message;
   final TwitchBadges badges;
+  final StreamerMentionTarget? mentionTarget;
 
   @override
   Widget build(BuildContext context) {
@@ -806,22 +827,39 @@ class _UserMessageView extends StatelessWidget {
         message.messageType != 'power_ups_gigantified_emote';
     final channelPointsHighlight =
         message.messageType == 'channel_points_highlighted';
+    final mentioned = mentionTarget?.isAddressedBy(message) ?? false;
     return Container(
       key: channelPointsHighlight
           ? ValueKey('highlighted-message-${message.id}')
+          : mentioned
+          ? ValueKey('streamer-mention-${message.id}')
           : null,
       margin: EdgeInsets.symmetric(vertical: channelPointsHighlight ? 5 : 2),
       padding: channelPointsHighlight
           ? const EdgeInsets.fromLTRB(10, 8, 10, 9)
-          : highlighted
+          : highlighted || mentioned
           ? const EdgeInsets.all(7)
           : const EdgeInsets.all(3),
-      decoration: highlighted
+      decoration: highlighted || mentioned
           ? BoxDecoration(
               color: BackgroundOpacity.colorOf(
                 context,
                 const Color(0x269146FF),
               ),
+              gradient: mentioned && !channelPointsHighlight
+                  ? LinearGradient(
+                      colors: [
+                        BackgroundOpacity.colorOf(
+                          context,
+                          const Color(0x559146FF),
+                        ),
+                        BackgroundOpacity.colorOf(
+                          context,
+                          const Color(0x149146FF),
+                        ),
+                      ],
+                    )
+                  : null,
               borderRadius: BorderRadius.circular(
                 channelPointsHighlight ? 4 : 6,
               ),
@@ -831,6 +869,10 @@ class _UserMessageView extends StatelessWidget {
                       top: BorderSide(color: Color(0xFF9146FF)),
                       right: BorderSide(color: Color(0xFF9146FF)),
                       bottom: BorderSide(color: Color(0xFF9146FF)),
+                    )
+                  : mentioned
+                  ? const Border(
+                      left: BorderSide(color: Color(0xFFBF94FF), width: 3),
                     )
                   : null,
             )
@@ -889,9 +931,18 @@ class _UserMessageView extends StatelessWidget {
             ),
           ChatMessageContent(
             fragments: message.displayFragments,
+            mentionTarget: mentioned ? mentionTarget : null,
             gigantifyEmote:
                 message.messageType == 'power_ups_gigantified_emote',
             prefix: [
+              if (mentioned)
+                const TextSpan(
+                  text: '@ ',
+                  style: TextStyle(
+                    color: Color(0xFFBF94FF),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               for (final badge in message.badges) _badgeSpan(badge, badges),
               TextSpan(
                 text: '${message.userName}: ',

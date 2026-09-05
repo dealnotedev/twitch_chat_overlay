@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
+import 'package:twitch_chat_overlay/chat/streamer_mention.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 
@@ -14,6 +15,7 @@ class ChatMessageContent extends StatelessWidget {
     required this.style,
     this.prefix = const [],
     this.gigantifyEmote = false,
+    this.mentionTarget,
     super.key,
   });
 
@@ -21,6 +23,7 @@ class ChatMessageContent extends StatelessWidget {
   final TextStyle style;
   final List<InlineSpan> prefix;
   final bool gigantifyEmote;
+  final StreamerMentionTarget? mentionTarget;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +51,7 @@ class ChatMessageContent extends StatelessWidget {
         flushText();
         children.add(ChatGifImage(fragment: fragment));
       } else {
-        spans.add(_fragmentSpan(fragment));
+        spans.add(_fragmentSpan(fragment, mentionTarget));
       }
     }
     flushText();
@@ -171,16 +174,38 @@ class ChatGifImage extends StatelessWidget {
   }
 }
 
-InlineSpan _fragmentSpan(ChatFragment fragment) {
+const _streamerMentionStyle = TextStyle(
+  color: Color(0xFFF0E6FF),
+  fontWeight: FontWeight.w700,
+);
+
+InlineSpan _fragmentSpan(
+  ChatFragment fragment,
+  StreamerMentionTarget? mentionTarget,
+) {
+  final pattern = mentionTarget?.textPattern;
+  if (fragment is ChatTextFragment && pattern != null) {
+    final spans = <InlineSpan>[];
+    var end = 0;
+    for (final match in pattern.allMatches(fragment.text)) {
+      spans.add(TextSpan(text: fragment.text.substring(end, match.start)));
+      spans.add(TextSpan(text: match.group(0), style: _streamerMentionStyle));
+      end = match.end;
+    }
+    spans.add(TextSpan(text: fragment.text.substring(end)));
+    return TextSpan(children: spans);
+  }
   return switch (fragment) {
     ChatTextFragment() ||
     ChatUnknownFragment() => TextSpan(text: fragment.text),
     ChatMentionFragment() => TextSpan(
       text: fragment.text,
-      style: const TextStyle(
-        color: Color(0xFFBF94FF),
-        fontWeight: FontWeight.w600,
-      ),
+      style: (mentionTarget?.matchesMention(fragment) ?? false)
+          ? _streamerMentionStyle
+          : const TextStyle(
+              color: Color(0xFFBF94FF),
+              fontWeight: FontWeight.w600,
+            ),
     ),
     ChatCheermoteFragment() => TextSpan(
       text: fragment.text,
