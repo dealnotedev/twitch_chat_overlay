@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
+import 'package:twitch_chat_overlay/chat/viewer_count.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
@@ -125,6 +126,7 @@ void main() {
             twitchChat: _Chat(
               initialState: const ChatState(
                 status: ChatConnectionStatus.connected,
+                viewerCount: 1234,
                 items: [],
               ),
               updates: chatUpdates.stream,
@@ -142,7 +144,16 @@ void main() {
       final dot = find.byKey(const ValueKey('chat-connected-dot'));
       final indicator = tester.getRect(dot);
       expect(indicator.size, const Size(7, 7));
-      expect(indicator.top - frame.top, closeTo(8, 0.001));
+      final statusRow = find.byKey(const ValueKey('chat-status-row'));
+      final viewers = find.byType(ViewerCount);
+      expect(find.descendant(of: statusRow, matching: viewers), findsOneWidget);
+      expect(find.descendant(of: statusRow, matching: dot), findsOneWidget);
+      expect(tester.widget<ViewerCount>(viewers).count, 1234);
+      expect(find.text('1,234'), findsOneWidget);
+      expect(find.bySemanticsLabel('Viewers: 1,234'), findsOneWidget);
+      expect(tester.getRect(statusRow).top - frame.top, closeTo(8, 0.001));
+      expect(tester.getCenter(viewers).dy, closeTo(indicator.center.dy, 0.001));
+      expect(indicator.left - tester.getRect(viewers).right, closeTo(8, 0.001));
       expect(frame.right - indicator.right, closeTo(8, 0.001));
       final decoration =
           tester.widget<Container>(dot).decoration as BoxDecoration;

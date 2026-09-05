@@ -1,4 +1,7 @@
 {
+  "viewerCountLabel": "Viewers",
+  "streamOffline": "Offline",
+
   "@@locale": "en",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Configure overlay",

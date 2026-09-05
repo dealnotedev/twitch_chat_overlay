@@ -98,6 +98,18 @@ abstract class AppLocalizations {
     Locale('uk'),
   ];
 
+  /// No description provided for @viewerCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers'**
+  String get viewerCountLabel;
+
+  /// No description provided for @streamOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get streamOffline;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:

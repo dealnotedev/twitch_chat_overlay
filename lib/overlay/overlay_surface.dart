@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
-import 'package:twitch_chat_overlay/overlay/message_lifetime_control.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
-import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
+import 'package:twitch_chat_overlay/overlay/message_lifetime_control.dart';
+import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
 import 'package:twitch_chat_overlay/platform/overlay_host.dart';
 import 'package:twitch_chat_overlay/platform/overlay_tray.dart';

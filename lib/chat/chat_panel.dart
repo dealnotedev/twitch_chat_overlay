@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:twitch_chat_overlay/chat/viewer_count.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
@@ -346,8 +348,23 @@ class _ChatPanelState extends State<ChatPanel> {
             child: IgnorePointer(
               child: Align(
                 alignment: Alignment.topRight,
-                child: _ChatConnectionIndicator(
-                  status: widget.chatState.status,
+                child: Row(
+                  key: const ValueKey('chat-status-row'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: ViewerCount(
+                        count: widget.chatState.viewerCount,
+                        offline: widget.chatState.streamOffline,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: _ChatConnectionIndicator(
+                        status: widget.chatState.status,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

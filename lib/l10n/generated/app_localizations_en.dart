@@ -10,6 +10,12 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get viewerCountLabel => 'Viewers';
+
+  @override
+  String get streamOffline => 'Offline';
+
+  @override
   String get appTitle => 'Twitch Chat Overlay';
 
   @override

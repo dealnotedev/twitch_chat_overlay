@@ -10,6 +10,12 @@ class AppLocalizationsUk extends AppLocalizations {
   AppLocalizationsUk([String locale = 'uk']) : super(locale);
 
   @override
+  String get viewerCountLabel => 'Глядачі';
+
+  @override
+  String get streamOffline => 'Поза ефіром';
+
+  @override
   String get appTitle => 'Twitch Chat Overlay';
 
   @override

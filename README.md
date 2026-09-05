@@ -79,6 +79,11 @@ If the reward event subscription fails, normal chat remains connected and a noti
 rewards are unavailable. Rewards from other Shared Chat channels are not read
 with the signed-in broadcaster's token.
 
+
+In locked mode, the viewer count appears beside the connection indicator in one
+compact row at the top right. Helix Get Streams is queried immediately on joining
+and every minute; offline channels show a localized Offline label, and unavailable
+counts show a dash. Polling stops on sign-out and ignores results from old sessions.
 ### Composer and sender emotes
 
 The logout button stays left of the input and Send stays right; the emote button

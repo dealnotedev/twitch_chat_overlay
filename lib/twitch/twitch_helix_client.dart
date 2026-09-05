@@ -32,6 +32,23 @@ final class TwitchHelixClient {
   final TwitchAuth _auth;
   final Dio _dio;
 
+  /// A null count means the channel is offline, not a failed request.
+  Future<int?> getViewerCount({required String broadcasterId}) async {
+    final response = await _request(
+      '/streams',
+      queryParameters: {'user_id': broadcasterId},
+    ).timeout(const Duration(seconds: 20));
+    final data = response.data?['data'];
+    if (data is! List) throw const FormatException('Invalid stream response');
+    if (data.isEmpty) return null;
+    final stream = data.first;
+    final count = stream is Map ? stream['viewer_count'] : null;
+    if (count is! int || count < 0) {
+      throw const FormatException('Invalid viewer count');
+    }
+    return count;
+  }
+
   // Only metadata is cached here; its lifetime is the client/app session.
   (String, String)? _emoteContext;
   List<TwitchEmote>? _emoteCache;

@@ -1,4 +1,7 @@
 {
+  "viewerCountLabel": "Глядачі",
+  "streamOffline": "Поза ефіром",
+
   "@@locale": "uk",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Налаштувати оверлей",

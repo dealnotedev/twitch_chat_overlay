@@ -23,6 +23,8 @@ final class ChatState {
     required this.status,
     required this.items,
     this.error,
+    this.viewerCount,
+    this.streamOffline = false,
     this.broadcasterId,
     this.badges = const TwitchBadges(),
     this.rewards = const {},
@@ -36,11 +38,15 @@ final class ChatState {
       rewards = const {},
       rewardSubscriptionFailed = false,
       broadcasterId = null,
+      viewerCount = null,
+      streamOffline = false,
       error = null;
 
   final ChatConnectionStatus status;
   final List<ChatItem> items;
   final String? error;
+  final int? viewerCount;
+  final bool streamOffline;
   final String? broadcasterId;
   final TwitchBadges badges;
   final Map<String, TwitchRewardAppearance> rewards;
@@ -83,6 +89,10 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   _EventSubSocket? _active;
   _EventSubSocket? _candidate;
   Timer? _retryTimer;
+  Timer? _viewerTimer;
+  int? _viewerCount;
+  bool _streamOffline = false;
+  bool _viewerLoadInFlight = false;
   String? _broadcasterId;
   int _retryAttempt = 0;
   int _generation = 0;
@@ -115,6 +125,10 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     _messageIdOrder.clear();
     _retryAttempt = 0;
     _emit(ChatConnectionStatus.connecting);
+    unawaited(_refreshViewerCount());
+    _viewerTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      unawaited(_refreshViewerCount());
+    });
     unawaited(_loadBadges(''));
     unawaited(_loadBadges(broadcasterId));
     await _connect(eventSubUrl, inheritedSubscriptions: false);
@@ -123,6 +137,11 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   @override
   Future<void> leave() async {
     _generation++;
+    _viewerTimer?.cancel();
+    _viewerTimer = null;
+    _viewerCount = null;
+    _streamOffline = false;
+    _viewerLoadInFlight = false;
     _badgeChannels.clear();
     _badgeLoads.clear();
     _badgeRetryAt.clear();
@@ -497,10 +516,33 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     }
   }
 
+  Future<void> _refreshViewerCount() async {
+    final broadcasterId = _broadcasterId;
+    if (broadcasterId == null || _viewerLoadInFlight) return;
+    final generation = _generation;
+    _viewerLoadInFlight = true;
+    try {
+      final count = await _helix.getViewerCount(broadcasterId: broadcasterId);
+      if (generation != _generation) return;
+      _viewerCount = count;
+      _streamOffline = count == null;
+    } catch (_) {
+      if (generation != _generation) return;
+      // Never present an old count as current, or interrupt chat on failure.
+      _viewerCount = null;
+      _streamOffline = false;
+    } finally {
+      if (generation == _generation) _viewerLoadInFlight = false;
+    }
+    _emit(_state.status, error: _state.error);
+  }
+
   void _emit(ChatConnectionStatus status, {String? error}) {
     final next = ChatState(
       status: status,
       broadcasterId: _broadcasterId,
+      viewerCount: _viewerCount,
+      streamOffline: _streamOffline,
       items: _timeline.items,
       error: error,
       badges: TwitchBadges(Map.unmodifiable(_badgeChannels)),
