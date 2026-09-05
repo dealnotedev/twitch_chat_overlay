@@ -450,7 +450,9 @@ class _UserMessageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final highlighted = message.messageType != 'text';
+    final highlighted =
+        message.messageType != 'text' &&
+        message.messageType != 'power_ups_gigantified_emote';
     final channelPointsHighlight =
         message.messageType == 'channel_points_highlighted';
     return Container(
