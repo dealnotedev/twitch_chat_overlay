@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 
@@ -36,14 +37,14 @@ class MessageLifetimeControl extends StatelessWidget {
       child: Row(
         children: [
           const Icon(Icons.timer_outlined, size: 16, color: Color(0xFFBF94FF)),
-          const SizedBox(width: 8),
+          const Gap(8),
           Expanded(
             child: Text(
               l10n.messageLifetime,
               style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
             ),
           ),
-          const SizedBox(width: 8),
+          const Gap(8),
           CallbackShortcuts(
             bindings: {
               const SingleActivator(LogicalKeyboardKey.arrowUp): increase,

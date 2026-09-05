@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
@@ -167,7 +168,7 @@ class _ChatComposerState extends State<ChatComposer> {
                     icon: Icons.logout_rounded,
                     onPressed: widget.onSignOut,
                   ),
-                  const SizedBox(width: 4),
+                  const Gap(4),
                   Expanded(
                     child: MouseRegion(
                       onEnter: (_) => setState(() => _hovering = true),
@@ -257,7 +258,7 @@ class _ChatComposerState extends State<ChatComposer> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const Gap(6),
                   ChatIconButton(
                     label: l10n.send,
                     icon: Icons.send_rounded,

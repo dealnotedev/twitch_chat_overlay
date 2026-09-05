@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
@@ -409,7 +410,7 @@ class _ChatHeader extends StatelessWidget {
         child: Row(
           children: [
             const Icon(Icons.chat_bubble_rounded, size: 17),
-            const SizedBox(width: 8),
+            const Gap(8),
             Expanded(
               child: Text(
                 l10n.twitchChatTitle,
@@ -428,13 +429,13 @@ class _ChatHeader extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 7),
+            const Gap(7),
             Text(
               editing ? l10n.setupMode : 'Ctrl+Shift+O',
               style: const TextStyle(fontSize: 10, color: Color(0xFFADADB8)),
             ),
             if (editing) ...[
-              const SizedBox(width: 8),
+              const Gap(8),
               IconButton(
                 visualDensity: VisualDensity.compact,
                 tooltip: l10n.lockOverlay,

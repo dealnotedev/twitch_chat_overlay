@@ -4,6 +4,7 @@ import 'package:twitch_chat_overlay/chat/viewer_count.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_actions.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
@@ -358,7 +359,7 @@ class _ChatPanelState extends State<ChatPanel> {
                         offline: widget.chatState.streamOffline,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const Gap(8),
                     Flexible(
                       child: _ChatConnectionIndicator(
                         status: widget.chatState.status,
@@ -553,13 +554,13 @@ class _SignedOutPanel extends StatelessWidget {
               size: 32,
               color: Color(0xFFBF94FF),
             ),
-            const SizedBox(height: 9),
+            const Gap(9),
             Text(
               error ?? l10n.connectTwitchDescription,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12.5, color: Color(0xFFD7D7DC)),
             ),
-            const SizedBox(height: 12),
+            const Gap(12),
             if (interactive)
               _TwitchSignInButton(
                 onPressed: () => unawaited(onSignIn()),
@@ -650,7 +651,7 @@ class _CenteredStatus extends StatelessWidget {
                 dimension: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              const SizedBox(height: 10),
+              const Gap(10),
             ],
             Text(
               text,
@@ -658,7 +659,7 @@ class _CenteredStatus extends StatelessWidget {
               style: const TextStyle(fontSize: 12, color: Color(0xFFADADB8)),
             ),
             if (hint != null) ...[
-              const SizedBox(height: 12),
+              const Gap(12),
               Text(
                 hint!,
                 textAlign: TextAlign.center,
@@ -852,7 +853,7 @@ class _UserMessageView extends StatelessWidget {
                     size: 14,
                     color: Color(0xFFBF94FF),
                   ),
-                  const SizedBox(width: 6),
+                  const Gap(6),
                   Expanded(
                     child: Text(
                       l10n.highlightedMessage,
@@ -942,7 +943,7 @@ class _NoticeView extends StatelessWidget {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
           ),
           if (notice.fragments.isNotEmpty) ...[
-            const SizedBox(height: 3),
+            const Gap(3),
             ChatMessageContent(
               fragments: notice.fragments,
               prefix: [

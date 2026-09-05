@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
@@ -31,7 +32,7 @@ class ViewerCount extends StatelessWidget {
             color: color,
             shadows: chatReadableStyle.shadows,
           ),
-          const SizedBox(width: 5),
+          const Gap(5),
           Flexible(
             child: Text(
               value,

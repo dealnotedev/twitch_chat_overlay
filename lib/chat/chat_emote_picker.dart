@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
@@ -192,7 +193,7 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
                                     l10n.emotesLoadFailed,
                                     textAlign: TextAlign.center,
                                   ),
-                                  const SizedBox(height: 8),
+                                  const Gap(8),
                                   TextButton(
                                     style: TextButton.styleFrom(
                                       foregroundColor: const Color(0xFFBF94FF),

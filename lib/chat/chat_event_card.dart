@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
@@ -123,10 +124,10 @@ class RaidCard extends StatelessWidget {
       imageLabel: raid.userName,
       children: [
         Text(l10n.raidFrom(raid.userName), style: _titleStyle),
-        const SizedBox(height: 3),
+        const Gap(3),
         Text(l10n.raidViewers(raid.viewerCount), style: _captionStyle),
         if (raid.sourceChannel case final channel?) ...[
-          const SizedBox(height: 5),
+          const Gap(5),
           Text(l10n.sharedChatOrigin(channel), style: _captionStyle),
         ],
       ],
@@ -190,7 +191,7 @@ class _EventCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 9),
+            const Gap(9),
           ],
           Expanded(
             child: Column(

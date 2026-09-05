@@ -35,6 +35,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
+  gap: ^3.0.1
   intl: any
   open_url: ^2.0.1
   shared_preferences: ^2.5.4
