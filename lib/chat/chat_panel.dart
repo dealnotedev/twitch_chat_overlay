@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:twitch_chat_overlay/chat/chat_message_entrance.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
@@ -41,9 +42,35 @@ class _ChatPanelState extends State<ChatPanel> {
   final FocusNode _messageFocus = FocusNode();
   bool _sending = false;
   String? _sendError;
+  final Stopwatch _arrivalClock = Stopwatch()..start();
+  final Map<String, Duration> _messageArrivals = {};
+
+  @override
+  void didUpdateWidget(ChatPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final now = _arrivalClock.elapsed;
+    final previousIds = oldWidget.chatState.items
+        .map((item) => item.id)
+        .toSet();
+    final currentIds = widget.chatState.items.map((item) => item.id).toSet();
+    _messageArrivals.removeWhere(
+      (id, arrivedAt) =>
+          !currentIds.contains(id) ||
+          now - arrivedAt >= ChatMessageEntrance.duration,
+    );
+    for (final id in currentIds.difference(previousIds)) {
+      _messageArrivals[id] = now;
+    }
+  }
+
+  Duration? _entranceElapsed(String id) {
+    final arrivedAt = _messageArrivals[id];
+    return arrivedAt == null ? null : _arrivalClock.elapsed - arrivedAt;
+  }
 
   @override
   void dispose() {
+    _arrivalClock.stop();
     _messageController.dispose();
     _messageFocus.dispose();
     super.dispose();
@@ -128,10 +155,13 @@ class _ChatPanelState extends State<ChatPanel> {
               itemIndices[(key as ValueKey<String>).value],
           itemBuilder: (context, index) => RepaintBoundary(
             key: ValueKey(items[index].id),
-            child: _ChatItemView(
-              item: items[index],
-              badges: widget.chatState.badges,
-              rewards: widget.chatState.rewards,
+            child: ChatMessageEntrance(
+              elapsed: _entranceElapsed(items[index].id),
+              child: _ChatItemView(
+                item: items[index],
+                badges: widget.chatState.badges,
+                rewards: widget.chatState.rewards,
+              ),
             ),
           ),
         ),

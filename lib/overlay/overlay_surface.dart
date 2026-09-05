@@ -223,7 +223,7 @@ class _VirtualChatWindow extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Positioned.fill(
-          child: DecoratedBox(
+          child: Container(
             decoration: BoxDecoration(
               color: BackgroundOpacity.colorOf(
                 context,
@@ -250,7 +250,7 @@ class _VirtualChatWindow extends StatelessWidget {
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(editing ? 10 : 11),
               child: Column(
                 children: [
                   _ChatHeader(
