@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 
@@ -25,7 +26,12 @@ class ChatMessageContent extends StatelessWidget {
     var spans = <InlineSpan>[...prefix];
     void flushText() {
       if (spans.isEmpty) return;
-      children.add(Text.rich(TextSpan(children: spans), style: style));
+      children.add(
+        Text.rich(
+          TextSpan(children: spans),
+          style: chatReadableStyle.merge(style),
+        ),
+      );
       spans = [];
     }
 

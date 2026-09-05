@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
 import 'package:twitch_chat_overlay/chat/chat_event_card.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
@@ -79,7 +80,9 @@ class _ChatPanelState extends State<ChatPanel> {
               style: const TextStyle(fontSize: 11, color: Color(0xFFFFB31A)),
             ),
           ),
-        Expanded(child: body),
+        Expanded(
+          child: DefaultTextStyle.merge(style: chatReadableStyle, child: body),
+        ),
         if (widget.authState.status == TwitchAuthStatus.signedIn &&
             widget.interactive)
           _Composer(
@@ -578,5 +581,7 @@ Color _parseColor(String? value) {
   if (value == null || value.isEmpty) return const Color(0xFFB8B8FF);
   final hex = value.replaceFirst('#', '');
   final parsed = int.tryParse(hex, radix: 16);
-  return parsed == null ? const Color(0xFFB8B8FF) : Color(0xFF000000 | parsed);
+  return parsed == null
+      ? const Color(0xFFB8B8FF)
+      : readableChatColor(Color(0xFF000000 | parsed));
 }
