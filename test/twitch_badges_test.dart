@@ -179,15 +179,16 @@ Map<String, Object?> _set(String setId, String id, String url) => {
 
 class _Auth implements TwitchAuth {
   @override
-  Future<TwitchToken> validToken() async => TwitchToken(
-    accessToken: 'test-access',
-    refreshToken: 'test-refresh',
-    clientId: 'test-client',
-    userId: 'viewer',
-    userLogin: 'viewer',
-    scopes: TwitchAuthClient.requiredScopes,
-    expiresAt: DateTime.utc(2030),
-  );
+  Future<TwitchToken> validToken({String? rejectedAccessToken}) async =>
+      TwitchToken(
+        accessToken: 'test-access',
+        refreshToken: 'test-refresh',
+        clientId: 'test-client',
+        userId: 'viewer',
+        userLogin: 'viewer',
+        scopes: TwitchAuthClient.requiredScopes,
+        expiresAt: DateTime.utc(2030),
+      );
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

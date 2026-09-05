@@ -59,6 +59,17 @@ subscription fails, normal chat remains connected and a notice explains that
 rewards are unavailable. Rewards from other Shared Chat channels are not read
 with the signed-in broadcaster's token.
 
+### Session recovery (1.0.1)
+
+Startup validation refreshes rejected access tokens before requesting login.
+Helix retries a request once after a 401, sharing one refresh across concurrent
+requests and persisting rotated credentials before further validation. Network
+failures, rate limits and server outages retain the account and retry through
+the existing reconnect loop. Signing out invalidates pending refresh work.
+The `twitch_auth` storage key and JSON format are unchanged from 1.0.0.
+Users whose credentials were already deleted by 1.0.0 must sign in once again;
+upgrading cannot recover deleted tokens.
+
 ### Differences from Twitch web chat
 
 - Cheermotes currently render as colored text, without Twitch Bits animations.

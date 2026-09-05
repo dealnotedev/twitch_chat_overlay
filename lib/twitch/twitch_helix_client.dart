@@ -51,37 +51,23 @@ final class TwitchHelixClient {
   Future<Map<String, TwitchRewardAppearance>> getRewards({
     required String broadcasterId,
   }) async {
-    final token = await _auth.validToken();
-    final response = await _dio.get<Map<String, Object?>>(
+    final response = await _request(
       '/channel_points/custom_rewards',
       queryParameters: {
         'broadcaster_id': broadcasterId,
         'only_manageable_rewards': false,
       },
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer ${token.accessToken}',
-          'Client-Id': token.clientId,
-        },
-      ),
     );
     return TwitchRewardAppearance.parse(response.data?['data']);
   }
 
   /// Both endpoints accept our existing user token without additional scopes.
   Future<TwitchBadgeSet> getBadges({String? broadcasterId}) async {
-    final token = await _auth.validToken();
-    final response = await _dio.get<Map<String, Object?>>(
+    final response = await _request(
       broadcasterId == null ? '/chat/badges/global' : '/chat/badges',
       queryParameters: broadcasterId == null
           ? null
           : {'broadcaster_id': broadcasterId},
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer ${token.accessToken}',
-          'Client-Id': token.clientId,
-        },
-      ),
     );
     return TwitchBadges.parse(response.data?['data']);
   }
@@ -139,17 +125,35 @@ final class TwitchHelixClient {
   Future<Response<Map<String, Object?>>> _post(
     String path, {
     required Map<String, Object?> data,
+  }) => _request(path, method: 'POST', data: data);
+
+  Future<Response<Map<String, Object?>>> _request(
+    String path, {
+    String method = 'GET',
+    Map<String, Object?>? data,
+    Map<String, Object?>? queryParameters,
   }) async {
-    final token = await _auth.validToken();
-    return _dio.post<Map<String, Object?>>(
-      path,
-      data: data,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer ${token.accessToken}',
-          'Client-Id': token.clientId,
-        },
-      ),
-    );
+    var token = await _auth.validToken();
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return await _dio.request<Map<String, Object?>>(
+          path,
+          data: data,
+          queryParameters: queryParameters,
+          options: Options(
+            method: method,
+            headers: {
+              'Authorization': 'Bearer ${token.accessToken}',
+              'Client-Id': token.clientId,
+            },
+          ),
+        );
+      } on DioException catch (error) {
+        if (error.response?.statusCode != 401 || attempt != 0) rethrow;
+        // Refresh once and replay only the rejected request. Concurrent/late
+        // 401s for the same token share the already refreshed credentials.
+        token = await _auth.validToken(rejectedAccessToken: token.accessToken);
+      }
+    }
   }
 }

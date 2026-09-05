@@ -141,7 +141,7 @@ final _token = TwitchToken(
 
 class _Auth implements TwitchAuth {
   @override
-  Future<TwitchToken> validToken() async => _token;
+  Future<TwitchToken> validToken({String? rejectedAccessToken}) async => _token;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

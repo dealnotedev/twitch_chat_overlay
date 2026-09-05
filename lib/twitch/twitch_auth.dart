@@ -19,6 +19,8 @@ enum TwitchAuthFailure {
 
 final class _MissingScopes implements Exception {}
 
+final class _InvalidRefreshToken implements Exception {}
+
 final class TwitchAuthState {
   const TwitchAuthState({
     required this.status,
@@ -46,11 +48,20 @@ abstract interface class TwitchAuth {
   Future<void> initialize();
   Future<void> signIn();
   Future<void> signOut();
-  Future<TwitchToken> validToken();
+  Future<TwitchToken> validToken({String? rejectedAccessToken});
 }
 
 final class TwitchAuthClient implements TwitchAuth {
-  TwitchAuthClient(this._tokenStore, {Dio? dio}) : _dio = dio ?? Dio();
+  TwitchAuthClient(this._tokenStore, {Dio? dio})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              sendTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 15),
+            ),
+          );
 
   static const String oauthRedirectUrl = 'http://localhost:3000';
 
@@ -67,6 +78,9 @@ final class TwitchAuthClient implements TwitchAuth {
 
   TwitchAuthState _state = const TwitchAuthState.loading();
   Future<TwitchToken>? _refreshInFlight;
+  Future<void> _storageWork = Future.value();
+  int _sessionGeneration = 0;
+  bool _mustValidate = false;
 
   @override
   TwitchAuthState get state => _state;
@@ -76,37 +90,50 @@ final class TwitchAuthClient implements TwitchAuth {
 
   @override
   Future<void> initialize() async {
+    final generation = ++_sessionGeneration;
+    _refreshInFlight = null;
     _emit(const TwitchAuthState.loading());
     final stored = await _tokenStore.read();
+    if (generation != _sessionGeneration) return;
     if (stored == null) {
       _emit(const TwitchAuthState(status: TwitchAuthStatus.signedOut));
       return;
     }
 
     try {
-      final token = await _validate(stored);
+      final token = await _validateOrRefresh(stored, generation);
+      await _saveToken(token, generation);
+      if (generation != _sessionGeneration) return;
+      _mustValidate = false;
       _emit(TwitchAuthState(status: TwitchAuthStatus.signedIn, token: token));
     } catch (error) {
-      await _tokenStore.clear();
-      _emit(
-        TwitchAuthState(
-          status: TwitchAuthStatus.signedOut,
-          failure: error is _MissingScopes
-              ? TwitchAuthFailure.scopesChanged
-              : TwitchAuthFailure.storedSessionExpired,
-          errorDetails: error.toString(),
-        ),
-      );
+      if (generation != _sessionGeneration) return;
+      if (_isTerminal(error)) {
+        await _endSession(error, generation);
+      } else {
+        // Keep the account offline; the chat reconnect loop retries validation.
+        // A rotated refresh token may already have been saved by _refresh.
+        _mustValidate = true;
+        _emit(
+          TwitchAuthState(
+            status: TwitchAuthStatus.signedIn,
+            token: _state.token ?? stored,
+          ),
+        );
+      }
     }
   }
 
   @override
   Future<void> signIn() async {
     if (_state.status == TwitchAuthStatus.authorizing) return;
+    final generation = ++_sessionGeneration;
+    _refreshInFlight = null;
     _emit(const TwitchAuthState(status: TwitchAuthStatus.authorizing));
 
     try {
       final code = await _requestAuthorizationCode();
+      if (generation != _sessionGeneration) return;
       final response = await _dio.post<Map<String, Object?>>(
         'https://id.twitch.tv/oauth2/token',
         data: _formBody({
@@ -134,9 +161,12 @@ final class TwitchAuthClient implements TwitchAuth {
         ),
       );
       final token = await _validate(provisional);
-      await _tokenStore.write(token);
+      await _saveToken(token, generation);
+      if (generation != _sessionGeneration) return;
+      _mustValidate = false;
       _emit(TwitchAuthState(status: TwitchAuthStatus.signedIn, token: token));
     } catch (error) {
+      if (generation != _sessionGeneration) return;
       _emit(
         TwitchAuthState(
           status: TwitchAuthStatus.failure,
@@ -149,27 +179,115 @@ final class TwitchAuthClient implements TwitchAuth {
 
   @override
   Future<void> signOut() async {
-    await _tokenStore.clear();
+    ++_sessionGeneration;
+    _refreshInFlight = null;
+    _mustValidate = false;
     _emit(const TwitchAuthState(status: TwitchAuthStatus.signedOut));
+    await _enqueueStorage(_tokenStore.clear);
   }
 
   @override
-  Future<TwitchToken> validToken() async {
+  Future<TwitchToken> validToken({String? rejectedAccessToken}) async {
     final token = _state.token;
     if (token == null) throw StateError('Twitch account is not connected');
-    if (!token.needsRefresh) return token;
+    final pending = _refreshInFlight;
+    if (pending != null) return pending;
+    final forceRefresh = rejectedAccessToken == token.accessToken;
+    if (!forceRefresh && !_mustValidate && !token.needsRefresh) return token;
 
-    final refresh = _refreshInFlight ??= _refresh(token);
+    final generation = _sessionGeneration;
+    final refresh = _refreshSession(token, generation, forceRefresh);
+    _refreshInFlight = refresh;
     try {
-      final refreshed = await refresh;
-      await _tokenStore.write(refreshed);
+      return await refresh;
+    } finally {
+      if (identical(_refreshInFlight, refresh)) _refreshInFlight = null;
+    }
+  }
+
+  Future<TwitchToken> _refreshSession(
+    TwitchToken token,
+    int generation,
+    bool forceRefresh,
+  ) async {
+    try {
+      final refreshed = !forceRefresh && _mustValidate
+          ? await _validateOrRefresh(token, generation)
+          : await _refresh(token, generation);
+      await _saveToken(refreshed, generation);
+      _checkSession(generation);
+      _mustValidate = false;
       _emit(
         TwitchAuthState(status: TwitchAuthStatus.signedIn, token: refreshed),
       );
       return refreshed;
-    } finally {
-      _refreshInFlight = null;
+    } catch (error) {
+      if (generation == _sessionGeneration) {
+        if (_isTerminal(error)) {
+          await _endSession(error, generation);
+        } else {
+          _mustValidate = true;
+        }
+      }
+      rethrow;
     }
+  }
+
+  Future<TwitchToken> _validateOrRefresh(
+    TwitchToken token,
+    int generation,
+  ) async {
+    try {
+      return await _validate(token);
+    } on DioException catch (error) {
+      if (error.response?.statusCode != 401) rethrow;
+      _checkSession(generation);
+      return _refresh(token, generation);
+    }
+  }
+
+  static bool _isTerminal(Object error) =>
+      error is _MissingScopes || error is _InvalidRefreshToken;
+
+  Future<void> _endSession(Object error, int generation) async {
+    if (generation != _sessionGeneration) return;
+    ++_sessionGeneration;
+    _refreshInFlight = null;
+    _mustValidate = false;
+    _emit(
+      TwitchAuthState(
+        status: TwitchAuthStatus.signedOut,
+        failure: error is _MissingScopes
+            ? TwitchAuthFailure.scopesChanged
+            : TwitchAuthFailure.storedSessionExpired,
+      ),
+    );
+    await _enqueueStorage(_tokenStore.clear);
+  }
+
+  void _checkSession(int generation) {
+    if (generation != _sessionGeneration) {
+      throw StateError('Twitch session changed during authorization');
+    }
+  }
+
+  // Serialize persistence so sign-out always clears any earlier in-flight write.
+  Future<void> _enqueueStorage(Future<void> Function() work) {
+    final operation = _storageWork.then((_) => work());
+    _storageWork = operation.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return operation;
+  }
+
+  Future<void> _saveToken(TwitchToken token, int generation) async {
+    await _enqueueStorage(() async {
+      _checkSession(generation);
+      await _tokenStore.write(token);
+    });
+    _checkSession(generation);
+    _state = TwitchAuthState(status: _state.status, token: token);
   }
 
   Future<TwitchToken> _validate(TwitchToken token) async {
@@ -197,30 +315,47 @@ final class TwitchAuthClient implements TwitchAuth {
     );
   }
 
-  Future<TwitchToken> _refresh(TwitchToken token) async {
-    final response = await _dio.post<Map<String, Object?>>(
-      'https://id.twitch.tv/oauth2/token',
-      data: _formBody({
-        'client_id': twitchClientId,
-        'client_secret': twitchClientSecret,
-        'grant_type': 'refresh_token',
-        'refresh_token': token.refreshToken,
-      }),
-      options: Options(contentType: Headers.formUrlEncodedContentType),
-    );
-    final data = response.data ?? const {};
-    final refreshed = token.copyWith(
-      accessToken: data['access_token'] as String,
-      refreshToken: data['refresh_token'] as String? ?? token.refreshToken,
-      scopes: (data['scope'] as List? ?? token.scopes)
-          .whereType<String>()
-          .toList(growable: false),
-      expiresAt: DateTime.now().toUtc().add(
-        Duration(seconds: data['expires_in'] as int? ?? 14400),
-      ),
-    );
-    await _tokenStore.write(refreshed);
-    return _validate(refreshed);
+  Future<TwitchToken> _refresh(TwitchToken token, int generation) async {
+    _checkSession(generation);
+    try {
+      final response = await _dio.post<Map<String, Object?>>(
+        'https://id.twitch.tv/oauth2/token',
+        data: _formBody({
+          'client_id': token.clientId,
+          'client_secret': twitchClientSecret,
+          'grant_type': 'refresh_token',
+          'refresh_token': token.refreshToken,
+        }),
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+      final data = response.data ?? const {};
+      final refreshed = token.copyWith(
+        accessToken: data['access_token'] as String,
+        refreshToken: data['refresh_token'] as String? ?? token.refreshToken,
+        scopes: (data['scope'] as List? ?? token.scopes)
+            .whereType<String>()
+            .toList(growable: false),
+        expiresAt: DateTime.now().toUtc().add(
+          Duration(seconds: data['expires_in'] as int? ?? 14400),
+        ),
+      );
+      // Persist rotation before validation: a transient failure must not lose it.
+      await _saveToken(refreshed, generation);
+      return await _validate(refreshed);
+    } on DioException catch (error) {
+      final response = error.response;
+      final data = response?.data;
+      final message = data is Map
+          ? data['message']?.toString().toLowerCase() ?? ''
+          : '';
+      if (error.requestOptions.path.endsWith('/token') &&
+          ((response?.statusCode == 400 &&
+                  message.contains('invalid refresh token')) ||
+              (response?.statusCode == 401 && !message.contains('client')))) {
+        throw _InvalidRefreshToken();
+      }
+      rethrow;
+    }
   }
 
   Future<String> _requestAuthorizationCode() async {
