@@ -13,6 +13,8 @@
   "connectingEventSub": "Підключаємося до EventSub…",
   "reconnectingChat": "Перепідключаємо чат…",
   "chatConnectionFailed": "Не вдалося підключити чат",
+  "chatConnected": "Чат підключено",
+  "noChatMessages": "Повідомлень поки немає.\nЧекаємо на першого чатера.",
   "waitingForConnection": "Очікуємо на підключення…",
   "reconnecting": "перепідключення",
   "messageRejected": "Повідомлення відхилено",

@@ -13,6 +13,8 @@
   "connectingEventSub": "Connecting to EventSub…",
   "reconnectingChat": "Reconnecting chat…",
   "chatConnectionFailed": "Could not connect to chat",
+  "chatConnected": "Chat connected",
+  "noChatMessages": "No messages yet.\nWaiting for the first chatter.",
   "waitingForConnection": "Waiting for connection…",
   "reconnecting": "reconnecting",
   "messageRejected": "Message was rejected",

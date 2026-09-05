@@ -293,7 +293,23 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           ),
         ),
-        if (widget.chatState.status == ChatConnectionStatus.reconnecting)
+        if (items.isEmpty)
+          Positioned.fill(child: _CenteredStatus(text: l10n.noChatMessages)),
+        if (!widget.interactive)
+          Positioned(
+            top: 8,
+            left: 12,
+            right: 8,
+            child: IgnorePointer(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: _ChatConnectionIndicator(
+                  status: widget.chatState.status,
+                ),
+              ),
+            ),
+          )
+        else if (widget.chatState.status == ChatConnectionStatus.reconnecting)
           Positioned(
             top: 5,
             right: 8,
@@ -587,10 +603,55 @@ class _CenteredStatus extends StatelessWidget {
   }
 }
 
+class _ChatConnectionIndicator extends StatelessWidget {
+  const _ChatConnectionIndicator({required this.status});
+
+  final ChatConnectionStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final text = switch (status) {
+      ChatConnectionStatus.connected => l10n.chatConnected,
+      ChatConnectionStatus.connecting => l10n.connectingEventSub,
+      ChatConnectionStatus.reconnecting => l10n.reconnecting,
+      ChatConnectionStatus.failure => l10n.chatConnectionFailed,
+      ChatConnectionStatus.idle => l10n.waitingForConnection,
+    };
+    return Semantics(
+      label: text,
+      liveRegion: true,
+      excludeSemantics: true,
+      child: status == ChatConnectionStatus.connected
+          ? Container(
+              key: const ValueKey('chat-connected-dot'),
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: Color(0xFF52D273),
+                shape: BoxShape.circle,
+              ),
+            )
+          : _ConnectionPill(
+              text: text,
+              color: switch (status) {
+                ChatConnectionStatus.failure => const Color(0xFFFF7676),
+                ChatConnectionStatus.idle => const Color(0xFFADADB8),
+                _ => const Color(0xFFFFB31A),
+              },
+            ),
+    );
+  }
+}
+
 class _ConnectionPill extends StatelessWidget {
-  const _ConnectionPill({required this.text});
+  const _ConnectionPill({
+    required this.text,
+    this.color = const Color(0xFFFFB31A),
+  });
 
   final String text;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -601,10 +662,7 @@ class _ConnectionPill extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(
-          text,
-          style: const TextStyle(fontSize: 9, color: Color(0xFFFFB31A)),
-        ),
+        child: Text(text, style: TextStyle(fontSize: 9, color: color)),
       ),
     );
   }

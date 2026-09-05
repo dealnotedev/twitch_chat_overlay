@@ -112,6 +112,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                     opacity: _layout.backgroundOpacity,
                     child: _VirtualChatWindow(
                       editing: _hostState.interactive,
+                      signedIn: _authState.status == TwitchAuthStatus.signedIn,
                       backgroundOpacity: _layout.backgroundOpacity,
                       onOpacityChanged: (value) =>
                           _updateLayout(_layout.withBackgroundOpacity(value)),
@@ -202,6 +203,7 @@ class _EditModeBanner extends StatelessWidget {
 class _VirtualChatWindow extends StatelessWidget {
   const _VirtualChatWindow({
     required this.editing,
+    required this.signedIn,
     required this.backgroundOpacity,
     required this.onOpacityChanged,
     required this.onMove,
@@ -213,6 +215,7 @@ class _VirtualChatWindow extends StatelessWidget {
   });
 
   final bool editing;
+  final bool signedIn;
   final double backgroundOpacity;
   final ValueChanged<double> onOpacityChanged;
   final ValueChanged<Offset> onMove;
@@ -258,13 +261,14 @@ class _VirtualChatWindow extends StatelessWidget {
               borderRadius: BorderRadius.circular(editing ? 10 : 11),
               child: Column(
                 children: [
-                  _ChatHeader(
-                    editing: editing,
-                    onMove: onMove,
-                    onGestureEnd: onGestureEnd,
-                    onLock: onLock,
-                    connectionStatus: connectionStatus,
-                  ),
+                  if (editing || !signedIn)
+                    _ChatHeader(
+                      editing: editing,
+                      onMove: onMove,
+                      onGestureEnd: onGestureEnd,
+                      onLock: onLock,
+                      connectionStatus: connectionStatus,
+                    ),
                   if (editing)
                     _BackgroundTransparencySlider(
                       opacity: backgroundOpacity,

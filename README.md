@@ -146,6 +146,11 @@ flutter run -d windows
    without fading text or Twitch images; the value is saved when you release it.
 4. Press `Ctrl+Shift+O` again to restore click-through mode.
 
+Once signed in, click-through mode hides the header so chat fills the frame.
+A green dot in the top-right corner shows the active connection; connection
+problems show a compact status label. Connected chats without messages show a
+waiting state until the first chatter arrives. Setup mode keeps its header and controls.
+
 The current milestone connects to the signed-in user's channel. The composer
 and Twitch sign-out action are available in setup mode. `Alt+F4` or the tray
 menu's **Вийти** command closes the app.

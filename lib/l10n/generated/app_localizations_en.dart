@@ -49,6 +49,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatConnectionFailed => 'Could not connect to chat';
 
   @override
+  String get chatConnected => 'Chat connected';
+
+  @override
+  String get noChatMessages =>
+      'No messages yet.\nWaiting for the first chatter.';
+
+  @override
   String get waitingForConnection => 'Waiting for connection…';
 
   @override

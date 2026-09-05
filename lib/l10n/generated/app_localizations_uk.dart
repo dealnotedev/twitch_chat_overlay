@@ -50,6 +50,13 @@ class AppLocalizationsUk extends AppLocalizations {
   String get chatConnectionFailed => 'Не вдалося підключити чат';
 
   @override
+  String get chatConnected => 'Чат підключено';
+
+  @override
+  String get noChatMessages =>
+      'Повідомлень поки немає.\nЧекаємо на першого чатера.';
+
+  @override
   String get waitingForConnection => 'Очікуємо на підключення…';
 
   @override

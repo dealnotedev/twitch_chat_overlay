@@ -176,6 +176,18 @@ abstract class AppLocalizations {
   /// **'Could not connect to chat'**
   String get chatConnectionFailed;
 
+  /// No description provided for @chatConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat connected'**
+  String get chatConnected;
+
+  /// No description provided for @noChatMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet.\nWaiting for the first chatter.'**
+  String get noChatMessages;
+
   /// No description provided for @waitingForConnection.
   ///
   /// In en, this message translates to:
