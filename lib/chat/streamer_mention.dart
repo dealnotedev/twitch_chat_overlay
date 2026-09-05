@@ -23,19 +23,18 @@ final class StreamerMentionTarget {
     return textPattern?.hasMatch(fragment.text) ?? false;
   }
 
+  bool matchesReply(ChatReply reply) {
+    final id = reply.parentUserId;
+    if (id != null && id.isNotEmpty) return id == userId;
+    return login != null &&
+        (reply.parentUserLogin ?? reply.parentUserName).toLowerCase() ==
+            login!.toLowerCase();
+  }
+
   bool isAddressedBy(ChatUserMessage message) {
     if (message.userId == userId) return false;
     final reply = message.reply;
-    if (reply != null) {
-      final id = reply.parentUserId;
-      if (id != null && id.isNotEmpty) {
-        if (id == userId) return true;
-      } else if (login != null &&
-          (reply.parentUserLogin ?? reply.parentUserName).toLowerCase() ==
-              login!.toLowerCase()) {
-        return true;
-      }
-    }
+    if (reply != null && matchesReply(reply)) return true;
     return message.fragments.any(
       (fragment) => switch (fragment) {
         ChatMentionFragment() => matchesMention(fragment),

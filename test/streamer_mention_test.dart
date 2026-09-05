@@ -163,6 +163,39 @@ void main() {
     });
   }
 
+  testWidgets('underlines only the broadcaster as reply author', (
+    tester,
+  ) async {
+    for (final parentId in ['broadcaster', 'other']) {
+      await tester.pumpWidget(
+        app(
+          message(
+            text: '@streamer hello',
+            reply: reply(id: parentId),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final context = tester
+          .widgetList<Text>(find.byType(Text))
+          .singleWhere(
+            (text) =>
+                text.textSpan?.toPlainText().contains(
+                  'Display name: Question',
+                ) ??
+                false,
+          );
+      final underlined = flatten(context.textSpan!)
+          .where((span) => span.style?.decoration == TextDecoration.underline)
+          .toList();
+      expect(
+        underlined.map((span) => span.text).toList(),
+        parentId == 'broadcaster' ? ['Display name'] : isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('mention retains Channel Points and Power-up labels', (
     tester,
   ) async {

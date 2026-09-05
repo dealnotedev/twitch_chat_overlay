@@ -174,11 +174,6 @@ class ChatGifImage extends StatelessWidget {
   }
 }
 
-const _streamerMentionStyle = TextStyle(
-  color: Color(0xFFF0E6FF),
-  fontWeight: FontWeight.w700,
-);
-
 InlineSpan _fragmentSpan(
   ChatFragment fragment,
   StreamerMentionTarget? mentionTarget,
@@ -189,7 +184,7 @@ InlineSpan _fragmentSpan(
     var end = 0;
     for (final match in pattern.allMatches(fragment.text)) {
       spans.add(TextSpan(text: fragment.text.substring(end, match.start)));
-      spans.add(TextSpan(text: match.group(0), style: _streamerMentionStyle));
+      spans.add(TextSpan(text: match.group(0), style: streamerMentionStyle));
       end = match.end;
     }
     spans.add(TextSpan(text: fragment.text.substring(end)));
@@ -201,7 +196,7 @@ InlineSpan _fragmentSpan(
     ChatMentionFragment() => TextSpan(
       text: fragment.text,
       style: (mentionTarget?.matchesMention(fragment) ?? false)
-          ? _streamerMentionStyle
+          ? streamerMentionStyle
           : const TextStyle(
               color: Color(0xFFBF94FF),
               fontWeight: FontWeight.w600,

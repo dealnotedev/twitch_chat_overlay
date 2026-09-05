@@ -34,3 +34,12 @@ Color readableChatColor(Color color) {
   }
   return Color.lerp(opaque, Colors.white, high)!;
 }
+
+/// Shared emphasis for the broadcaster in mentions and reply attribution.
+const streamerMentionStyle = TextStyle(
+  color: Color(0xFFF0E6FF),
+  fontWeight: FontWeight.w700,
+  decoration: TextDecoration.underline,
+  decorationColor: Color(0xFFBF94FF),
+  decorationThickness: 1.5,
+);

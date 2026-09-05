@@ -31,7 +31,8 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 The native renderer supports text, mentions, Twitch emotes (static and
 animated), GIF fragments, replies, official Twitch badges, and shared-chat origin.
 Messages addressing the broadcaster use a soft purple gradient, an opaque left
-accent and a compact @ marker. Broadcaster mentions are brighter and bold.
+accent and a compact @ marker. Broadcaster mentions and the broadcaster name in reply context are brighter,
+bold and underlined.
 Detection uses Twitch user IDs for mentions and replies, with case-insensitive
 @login matching for plain text; longer usernames and self-mentions do not trigger
 it. The accent stays visible at zero background opacity, and Channel Points and

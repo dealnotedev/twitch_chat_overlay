@@ -916,11 +916,8 @@ class _UserMessageView extends StatelessWidget {
           if (message.reply case final reply?)
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                l10n.replyContext(
-                  reply.parentUserName,
-                  reply.parentMessageBody,
-                ),
+              child: Text.rich(
+                _replyContextSpan(l10n, reply, mentionTarget),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -963,6 +960,27 @@ class _UserMessageView extends StatelessWidget {
       ),
     );
   }
+}
+
+InlineSpan _replyContextSpan(
+  AppLocalizations l10n,
+  ChatReply reply,
+  StreamerMentionTarget? mentionTarget,
+) {
+  final text = l10n.replyContext(reply.parentUserName, reply.parentMessageBody);
+  final start = text.indexOf(reply.parentUserName);
+  if (!(mentionTarget?.matchesReply(reply) ?? false) ||
+      reply.parentUserName.isEmpty ||
+      start < 0) {
+    return TextSpan(text: text);
+  }
+  return TextSpan(
+    children: [
+      TextSpan(text: text.substring(0, start)),
+      TextSpan(text: reply.parentUserName, style: streamerMentionStyle),
+      TextSpan(text: text.substring(start + reply.parentUserName.length)),
+    ],
+  );
 }
 
 class _NoticeView extends StatelessWidget {
