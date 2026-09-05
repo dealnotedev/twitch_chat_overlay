@@ -272,18 +272,6 @@ abstract class AppLocalizations {
   /// **'Could not load emotes'**
   String get emotesLoadFailed;
 
-  /// No description provided for @emotesPermissionRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect your Twitch emotes to choose the ones available to you.'**
-  String get emotesPermissionRequired;
-
-  /// No description provided for @enableEmotes.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect emotes'**
-  String get enableEmotes;
-
   /// No description provided for @retry.
   ///
   /// In en, this message translates to:
@@ -319,12 +307,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'GIF unavailable'**
   String get gifUnavailable;
-
-  /// No description provided for @twitchPermissionsChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in to Twitch again to enable Channel Points rewards.'**
-  String get twitchPermissionsChanged;
 
   /// No description provided for @rewardSubscriptionFailed.
   ///
@@ -451,18 +433,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The message was deleted or is too old to delete.'**
   String get messageUnavailable;
-
-  /// No description provided for @moderationPermissionRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Allow message deletion in Twitch to use this action.'**
-  String get moderationPermissionRequired;
-
-  /// No description provided for @enableModeration.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable deletion'**
-  String get enableModeration;
 
   /// No description provided for @dismiss.
   ///

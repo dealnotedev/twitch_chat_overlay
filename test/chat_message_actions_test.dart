@@ -126,44 +126,38 @@ void main() {
     expect(find.textContaining('no longer available'), findsOneWidget);
   });
 
-  testWidgets(
-    'delete is single-flight and permission authorization never replays it',
-    (tester) async {
-      final pending = Completer<void>();
-      final deleted = <String>[];
-      var authorizations = 0;
-      await tester.pumpWidget(
-        app(
-          [message('a')],
-          delete: (id) {
-            deleted.add(id);
-            return pending.future;
-          },
-          authorize: () async {
-            authorizations++;
-          },
-        ),
-      );
-      await hover(tester, 'a');
-      final button = find.byKey(const ValueKey('delete-a'));
-      await tester.tap(button);
-      await tester.pump();
-      await tester.tap(button);
-      expect(deleted, ['a']);
-      pending.completeError(
-        const TwitchChatActionException(
-          TwitchChatActionFailure.permissionRequired,
-        ),
-      );
-      await tester.pump();
-      expect(find.byType(ChatMessageContent), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('enable-moderation')));
-      await tester.pump();
-      expect(authorizations, 1);
-      expect(deleted, ['a']);
-      expect(find.byType(ChatMessageContent), findsOneWidget);
-    },
-  );
+  testWidgets('delete is single-flight and failures preserve the message', (
+    tester,
+  ) async {
+    final pending = Completer<void>();
+    final deleted = <String>[];
+    await tester.pumpWidget(
+      app(
+        [message('a')],
+        delete: (id) {
+          deleted.add(id);
+          return pending.future;
+        },
+      ),
+    );
+    await hover(tester, 'a');
+    final button = find.byKey(const ValueKey('delete-a'));
+    await tester.tap(button);
+    await tester.pump();
+    await tester.tap(button);
+    expect(deleted, ['a']);
+    pending.completeError(
+      const TwitchChatActionException(TwitchChatActionFailure.forbidden),
+    );
+    await tester.pump();
+    expect(find.byType(ChatMessageContent), findsOneWidget);
+    expect(
+      find.text('Twitch does not allow deleting this message.'),
+      findsOneWidget,
+    );
+    expect(deleted, ['a']);
+    expect(find.byType(ChatMessageContent), findsOneWidget);
+  });
 
   testWidgets(
     'own, moderator and expired messages cannot be deleted from Twitch',
@@ -237,7 +231,6 @@ Widget app(
   bool interactive = true,
   Future<SendChatResult> Function(String, {String? replyTo})? send,
   Future<void> Function(String)? delete,
-  Future<void> Function()? authorize,
 }) => MaterialApp(
   locale: const Locale('en'),
   localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -259,7 +252,7 @@ Widget app(
             broadcasterId: 'sender',
           ),
           interactive: interactive,
-          onSignIn: authorize ?? () async {},
+          onSignIn: () async {},
           onSignOut: () async {},
           onSend: send ?? (_, {String? replyTo}) async => sent,
           onDeleteMessage: delete ?? (_) async {},

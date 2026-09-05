@@ -99,13 +99,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String get emotesLoadFailed => 'Не вдалося завантажити смайли';
 
   @override
-  String get emotesPermissionRequired =>
-      'Підключіть смайли Twitch, щоб вибирати доступні вам.';
-
-  @override
-  String get enableEmotes => 'Підключити смайли';
-
-  @override
   String get retry => 'Повторити';
 
   @override
@@ -122,10 +115,6 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get gifUnavailable => 'GIF недоступна';
-
-  @override
-  String get twitchPermissionsChanged =>
-      'Увійдіть у Twitch ще раз, щоб увімкнути нагороди за бали каналу.';
 
   @override
   String get rewardSubscriptionFailed =>
@@ -227,13 +216,6 @@ class AppLocalizationsUk extends AppLocalizations {
   @override
   String get messageUnavailable =>
       'Повідомлення вже видалено або термін його видалення минув.';
-
-  @override
-  String get moderationPermissionRequired =>
-      'Надайте дозвіл Twitch на видалення повідомлень.';
-
-  @override
-  String get enableModeration => 'Увімкнути видалення';
 
   @override
   String get dismiss => 'Закрити';

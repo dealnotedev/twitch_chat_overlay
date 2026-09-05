@@ -58,75 +58,34 @@ void main() {
     },
   );
 
-  test(
-    'saved chat-only token prompts a new login for reward permission',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final store = SharedPreferencesTwitchTokenStore(
-        await SharedPreferences.getInstance(),
-      );
-      await store.write(_token);
-      final dio = Dio();
-      dio.interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (request, handler) {
-            handler.resolve(
-              Response(
-                requestOptions: request,
-                data: <String, Object?>{
-                  'user_id': 'owner',
-                  'login': 'owner',
-                  'expires_in': 3600,
-                  'scopes': ['user:read:chat', 'user:write:chat'],
-                },
-              ),
-            );
-          },
-        ),
-      );
-      final auth = TwitchAuthClient(store, dio: dio);
-      await auth.initialize();
-      expect(auth.state.status, TwitchAuthStatus.signedOut);
-      expect(auth.state.failure, TwitchAuthFailure.scopesChanged);
-      expect(await store.read(), isNull);
-    },
-  );
-
-  test(
-    'saved token with reward permission keeps the session signed in',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final store = SharedPreferencesTwitchTokenStore(
-        await SharedPreferences.getInstance(),
-      );
-      await store.write(_token);
-      final dio = Dio();
-      dio.interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (request, handler) {
-            handler.resolve(
-              Response(
-                requestOptions: request,
-                data: <String, Object?>{
-                  'user_id': 'owner',
-                  'login': 'owner',
-                  'expires_in': 3600,
-                  'scopes': [
-                    'user:read:chat',
-                    'user:write:chat',
-                    'channel:read:redemptions',
-                  ],
-                },
-              ),
-            );
-          },
-        ),
-      );
-      final auth = TwitchAuthClient(store, dio: dio);
-      await auth.initialize();
-      expect(auth.state.status, TwitchAuthStatus.signedIn);
-    },
-  );
+  test('saved token keeps the session signed in', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = SharedPreferencesTwitchTokenStore(
+      await SharedPreferences.getInstance(),
+    );
+    await store.write(_token);
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (request, handler) {
+          handler.resolve(
+            Response(
+              requestOptions: request,
+              data: <String, Object?>{
+                'user_id': 'owner',
+                'login': 'owner',
+                'expires_in': 3600,
+                'scopes': TwitchAuthClient.authorizationScopes,
+              },
+            ),
+          );
+        },
+      ),
+    );
+    final auth = TwitchAuthClient(store, dio: dio);
+    await auth.initialize();
+    expect(auth.state.status, TwitchAuthStatus.signedIn);
+  });
 }
 
 final _token = TwitchToken(
@@ -135,7 +94,7 @@ final _token = TwitchToken(
   clientId: 'client',
   userId: 'owner',
   userLogin: 'owner',
-  scopes: TwitchAuthClient.requiredScopes,
+  scopes: TwitchAuthClient.authorizationScopes,
   expiresAt: DateTime.utc(2030),
 );
 

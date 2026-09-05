@@ -1,11 +1,6 @@
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 
-enum TwitchChatActionFailure {
-  permissionRequired,
-  forbidden,
-  messageUnavailable,
-  sessionChanged,
-}
+enum TwitchChatActionFailure { forbidden, messageUnavailable, sessionChanged }
 
 final class TwitchChatActionException implements Exception {
   const TwitchChatActionException(this.failure);

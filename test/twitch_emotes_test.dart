@@ -55,35 +55,6 @@ void main() {
   );
 
   test(
-    'optional emote permission leaves existing chat sessions valid',
-    () async {
-      final auth = FakeAuth()
-        ..token = makeToken(scopes: TwitchAuthClient.requiredScopes);
-      var requested = false;
-      final client = TwitchHelixClient(
-        auth,
-        dio: mockDio((r, h) {
-          requested = true;
-          reply(r, h, {});
-        }),
-      );
-      expect(
-        TwitchAuthClient.authorizationScopes,
-        contains(TwitchAuthClient.emotesScope),
-      );
-      expect(
-        TwitchAuthClient.requiredScopes,
-        isNot(contains(TwitchAuthClient.emotesScope)),
-      );
-      await expectLater(
-        client.getUserEmotes(broadcasterId: 'channel'),
-        throwsA(isA<TwitchEmotePermissionRequired>()),
-      );
-      expect(requested, isFalse);
-    },
-  );
-
-  test(
     'refreshes an expired access token and retries the same sender request',
     () async {
       final auth = FakeAuth();
@@ -249,38 +220,26 @@ void main() {
     },
   );
 
-  test(
-    'cache is isolated by sender and channel and rechecks permission',
-    () async {
-      final auth = FakeAuth();
-      var calls = 0;
-      final client = TwitchHelixClient(
-        auth,
-        dio: mockDio((r, h) {
-          calls++;
-          reply(r, h, {
-            'data': [emote('$calls', 'Emote$calls')],
-            'template': template,
-          });
-        }),
-      );
-      await client.getUserEmotes(broadcasterId: 'one');
-      await client.getUserEmotes(broadcasterId: 'two');
-      auth.token = makeToken(user: 'new-sender');
-      final result = await client.getUserEmotes(broadcasterId: 'two');
-      expect(calls, 3);
-      expect(result.single.name, 'Emote3');
-      auth.token = makeToken(
-        user: 'new-sender',
-        scopes: TwitchAuthClient.requiredScopes,
-      );
-      await expectLater(
-        client.getUserEmotes(broadcasterId: 'two'),
-        throwsA(isA<TwitchEmotePermissionRequired>()),
-      );
-      expect(calls, 3);
-    },
-  );
+  test('cache is isolated by sender and channel', () async {
+    final auth = FakeAuth();
+    var calls = 0;
+    final client = TwitchHelixClient(
+      auth,
+      dio: mockDio((r, h) {
+        calls++;
+        reply(r, h, {
+          'data': [emote('$calls', 'Emote$calls')],
+          'template': template,
+        });
+      }),
+    );
+    await client.getUserEmotes(broadcasterId: 'one');
+    await client.getUserEmotes(broadcasterId: 'two');
+    auth.token = makeToken(user: 'new-sender');
+    final result = await client.getUserEmotes(broadcasterId: 'two');
+    expect(calls, 3);
+    expect(result.single.name, 'Emote3');
+  });
 
   test(
     'late old-channel responses do not replace the current cached list',

@@ -147,32 +147,6 @@ void main() {
   );
 
   testWidgets(
-    'permission prompt preserves the draft and uses explicit authorization',
-    (tester) async {
-      var authorizations = 0;
-      await primeEmoteImages(tester);
-      await tester.pumpWidget(
-        app(
-          load: ({bool refresh = false}) async =>
-              throw const TwitchEmotePermissionRequired(),
-          authorize: () async {
-            authorizations++;
-          },
-        ),
-      );
-      await tester.enterText(messageInput, 'draft');
-      await tester.tap(find.byTooltip('Emotes'));
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('Connect emotes'), findsOneWidget);
-      expect(tester.widget<TextField>(messageInput).controller!.text, 'draft');
-      await tester.tap(find.text('Connect emotes'));
-      await tester.pump();
-      expect(authorizations, 1);
-    },
-  );
-
-  testWidgets(
     'loading failures can retry and the picker remains inside a narrow chat',
     (tester) async {
       var loads = 0;
@@ -187,9 +161,11 @@ void main() {
           },
         ),
       );
+      await tester.enterText(messageInput, 'draft');
       await tester.tap(find.byTooltip('Emotes'));
       await tester.pump();
       await tester.pump();
+      expect(tester.widget<TextField>(messageInput).controller!.text, 'draft');
       await tester.tap(find.text('Retry'));
       await tester.pump();
       await tester.pump();
@@ -326,7 +302,6 @@ Widget app({
   double height = 440,
   bool interactive = true,
   Future<List<TwitchEmote>> Function({bool refresh})? load,
-  Future<void> Function()? authorize,
   Future<SendChatResult> Function(String, {String? replyTo})? onSend,
 }) => MaterialApp(
   scrollBehavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
@@ -357,7 +332,7 @@ Widget app({
             items: [],
           ),
           interactive: interactive,
-          onSignIn: authorize ?? () async {},
+          onSignIn: () async {},
           onSignOut: () async {},
           onSend: onSend ?? (_, {String? replyTo}) async => sent,
           onLoadEmotes: load ?? ({bool refresh = false}) async => library,

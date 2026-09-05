@@ -177,7 +177,7 @@ class _Auth implements TwitchAuth {
         clientId: 'client',
         userId: 'owner',
         userLogin: 'owner',
-        scopes: TwitchAuthClient.requiredScopes,
+        scopes: TwitchAuthClient.authorizationScopes,
         expiresAt: DateTime.utc(2030),
       );
   @override

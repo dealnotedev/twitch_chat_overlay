@@ -91,11 +91,6 @@ final class TwitchHelixClient {
       _emoteCache = null;
       _emoteLoad = null;
     }
-    if (!token.scopes.contains(TwitchAuthClient.emotesScope)) {
-      _emoteCache = null;
-      _emoteLoad = null;
-      throw const TwitchEmotePermissionRequired();
-    }
     if (_emoteLoad case final pending?) return pending;
     if (!refresh && _emoteCache != null) return _emoteCache!;
 
@@ -249,7 +244,6 @@ final class TwitchHelixClient {
         '/moderation/chat',
         method: 'DELETE',
         actorUserId: moderatorId,
-        requiredScope: TwitchAuthClient.moderationScope,
         queryParameters: {
           'broadcaster_id': broadcasterId,
           'moderator_id': moderatorId,
@@ -260,7 +254,6 @@ final class TwitchHelixClient {
       final failure = switch (error.response?.statusCode) {
         400 || 403 => TwitchChatActionFailure.forbidden,
         404 => TwitchChatActionFailure.messageUnavailable,
-        401 => TwitchChatActionFailure.permissionRequired,
         _ => null,
       };
       if (failure != null) throw TwitchChatActionException(failure);
@@ -280,7 +273,6 @@ final class TwitchHelixClient {
     Map<String, Object?>? queryParameters,
     String? emoteUserId,
     String? actorUserId,
-    String? requiredScope,
   }) async {
     var token = await _auth.validToken();
     for (var attempt = 0; ; attempt++) {
@@ -289,17 +281,9 @@ final class TwitchHelixClient {
           TwitchChatActionFailure.sessionChanged,
         );
       }
-      if (requiredScope != null && !token.scopes.contains(requiredScope)) {
-        throw const TwitchChatActionException(
-          TwitchChatActionFailure.permissionRequired,
-        );
-      }
       if (emoteUserId != null) {
         if (token.userId != emoteUserId) {
           throw StateError('Sender changed while loading emotes');
-        }
-        if (!token.scopes.contains(TwitchAuthClient.emotesScope)) {
-          throw const TwitchEmotePermissionRequired();
         }
       }
       try {

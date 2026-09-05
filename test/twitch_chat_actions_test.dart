@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
@@ -69,49 +68,29 @@ void main() {
     },
   );
 
-  test(
-    'missing optional permission and wrong identity never issue deletion',
-    () async {
-      final auth = fixtures.FakeAuth()
-        ..token = fixtures.makeToken(scopes: TwitchAuthClient.requiredScopes);
-      var calls = 0;
-      final client = TwitchHelixClient(
-        auth,
-        dio: fixtures.mockDio((r, h) {
-          calls++;
-          fixtures.reply(r, h, {});
-        }),
-      );
-      expect(
-        TwitchAuthClient.requiredScopes,
-        isNot(contains(TwitchAuthClient.moderationScope)),
-      );
-      expect(
-        TwitchAuthClient.authorizationScopes,
-        contains(TwitchAuthClient.moderationScope),
-      );
-      await expectLater(
-        client.deleteMessage(
-          broadcasterId: 'channel',
-          moderatorId: 'sender',
-          messageId: 'target',
-        ),
-        failure(TwitchChatActionFailure.permissionRequired),
-      );
-      auth.token = fixtures.makeToken(user: 'different');
-      await expectLater(
-        client.deleteMessage(
-          broadcasterId: 'channel',
-          moderatorId: 'sender',
-          messageId: 'target',
-        ),
-        failure(TwitchChatActionFailure.sessionChanged),
-      );
-      expect(calls, 0);
-    },
-  );
+  test('wrong identity never issues deletion', () async {
+    final auth = fixtures.FakeAuth()
+      ..token = fixtures.makeToken(user: 'different');
+    var calls = 0;
+    final client = TwitchHelixClient(
+      auth,
+      dio: fixtures.mockDio((r, h) {
+        calls++;
+        fixtures.reply(r, h, {});
+      }),
+    );
+    await expectLater(
+      client.deleteMessage(
+        broadcasterId: 'channel',
+        moderatorId: 'sender',
+        messageId: 'target',
+      ),
+      failure(TwitchChatActionFailure.sessionChanged),
+    );
+    expect(calls, 0);
+  });
 
-  for (final status in [400, 403, 404, 503]) {
+  for (final status in [400, 401, 403, 404, 503]) {
     test('delete preserves Twitch failure $status', () async {
       final client = TwitchHelixClient(
         fixtures.FakeAuth(),
@@ -123,7 +102,7 @@ void main() {
           moderatorId: 'sender',
           messageId: 'target',
         ),
-        status == 503
+        status == 401 || status == 503
             ? throwsA(isA<DioException>())
             : failure(
                 status == 404

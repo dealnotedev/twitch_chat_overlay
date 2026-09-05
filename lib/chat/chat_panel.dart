@@ -53,7 +53,6 @@ class _ChatPanelState extends State<ChatPanel> {
   String? _sendError;
   ChatReply? _replyTo;
   String? _deleteError;
-  bool _needsModerationPermission = false;
   final Set<String> _deletingIds = {};
   int _actionGeneration = 0;
   bool _emotesOpen = false;
@@ -77,7 +76,6 @@ class _ChatPanelState extends State<ChatPanel> {
       _replyTo = null;
       _sendError = null;
       _deleteError = null;
-      _needsModerationPermission = false;
       _deletingIds.clear();
       _sending = false;
     }
@@ -169,7 +167,6 @@ class _ChatPanelState extends State<ChatPanel> {
                         tapGroup: _emoteTapGroup,
                         onSelected: _insertEmote,
                         onReload: _reloadEmotes,
-                        onAuthorize: () => unawaited(widget.onSignIn()),
                         onClose: () {
                           _closeEmotes();
                           _messageFocus.requestFocus();
@@ -205,20 +202,10 @@ class _ChatPanelState extends State<ChatPanel> {
                       iconSize: 15,
                       onPressed: () => setState(() {
                         _deleteError = null;
-                        _needsModerationPermission = false;
                       }),
                     ),
                   ],
                 ),
-                if (_needsModerationPermission)
-                  TextButton(
-                    key: const ValueKey('enable-moderation'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFBF94FF),
-                    ),
-                    onPressed: () => unawaited(widget.onSignIn()),
-                    child: Text(l10n.enableModeration),
-                  ),
               ],
             ),
           ),
@@ -389,7 +376,6 @@ class _ChatPanelState extends State<ChatPanel> {
     setState(() {
       _deletingIds.add(message.id);
       _deleteError = null;
-      _needsModerationPermission = false;
     });
     try {
       await widget.onDeleteMessage!(message.id);
@@ -399,11 +385,7 @@ class _ChatPanelState extends State<ChatPanel> {
         final failure = error is TwitchChatActionException
             ? error.failure
             : null;
-        _needsModerationPermission =
-            failure == TwitchChatActionFailure.permissionRequired;
         _deleteError = switch (failure) {
-          TwitchChatActionFailure.permissionRequired =>
-            l10n.moderationPermissionRequired,
           TwitchChatActionFailure.forbidden => l10n.deleteNotAllowed,
           TwitchChatActionFailure.messageUnavailable => l10n.messageUnavailable,
           _ => l10n.deleteFailed,
@@ -466,7 +448,6 @@ String? _authError(AppLocalizations l10n, TwitchAuthState state) {
     TwitchAuthFailure.authorizationFailed => l10n.twitchAuthorizationFailed(
       details,
     ),
-    TwitchAuthFailure.scopesChanged => l10n.twitchPermissionsChanged,
     null => null,
   };
 }

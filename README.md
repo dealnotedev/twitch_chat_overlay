@@ -60,10 +60,8 @@ Raids and Shared Chat raids have dedicated cards with the raider's Twitch
 avatar, name, viewer count and shared origin, using the existing chat notification
 subscription without subscribing to a second raid event stream.
 
-Rewards require the broadcaster's `channel:read:redemptions` permission. On the
-first launch after upgrading from a chat-only token, sign in to Twitch again to
-grant it. No reward management permission is requested. If the reward event
-subscription fails, normal chat remains connected and a notice explains that
+OAuth sign-in requests the broadcaster's `channel:read:redemptions` scope.
+If the reward event subscription fails, normal chat remains connected and a notice explains that
 rewards are unavailable. Rewards from other Shared Chat channels are not read
 with the signed-in broadcaster's token.
 
@@ -86,10 +84,7 @@ hover tooltips and automatic app-wide scrollbars are hidden. The emote picker
 has its own thin, rounded 6px scrollbar with a 48px minimum thumb length that stays visible while the list is scrollable. Static previews are
 preferred where available; animated-only emotes are also supported.
 
-New OAuth authorizations request `user:read:emotes`. Existing chat sessions stay
-signed in without this optional permission. Open the emote picker and select
-**Connect emotes** to authorize it once. Errors have a retry action and do not
-prevent typing or sending ordinary messages.
+OAuth sign-in requests `user:read:emotes`. Loading errors have a retry action and do not prevent typing or sending ordinary messages.
 
 ### Reply and delete actions
 
@@ -108,10 +103,7 @@ Only successful deletion removes a message locally; EventSub also synchronizes
 moderation from Twitch. Missing/replaced reply targets are cleared from the
 composer without clearing its draft.
 
-New authorizations also request optional `moderator:manage:chat_messages`.
-Existing sessions stay signed in. If deletion needs permission, use **Enable
-deletion** in the error prompt, authorize Twitch, then click Delete again.
-Authorization itself never replays a pending deletion.
+OAuth sign-in also requests `moderator:manage:chat_messages` for message deletion.
 
 ### Session recovery (1.0.1)
 

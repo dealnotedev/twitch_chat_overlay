@@ -11,13 +11,7 @@ import 'package:twitch_chat_overlay/twitch/twitch_token_store.dart';
 
 enum TwitchAuthStatus { loading, signedOut, authorizing, signedIn, failure }
 
-enum TwitchAuthFailure {
-  storedSessionExpired,
-  authorizationFailed,
-  scopesChanged,
-}
-
-final class _MissingScopes implements Exception {}
+enum TwitchAuthFailure { storedSessionExpired, authorizationFailed }
 
 final class _InvalidRefreshToken implements Exception {}
 
@@ -65,18 +59,12 @@ final class TwitchAuthClient implements TwitchAuth {
 
   static const String oauthRedirectUrl = 'http://localhost:3000';
 
-  static const List<String> requiredScopes = [
+  static const List<String> authorizationScopes = [
     'user:read:chat',
     'user:write:chat',
     'channel:read:redemptions',
-  ];
-
-  static const emotesScope = 'user:read:emotes';
-  static const moderationScope = 'moderator:manage:chat_messages';
-  static const authorizationScopes = [
-    ...requiredScopes,
-    emotesScope,
-    moderationScope,
+    'user:read:emotes',
+    'moderator:manage:chat_messages',
   ];
 
   final TwitchTokenStore _tokenStore;
@@ -116,8 +104,8 @@ final class TwitchAuthClient implements TwitchAuth {
       _emit(TwitchAuthState(status: TwitchAuthStatus.signedIn, token: token));
     } catch (error) {
       if (generation != _sessionGeneration) return;
-      if (_isTerminal(error)) {
-        await _endSession(error, generation);
+      if (error is _InvalidRefreshToken) {
+        await _endSession(generation);
       } else {
         // Keep the account offline; the chat reconnect loop retries validation.
         // A rotated refresh token may already have been saved by _refresh.
@@ -161,7 +149,7 @@ final class TwitchAuthClient implements TwitchAuth {
         clientId: twitchClientId,
         userId: '',
         userLogin: null,
-        scopes: (data['scope'] as List? ?? requiredScopes)
+        scopes: (data['scope'] as List? ?? authorizationScopes)
             .whereType<String>()
             .toList(growable: false),
         expiresAt: DateTime.now().toUtc().add(
@@ -231,8 +219,8 @@ final class TwitchAuthClient implements TwitchAuth {
       return refreshed;
     } catch (error) {
       if (generation == _sessionGeneration) {
-        if (_isTerminal(error)) {
-          await _endSession(error, generation);
+        if (error is _InvalidRefreshToken) {
+          await _endSession(generation);
         } else {
           _mustValidate = true;
         }
@@ -254,20 +242,15 @@ final class TwitchAuthClient implements TwitchAuth {
     }
   }
 
-  static bool _isTerminal(Object error) =>
-      error is _MissingScopes || error is _InvalidRefreshToken;
-
-  Future<void> _endSession(Object error, int generation) async {
+  Future<void> _endSession(int generation) async {
     if (generation != _sessionGeneration) return;
     ++_sessionGeneration;
     _refreshInFlight = null;
     _mustValidate = false;
     _emit(
-      TwitchAuthState(
+      const TwitchAuthState(
         status: TwitchAuthStatus.signedOut,
-        failure: error is _MissingScopes
-            ? TwitchAuthFailure.scopesChanged
-            : TwitchAuthFailure.storedSessionExpired,
+        failure: TwitchAuthFailure.storedSessionExpired,
       ),
     );
     await _enqueueStorage(_tokenStore.clear);
@@ -309,9 +292,6 @@ final class TwitchAuthClient implements TwitchAuth {
     final scopes = (data['scopes'] as List? ?? const [])
         .whereType<String>()
         .toList(growable: false);
-    if (!requiredScopes.every(scopes.contains)) {
-      throw _MissingScopes();
-    }
 
     return token.copyWith(
       userId: data['user_id'] as String? ?? token.userId,

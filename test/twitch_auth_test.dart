@@ -393,13 +393,13 @@ const validation = <String, Object?>{
   'user_id': 'owner',
   'login': 'owner',
   'expires_in': 3600,
-  'scopes': TwitchAuthClient.requiredScopes,
+  'scopes': TwitchAuthClient.authorizationScopes,
 };
 const rotated = <String, Object?>{
   'access_token': 'new',
   'refresh_token': 'new-refresh',
   'expires_in': 3600,
-  'scope': TwitchAuthClient.requiredScopes,
+  'scope': TwitchAuthClient.authorizationScopes,
 };
 
 Dio mockDio(void Function(RequestOptions, RequestInterceptorHandler) respond) {

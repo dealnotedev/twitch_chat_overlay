@@ -11,7 +11,6 @@ class ChatEmotePicker extends StatefulWidget {
     required this.tapGroup,
     required this.onSelected,
     required this.onReload,
-    required this.onAuthorize,
     required this.onClose,
     super.key,
   });
@@ -20,7 +19,6 @@ class ChatEmotePicker extends StatefulWidget {
   final Object tapGroup;
   final ValueChanged<TwitchEmote> onSelected;
   final VoidCallback onReload;
-  final VoidCallback onAuthorize;
   final VoidCallback onClose;
 
   @override
@@ -191,10 +189,7 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    snapshot.error
-                                            is TwitchEmotePermissionRequired
-                                        ? l10n.emotesPermissionRequired
-                                        : l10n.emotesLoadFailed,
+                                    l10n.emotesLoadFailed,
                                     textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(height: 8),
@@ -202,17 +197,8 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
                                     style: TextButton.styleFrom(
                                       foregroundColor: const Color(0xFFBF94FF),
                                     ),
-                                    onPressed:
-                                        snapshot.error
-                                            is TwitchEmotePermissionRequired
-                                        ? widget.onAuthorize
-                                        : widget.onReload,
-                                    child: Text(
-                                      snapshot.error
-                                              is TwitchEmotePermissionRequired
-                                          ? l10n.enableEmotes
-                                          : l10n.retry,
-                                    ),
+                                    onPressed: widget.onReload,
+                                    child: Text(l10n.retry),
                                   ),
                                 ],
                               ),

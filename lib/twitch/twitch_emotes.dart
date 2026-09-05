@@ -1,8 +1,3 @@
-/// The sender must grant this permission before loading their emote library.
-final class TwitchEmotePermissionRequired implements Exception {
-  const TwitchEmotePermissionRequired();
-}
-
 final class TwitchEmote {
   const TwitchEmote({
     required this.id,

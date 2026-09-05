@@ -98,13 +98,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emotesLoadFailed => 'Could not load emotes';
 
   @override
-  String get emotesPermissionRequired =>
-      'Connect your Twitch emotes to choose the ones available to you.';
-
-  @override
-  String get enableEmotes => 'Connect emotes';
-
-  @override
   String get retry => 'Retry';
 
   @override
@@ -122,10 +115,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gifUnavailable => 'GIF unavailable';
-
-  @override
-  String get twitchPermissionsChanged =>
-      'Sign in to Twitch again to enable Channel Points rewards.';
 
   @override
   String get rewardSubscriptionFailed =>
@@ -216,13 +205,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get messageUnavailable =>
       'The message was deleted or is too old to delete.';
-
-  @override
-  String get moderationPermissionRequired =>
-      'Allow message deletion in Twitch to use this action.';
-
-  @override
-  String get enableModeration => 'Enable deletion';
 
   @override
   String get dismiss => 'Dismiss';
