@@ -83,7 +83,8 @@ channel. Reopening the picker reuses the list; Refresh reloads it explicitly.
 Concurrent opens share one load, and failed loads can be retried. The list is
 grouped by owner, with one alphabetical grid per owner and no category subtitles.
 Owner names are resolved through batched Helix Get Users requests. Group counts,
-hover tooltips and app-wide scrollbars are hidden. Static previews are
+hover tooltips and automatic app-wide scrollbars are hidden. The emote picker
+has its own thin, rounded 6px scrollbar with a 48px minimum thumb length that stays visible while the list is scrollable. Static previews are
 preferred where available; animated-only emotes are also supported.
 
 New OAuth authorizations request `user:read:emotes`. Existing chat sessions stay

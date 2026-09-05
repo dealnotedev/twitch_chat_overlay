@@ -70,158 +70,173 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
                           emote.ownerName.toLowerCase().contains(_query),
                     )
                     .toList();
-                return CustomScrollView(
+                return RawScrollbar(
                   controller: _scroll,
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 12, right: 4),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                l10n.emotes,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            ChatIconButton(
-                              key: const ValueKey('refresh-emotes'),
-                              label: l10n.refreshEmotes,
-                              showTooltip: false,
-                              icon: Icons.refresh_rounded,
-                              onPressed:
-                                  snapshot.connectionState ==
-                                      ConnectionState.waiting
-                                  ? null
-                                  : widget.onReload,
-                            ),
-                            ChatIconButton(
-                              key: const ValueKey('close-emotes'),
-                              label: l10n.closeEmotes,
-                              showTooltip: false,
-                              icon: Icons.close_rounded,
-                              onPressed: widget.onClose,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (snapshot.connectionState == ConnectionState.done &&
-                        !snapshot.hasError)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                          child: TextField(
-                            groupId: widget.tapGroup,
-                            style: const TextStyle(fontSize: 12),
-                            onChanged: (query) {
-                              setState(
-                                () => _query = query.trim().toLowerCase(),
-                              );
-                              if (_scroll.hasClients) _scroll.jumpTo(0);
-                            },
-                            decoration: InputDecoration(
-                              hintText: l10n.searchEmotes,
-                              isDense: true,
-                              prefixIcon: const Icon(
-                                Icons.search_rounded,
-                                size: 17,
-                              ),
-                              prefixIconConstraints: const BoxConstraints(
-                                minWidth: 32,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 9,
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFF25252C),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(5),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF46464F),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(5),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF9146FF),
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (snapshot.connectionState != ConnectionState.done)
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(
-                            child: SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFFBF94FF),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (snapshot.connectionState == ConnectionState.done &&
-                        snapshot.hasError)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                snapshot.error is TwitchEmotePermissionRequired
-                                    ? l10n.emotesPermissionRequired
-                                    : l10n.emotesLoadFailed,
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFFBF94FF),
-                                ),
-                                onPressed:
-                                    snapshot.error
-                                        is TwitchEmotePermissionRequired
-                                    ? widget.onAuthorize
-                                    : widget.onReload,
-                                child: Text(
-                                  snapshot.error
-                                          is TwitchEmotePermissionRequired
-                                      ? l10n.enableEmotes
-                                      : l10n.retry,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (snapshot.connectionState == ConnectionState.done &&
-                        !snapshot.hasError)
-                      if (emotes.isEmpty)
+                  thumbVisibility: true,
+                  thickness: 6,
+                  radius: const Radius.circular(3),
+                  thumbColor: const Color(0xBFBF94FF),
+                  crossAxisMargin: 3,
+                  mainAxisMargin: 8,
+                  minThumbLength: 48,
+                  interactive: true,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: CustomScrollView(
+                      controller: _scroll,
+                      slivers: [
                         SliverToBoxAdapter(
                           child: Padding(
-                            padding: const EdgeInsets.all(18),
-                            child: Text(
-                              _query.isEmpty
-                                  ? l10n.noEmotes
-                                  : l10n.noMatchingEmotes,
-                              textAlign: TextAlign.center,
+                            padding: const EdgeInsets.only(left: 12, right: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    l10n.emotes,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                ChatIconButton(
+                                  key: const ValueKey('refresh-emotes'),
+                                  label: l10n.refreshEmotes,
+                                  showTooltip: false,
+                                  icon: Icons.refresh_rounded,
+                                  onPressed:
+                                      snapshot.connectionState ==
+                                          ConnectionState.waiting
+                                      ? null
+                                      : widget.onReload,
+                                ),
+                                ChatIconButton(
+                                  key: const ValueKey('close-emotes'),
+                                  label: l10n.closeEmotes,
+                                  showTooltip: false,
+                                  icon: Icons.close_rounded,
+                                  onPressed: widget.onClose,
+                                ),
+                              ],
                             ),
                           ),
-                        )
-                      else
-                        ..._emoteSlivers(emotes, l10n),
-                  ],
+                        ),
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            !snapshot.hasError)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                              child: TextField(
+                                groupId: widget.tapGroup,
+                                style: const TextStyle(fontSize: 12),
+                                onChanged: (query) {
+                                  setState(
+                                    () => _query = query.trim().toLowerCase(),
+                                  );
+                                  if (_scroll.hasClients) _scroll.jumpTo(0);
+                                },
+                                decoration: InputDecoration(
+                                  hintText: l10n.searchEmotes,
+                                  isDense: true,
+                                  prefixIcon: const Icon(
+                                    Icons.search_rounded,
+                                    size: 17,
+                                  ),
+                                  prefixIconConstraints: const BoxConstraints(
+                                    minWidth: 32,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 9,
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(0xFF25252C),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF46464F),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF9146FF),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (snapshot.connectionState != ConnectionState.done)
+                          const SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Center(
+                                child: SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFFBF94FF),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            snapshot.hasError)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    snapshot.error
+                                            is TwitchEmotePermissionRequired
+                                        ? l10n.emotesPermissionRequired
+                                        : l10n.emotesLoadFailed,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: const Color(0xFFBF94FF),
+                                    ),
+                                    onPressed:
+                                        snapshot.error
+                                            is TwitchEmotePermissionRequired
+                                        ? widget.onAuthorize
+                                        : widget.onReload,
+                                    child: Text(
+                                      snapshot.error
+                                              is TwitchEmotePermissionRequired
+                                          ? l10n.enableEmotes
+                                          : l10n.retry,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            !snapshot.hasError)
+                          if (emotes.isEmpty)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.all(18),
+                                child: Text(
+                                  _query.isEmpty
+                                      ? l10n.noEmotes
+                                      : l10n.noMatchingEmotes,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            )
+                          else
+                            ..._emoteSlivers(emotes, l10n),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),

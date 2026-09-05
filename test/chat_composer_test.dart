@@ -230,7 +230,10 @@ void main() {
     expect(find.text('Followers'), findsNothing);
     expect(find.textContaining(RegExp(r'^\d+$')), findsNothing);
     expect(find.byType(Scrollbar), findsNothing);
-    expect(find.byType(RawScrollbar), findsNothing);
+    expect(
+      find.descendant(of: picker, matching: find.byType(RawScrollbar)),
+      findsOneWidget,
+    );
     expect(
       tester.getCenter(find.byKey(const ValueKey('emote-88'))).dy,
       tester.getCenter(find.byKey(const ValueKey('emote-89'))).dy,
