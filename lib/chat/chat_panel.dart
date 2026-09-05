@@ -294,7 +294,12 @@ class _ChatPanelState extends State<ChatPanel> {
           ),
         ),
         if (items.isEmpty)
-          Positioned.fill(child: _CenteredStatus(text: l10n.noChatMessages)),
+          Positioned.fill(
+            child: _CenteredStatus(
+              text: l10n.noChatMessages,
+              hint: widget.interactive ? null : l10n.openControlsShortcut,
+            ),
+          ),
         if (!widget.interactive)
           Positioned(
             top: 8,
@@ -571,10 +576,11 @@ class _TwitchSignInButton extends StatelessWidget {
 }
 
 class _CenteredStatus extends StatelessWidget {
-  const _CenteredStatus({required this.text, this.progress = false});
+  const _CenteredStatus({required this.text, this.progress = false, this.hint});
 
   final String text;
   final bool progress;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -596,6 +602,14 @@ class _CenteredStatus extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12, color: Color(0xFFADADB8)),
             ),
+            if (hint != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                hint!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+              ),
+            ],
           ],
         ),
       ),
