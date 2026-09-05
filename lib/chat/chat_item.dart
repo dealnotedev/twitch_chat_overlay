@@ -156,9 +156,12 @@ final class ChatEmoteFragment extends ChatFragment {
   final String id;
   final bool animated;
 
-  String get imageUrl =>
+  String get imageUrl => _imageUrl('2.0');
+  String get giantImageUrl => _imageUrl('3.0');
+
+  String _imageUrl(String scale) =>
       'https://static-cdn.jtvnw.net/emoticons/v2/$id/'
-      '${animated ? 'animated' : 'static'}/dark/2.0';
+      '${animated ? 'animated' : 'static'}/dark/$scale';
 }
 
 final class ChatCheermoteFragment extends ChatFragment {

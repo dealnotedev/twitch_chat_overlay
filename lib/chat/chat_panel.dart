@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:twitch_chat_overlay/chat/chat_composer.dart';
+import 'package:twitch_chat_overlay/chat/chat_emote_picker.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_entrance.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
@@ -23,6 +26,7 @@ class ChatPanel extends StatefulWidget {
     required this.onSignIn,
     required this.onSignOut,
     required this.onSend,
+    required this.onLoadEmotes,
     super.key,
   });
 
@@ -32,6 +36,7 @@ class ChatPanel extends StatefulWidget {
   final Future<void> Function() onSignIn;
   final Future<void> Function() onSignOut;
   final Future<SendChatResult> Function(String message) onSend;
+  final Future<List<TwitchEmote>> Function({bool refresh}) onLoadEmotes;
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -42,12 +47,21 @@ class _ChatPanelState extends State<ChatPanel> {
   final FocusNode _messageFocus = FocusNode();
   bool _sending = false;
   String? _sendError;
+  bool _emotesOpen = false;
+  Future<List<TwitchEmote>>? _emotesFuture;
+  final Object _emoteTapGroup = Object();
   final Stopwatch _arrivalClock = Stopwatch()..start();
   final Map<String, Duration> _messageArrivals = {};
 
   @override
   void didUpdateWidget(ChatPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.authState.status != TwitchAuthStatus.signedIn ||
+        oldWidget.authState.token?.userId != widget.authState.token?.userId) {
+      _emotesFuture = null;
+      _emotesOpen = false;
+    }
+    if (!widget.interactive) _emotesOpen = false;
     final now = _arrivalClock.elapsed;
     final previousIds = oldWidget.chatState.items
         .map((item) => item.id)
@@ -108,17 +122,51 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           ),
         Expanded(
-          child: DefaultTextStyle.merge(style: chatReadableStyle, child: body),
+          child: DefaultTextStyle.merge(
+            style: chatReadableStyle,
+            child: LayoutBuilder(
+              builder: (context, constraints) => Stack(
+                children: [
+                  Positioned.fill(child: body),
+                  if (_emotesOpen &&
+                      _emotesFuture != null &&
+                      widget.interactive &&
+                      widget.authState.status == TwitchAuthStatus.signedIn)
+                    Positioned(
+                      left: 8,
+                      right: 8,
+                      bottom: 8,
+                      height: (constraints.maxHeight - 16).clamp(0.0, 280.0),
+                      child: ChatEmotePicker(
+                        emotes: _emotesFuture!,
+                        tapGroup: _emoteTapGroup,
+                        onSelected: _insertEmote,
+                        onReload: _reloadEmotes,
+                        onAuthorize: () => unawaited(widget.onSignIn()),
+                        onClose: () {
+                          _closeEmotes();
+                          _messageFocus.requestFocus();
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
         if (widget.authState.status == TwitchAuthStatus.signedIn &&
             widget.interactive)
-          _Composer(
+          ChatComposer(
             controller: _messageController,
             focusNode: _messageFocus,
             sending: _sending,
             error: _sendError,
+            emotesOpen: _emotesOpen,
+            tapGroup: _emoteTapGroup,
             onSend: _send,
-            onSignOut: widget.onSignOut,
+            onSignOut: () => unawaited(widget.onSignOut()),
+            onToggleEmotes: _toggleEmotes,
+            onCloseEmotes: _closeEmotes,
           ),
       ],
     );
@@ -175,12 +223,51 @@ class _ChatPanelState extends State<ChatPanel> {
     );
   }
 
+  Future<List<TwitchEmote>> _requestEmotes({bool refresh = false}) {
+    final request = Future<List<TwitchEmote>>.sync(
+      () => widget.onLoadEmotes(refresh: refresh),
+    );
+    // Keep late errors handled if the picker closes before the next frame.
+    request.ignore();
+    return request;
+  }
+
+  void _toggleEmotes() {
+    setState(() {
+      _emotesOpen = !_emotesOpen;
+      if (_emotesOpen) _emotesFuture = _requestEmotes();
+    });
+  }
+
+  void _reloadEmotes() {
+    setState(() {
+      _emotesFuture = _requestEmotes(refresh: true);
+    });
+  }
+
+  void _closeEmotes() {
+    if (_emotesOpen) setState(() => _emotesOpen = false);
+  }
+
+  void _insertEmote(TwitchEmote emote) {
+    final value = insertChatEmote(_messageController.value, emote.name);
+    if (value == null) {
+      setState(() => _sendError = AppLocalizations.of(context).messageTooLong);
+      return;
+    }
+    _messageController.value = value;
+    setState(() => _sendError = null);
+    _messageFocus.requestFocus();
+  }
+
   Future<void> _send() async {
-    final text = _messageController.text.trim();
+    final draft = _messageController.text;
+    final text = draft.trim();
     if (text.isEmpty || _sending) return;
     final l10n = AppLocalizations.of(context);
     setState(() {
       _sending = true;
+      _emotesOpen = false;
       _sendError = null;
     });
 
@@ -188,7 +275,7 @@ class _ChatPanelState extends State<ChatPanel> {
       final result = await widget.onSend(text);
       if (!mounted) return;
       if (result.sent) {
-        _messageController.clear();
+        if (_messageController.text == draft) _messageController.clear();
         _messageFocus.requestFocus();
       } else {
         setState(() => _sendError = result.dropReason ?? l10n.messageRejected);
@@ -300,96 +387,6 @@ class _CenteredStatus extends StatelessWidget {
   }
 }
 
-class _Composer extends StatelessWidget {
-  const _Composer({
-    required this.controller,
-    required this.focusNode,
-    required this.sending,
-    required this.error,
-    required this.onSend,
-    required this.onSignOut,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool sending;
-  final String? error;
-  final VoidCallback onSend;
-  final Future<void> Function() onSignOut;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
-      decoration: BoxDecoration(
-        color: BackgroundOpacity.colorOf(context, const Color(0xF21F1F23)),
-        border: const Border(top: BorderSide(color: Color(0x333F3F46))),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Text(
-                error!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: Color(0xFFFF7676)),
-              ),
-            ),
-          Row(
-            children: [
-              IconButton(
-                tooltip: l10n.signOutOfTwitch,
-                visualDensity: VisualDensity.compact,
-                onPressed: () => unawaited(onSignOut()),
-                icon: const Icon(Icons.logout_rounded, size: 17),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  maxLength: 500,
-                  maxLines: 3,
-                  minLines: 1,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => onSend(),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    counterText: '',
-                    hintText: l10n.sendMessageHint,
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              IconButton.filled(
-                tooltip: l10n.send,
-                onPressed: sending ? null : onSend,
-                style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFF9146FF),
-                ),
-                icon: sending
-                    ? const SizedBox.square(
-                        dimension: 15,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send_rounded, size: 17),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ConnectionPill extends StatelessWidget {
   const _ConnectionPill({required this.text});
 
@@ -454,21 +451,68 @@ class _UserMessageView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final highlighted = message.messageType != 'text';
+    final channelPointsHighlight =
+        message.messageType == 'channel_points_highlighted';
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      padding: highlighted ? const EdgeInsets.all(7) : const EdgeInsets.all(3),
+      key: channelPointsHighlight
+          ? ValueKey('highlighted-message-${message.id}')
+          : null,
+      margin: EdgeInsets.symmetric(vertical: channelPointsHighlight ? 5 : 2),
+      padding: channelPointsHighlight
+          ? const EdgeInsets.fromLTRB(10, 8, 10, 9)
+          : highlighted
+          ? const EdgeInsets.all(7)
+          : const EdgeInsets.all(3),
       decoration: highlighted
           ? BoxDecoration(
               color: BackgroundOpacity.colorOf(
                 context,
                 const Color(0x269146FF),
               ),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(
+                channelPointsHighlight ? 4 : 6,
+              ),
+              border: channelPointsHighlight
+                  ? const Border(
+                      left: BorderSide(color: Color(0xFF9146FF), width: 3),
+                      top: BorderSide(color: Color(0xFF9146FF)),
+                      right: BorderSide(color: Color(0xFF9146FF)),
+                      bottom: BorderSide(color: Color(0xFF9146FF)),
+                    )
+                  : null,
             )
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (channelPointsHighlight)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.highlight_alt_rounded,
+                    size: 14,
+                    color: Color(0xFFBF94FF),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l10n.highlightedMessage,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: chatReadableStyle.merge(
+                        const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFBF94FF),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (message.reply case final reply?)
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
@@ -487,6 +531,8 @@ class _UserMessageView extends StatelessWidget {
             ),
           ChatMessageContent(
             fragments: message.fragments,
+            gigantifyEmote:
+                message.messageType == 'power_ups_gigantified_emote',
             prefix: [
               for (final badge in message.badges) _badgeSpan(badge, badges),
               TextSpan(

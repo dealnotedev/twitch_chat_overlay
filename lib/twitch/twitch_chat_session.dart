@@ -10,6 +10,7 @@ import 'package:twitch_chat_overlay/chat/chat_timeline.dart';
 import 'package:twitch_chat_overlay/twitch/chat_event_mapper.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
 import 'package:web_socket_channel/io.dart';
@@ -48,6 +49,7 @@ abstract interface class TwitchChatSession {
 
   Future<void> join({required String broadcasterId});
   Future<void> leave();
+  Future<List<TwitchEmote>> loadEmotes({bool refresh = false});
   Future<SendChatResult> send(String message, {String? replyTo});
 }
 
@@ -135,6 +137,21 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     ]);
     _broadcasterId = null;
     _emit(ChatConnectionStatus.idle);
+  }
+
+  @override
+  Future<List<TwitchEmote>> loadEmotes({bool refresh = false}) async {
+    final broadcasterId = _broadcasterId;
+    final generation = _generation;
+    if (broadcasterId == null) throw StateError('Chat is not connected');
+    final emotes = await _helix.getUserEmotes(
+      broadcasterId: broadcasterId,
+      refresh: refresh,
+    );
+    if (generation != _generation || broadcasterId != _broadcasterId) {
+      throw StateError('Chat changed while loading emotes');
+    }
+    return emotes;
   }
 
   @override

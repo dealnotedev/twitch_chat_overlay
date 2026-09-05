@@ -80,6 +80,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get send => 'Send';
 
   @override
+  String get emotes => 'Emotes';
+
+  @override
+  String get highlightedMessage => 'Highlighted message';
+
+  @override
+  String get searchEmotes => 'Search emotes';
+
+  @override
+  String get noEmotes => 'No emotes available';
+
+  @override
+  String get noMatchingEmotes => 'No matching emotes';
+
+  @override
+  String get emotesLoadFailed => 'Could not load emotes';
+
+  @override
+  String get emotesPermissionRequired =>
+      'Connect your Twitch emotes to choose the ones available to you.';
+
+  @override
+  String get enableEmotes => 'Connect emotes';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get refreshEmotes => 'Refresh emotes';
+
+  @override
+  String get closeEmotes => 'Close emotes';
+
+  @override
+  String get messageTooLong =>
+      'This emote would exceed the 500-character limit.';
+
+  @override
   String get gifLoading => 'Loading GIF…';
 
   @override
@@ -143,4 +181,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String subscriptionRevoked(String type, String status) {
     return 'Twitch disabled the $type subscription: $status';
   }
+
+  @override
+  String get unknownEmoteOwner => 'Unavailable channel';
 }

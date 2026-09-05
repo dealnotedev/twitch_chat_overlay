@@ -75,10 +75,47 @@ class AppLocalizationsUk extends AppLocalizations {
   String get signOutOfTwitch => 'Вийти з Twitch';
 
   @override
-  String get sendMessageHint => 'Надіслати повідомлення…';
+  String get sendMessageHint => 'Напишіть щось…';
 
   @override
   String get send => 'Надіслати';
+
+  @override
+  String get emotes => 'Смайли';
+
+  @override
+  String get highlightedMessage => 'Важливе повідомлення';
+
+  @override
+  String get searchEmotes => 'Пошук смайлів';
+
+  @override
+  String get noEmotes => 'Немає доступних смайлів';
+
+  @override
+  String get noMatchingEmotes => 'Смайлів не знайдено';
+
+  @override
+  String get emotesLoadFailed => 'Не вдалося завантажити смайли';
+
+  @override
+  String get emotesPermissionRequired =>
+      'Підключіть смайли Twitch, щоб вибирати доступні вам.';
+
+  @override
+  String get enableEmotes => 'Підключити смайли';
+
+  @override
+  String get retry => 'Повторити';
+
+  @override
+  String get refreshEmotes => 'Оновити смайли';
+
+  @override
+  String get closeEmotes => 'Закрити смайли';
+
+  @override
+  String get messageTooLong => 'Цей смайл перевищить ліміт у 500 символів.';
 
   @override
   String get gifLoading => 'Завантаження GIF…';
@@ -154,4 +191,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String subscriptionRevoked(String type, String status) {
     return 'Twitch вимкнув підписку $type: $status';
   }
+
+  @override
+  String get unknownEmoteOwner => 'Недоступний канал';
 }

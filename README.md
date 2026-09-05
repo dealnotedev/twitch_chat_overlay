@@ -19,6 +19,7 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 - Twitch credentials stored as `twitch_auth` JSON in `SharedPreferences`.
 - EventSub WebSocket with keepalive, deduplication, reconnect URL, and backoff.
 - Message sending through the Helix Chat API.
+- Compact Twitch-style composer with sender-specific emote search and cursor insertion.
 - 500-item bounded timeline with moderation mutations.
 - Flutter `gen_l10n` localization for English and Ukrainian.
 - Bundled Inter 4.1 fonts for all app text (400–700, upright and italic),
@@ -36,6 +37,14 @@ Twitch GIF fragments from the July 2026 update accept both `gif_id` and `id`.
 GIFs animate in separate blocks up to 240×160, preserve their aspect ratio and
 use Twitch's full supplied URL unchanged. Loading/error labels are localized;
 surrounding text stays in order. No extra OAuth scopes are required for viewing.
+Messages marked `power_ups_gigantified_emote` display their last emote occurrence
+in a separate block below the message, up to 112×112 and constrained to chat width.
+Other emotes remain inline at 28×28. Giant emotes use Twitch's 3.0 CDN variant,
+including the animated format when available, and reserve space while loading.
+Channel Points highlighted messages (`channel_points_highlighted`) have a purple
+outline, a stronger left accent and a localized Highlighted message heading.
+Their background follows overlay opacity; the label, border and message remain
+visible. Reply context, badges, emotes and Shared Chat attribution are retained.
 System notices cover subscriptions, resubscriptions,
 gifts, announcements, raids, and other `channel.chat.notification` events.
 Message deletion, user-message clearing, and full chat clearing are applied to
@@ -59,6 +68,29 @@ subscription fails, normal chat remains connected and a notice explains that
 rewards are unavailable. Rewards from other Shared Chat channels are not read
 with the signed-in broadcaster's token.
 
+### Composer and sender emotes
+
+The logout button stays left of the input and Send stays right; the emote button
+is inside the input. Enter sends and Shift+Enter adds a line. The picker opens
+above the composer inside the overlay frame, supports search and refresh, and
+inserts the emote code at the current selection with a 500-character limit.
+
+Emotes come from Helix `GET /chat/emotes/user`, following every pagination cursor
+with the authenticated sender's user ID and the current broadcaster ID. The app
+does not substitute the channel's full emote catalog for the sender's access.
+The emote list and owner names are cached in memory for the current sender and
+channel. Reopening the picker reuses the list; Refresh reloads it explicitly.
+Concurrent opens share one load, and failed loads can be retried. The list is
+grouped by owner, with one alphabetical grid per owner and no category subtitles.
+Owner names are resolved through batched Helix Get Users requests. Group counts,
+hover tooltips and app-wide scrollbars are hidden. Static previews are
+preferred where available; animated-only emotes are also supported.
+
+New OAuth authorizations request `user:read:emotes`. Existing chat sessions stay
+signed in without this optional permission. Open the emote picker and select
+**Connect emotes** to authorize it once. Errors have a retry action and do not
+prevent typing or sending ordinary messages.
+
 ### Session recovery (1.0.1)
 
 Startup validation refreshes rejected access tokens before requesting login.
@@ -73,8 +105,8 @@ upgrading cannot recover deleted tokens.
 ### Differences from Twitch web chat
 
 - Cheermotes currently render as colored text, without Twitch Bits animations.
-- Highlighted/sub-only messages, user introductions and Power-ups render with
-  a generic highlight; message effects and giant emote sizing are not implemented.
+- Sub-only messages, user introductions and Power-ups retain a generic
+  highlight; message effects are not implemented.
 - Announcements and other notices use a common card rather than Twitch's
   individual layouts/colors. Watch streaks, modiversaries, charity donations and
   Shared Chat notices display their supplied system text.

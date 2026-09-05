@@ -131,6 +131,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                         onSignIn: widget.twitchAuth.signIn,
                         onSignOut: widget.twitchAuth.signOut,
                         onSend: (message) => widget.twitchChat.send(message),
+                        onLoadEmotes: widget.twitchChat.loadEmotes,
                       ),
                     ),
                   ),

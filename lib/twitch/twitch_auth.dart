@@ -71,6 +71,9 @@ final class TwitchAuthClient implements TwitchAuth {
     'channel:read:redemptions',
   ];
 
+  static const emotesScope = 'user:read:emotes';
+  static const authorizationScopes = [...requiredScopes, emotesScope];
+
   final TwitchTokenStore _tokenStore;
   final Dio _dio;
   final StreamController<TwitchAuthState> _states =
@@ -367,7 +370,7 @@ final class TwitchAuthClient implements TwitchAuth {
         'client_id': twitchClientId,
         'redirect_uri': oauthRedirectUrl,
         'response_type': 'code',
-        'scope': requiredScopes.join(' '),
+        'scope': authorizationScopes.join(' '),
         'state': state,
       });
       final launch = await openUrl(authorizationUri.toString());

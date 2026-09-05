@@ -23,6 +23,18 @@
   "signOutOfTwitch": "Sign out of Twitch",
   "sendMessageHint": "Send a message…",
   "send": "Send",
+  "emotes": "Emotes",
+  "highlightedMessage": "Highlighted message",
+  "searchEmotes": "Search emotes",
+  "noEmotes": "No emotes available",
+  "noMatchingEmotes": "No matching emotes",
+  "emotesLoadFailed": "Could not load emotes",
+  "emotesPermissionRequired": "Connect your Twitch emotes to choose the ones available to you.",
+  "enableEmotes": "Connect emotes",
+  "retry": "Retry",
+  "refreshEmotes": "Refresh emotes",
+  "closeEmotes": "Close emotes",
+  "messageTooLong": "This emote would exceed the 500-character limit.",
   "gifLoading": "Loading GIF…",
   "gifUnavailable": "GIF unavailable",
   "twitchPermissionsChanged": "Sign in to Twitch again to enable Channel Points rewards.",
@@ -66,5 +78,6 @@
       "type": {"type": "String"},
       "status": {"type": "String"}
     }
-  }
+  },
+  "unknownEmoteOwner": "Unavailable channel"
 }

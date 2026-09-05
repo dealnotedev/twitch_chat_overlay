@@ -15,7 +15,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   LicenseRegistry.addLicense(() async* {
-    final license = await rootBundle.loadString('assets/fonts/inter/LICENSE.txt');
+    final license = await rootBundle.loadString(
+      'assets/fonts/inter/LICENSE.txt',
+    );
     yield LicenseEntryWithLineBreaks(['Inter'], license);
   });
 
@@ -57,6 +59,9 @@ class TwitchChatOverlayApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        scrollbars: false,
+      ),
       color: Colors.transparent,
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       locale: const Locale('uk'),

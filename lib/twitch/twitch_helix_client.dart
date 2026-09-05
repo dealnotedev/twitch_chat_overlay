@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
 
 final class SendChatResult {
@@ -29,6 +30,11 @@ final class TwitchHelixClient {
 
   final TwitchAuth _auth;
   final Dio _dio;
+
+  // Only metadata is cached here; its lifetime is the client/app session.
+  (String, String)? _emoteContext;
+  List<TwitchEmote>? _emoteCache;
+  Future<List<TwitchEmote>>? _emoteLoad;
 
   static const rewardSubscriptionType =
       'channel.channel_points_custom_reward_redemption.add';
@@ -70,6 +76,108 @@ final class TwitchHelixClient {
           : {'broadcaster_id': broadcasterId},
     );
     return TwitchBadges.parse(response.data?['data']);
+  }
+
+  /// Includes only emotes Twitch grants to the authenticated sender.
+  Future<List<TwitchEmote>> getUserEmotes({
+    required String broadcasterId,
+    bool refresh = false,
+  }) async {
+    final token = await _auth.validToken();
+    final context = (token.userId, broadcasterId);
+    if (_emoteContext != context) {
+      _emoteContext = context;
+      _emoteCache = null;
+      _emoteLoad = null;
+    }
+    if (!token.scopes.contains(TwitchAuthClient.emotesScope)) {
+      _emoteCache = null;
+      _emoteLoad = null;
+      throw const TwitchEmotePermissionRequired();
+    }
+    if (_emoteLoad case final pending?) return pending;
+    if (!refresh && _emoteCache != null) return _emoteCache!;
+
+    final request = _fetchUserEmotes(token.userId, broadcasterId);
+    _emoteLoad = request;
+    try {
+      final emotes = await request;
+      if (identical(_emoteLoad, request)) _emoteCache = emotes;
+      return emotes;
+    } finally {
+      if (identical(_emoteLoad, request)) _emoteLoad = null;
+    }
+  }
+
+  Future<List<TwitchEmote>> _fetchUserEmotes(
+    String userId,
+    String broadcasterId,
+  ) async {
+    final emotes = <String, TwitchEmote>{};
+    final seenCursors = <String>{};
+    String? cursor;
+    do {
+      final response = await _request(
+        '/chat/emotes/user',
+        emoteUserId: userId,
+        queryParameters: {
+          'user_id': userId,
+          'broadcaster_id': broadcasterId,
+          'after': ?cursor,
+        },
+      );
+      final data = response.data?['data'];
+      final template = response.data?['template'];
+      if (data is! List || template is! String) {
+        throw const FormatException('Invalid user emote response');
+      }
+      for (final entry in data) {
+        final emote = TwitchEmote.parse(entry, template);
+        if (emote != null) emotes[emote.id] = emote;
+      }
+      final pagination = response.data?['pagination'];
+      cursor = pagination is Map ? pagination['cursor'] as String? : null;
+      if (cursor == '') cursor = null;
+      if (cursor != null && !seenCursors.add(cursor)) {
+        throw StateError('Repeated user emote pagination cursor');
+      }
+    } while (cursor != null);
+    final ownerIds = emotes.values
+        .map((e) => e.ownerId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final owners = <String, String>{};
+    // Get Users accepts at most 100 IDs, using repeated id query parameters.
+    for (var start = 0; start < ownerIds.length; start += 100) {
+      final response = await _request(
+        '/users',
+        emoteUserId: userId,
+        queryParameters: {'id': ownerIds.skip(start).take(100).toList()},
+      );
+      final data = response.data?['data'];
+      if (data is! List) throw const FormatException('Invalid emote owners');
+      for (final owner in data) {
+        if (owner is! Map) continue;
+        final id = owner['id'];
+        final displayName = owner['display_name'];
+        final login = owner['login'];
+        if (id is! String) continue;
+        if (displayName is String && displayName.isNotEmpty) {
+          owners[id] = displayName;
+        } else if (login is String && login.isNotEmpty) {
+          owners[id] = login;
+        }
+      }
+    }
+    final result =
+        emotes.values
+            .map((e) => e.withOwnerName(owners[e.ownerId] ?? ''))
+            .toList()
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
+    return List.unmodifiable(result);
   }
 
   Future<void> createChatSubscriptions({
@@ -132,9 +240,18 @@ final class TwitchHelixClient {
     String method = 'GET',
     Map<String, Object?>? data,
     Map<String, Object?>? queryParameters,
+    String? emoteUserId,
   }) async {
     var token = await _auth.validToken();
     for (var attempt = 0; ; attempt++) {
+      if (emoteUserId != null) {
+        if (token.userId != emoteUserId) {
+          throw StateError('Sender changed while loading emotes');
+        }
+        if (!token.scopes.contains(TwitchAuthClient.emotesScope)) {
+          throw const TwitchEmotePermissionRequired();
+        }
+      }
       try {
         return await _dio.request<Map<String, Object?>>(
           path,
@@ -142,6 +259,7 @@ final class TwitchHelixClient {
           queryParameters: queryParameters,
           options: Options(
             method: method,
+            listFormat: ListFormat.multi,
             headers: {
               'Authorization': 'Bearer ${token.accessToken}',
               'Client-Id': token.clientId,

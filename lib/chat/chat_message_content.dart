@@ -7,18 +7,20 @@ import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 
-/// Keeps inline text/emotes in order and gives each GIF its own media block.
+/// Keeps inline content in order, with media blocks for GIFs and giant emotes.
 class ChatMessageContent extends StatelessWidget {
   const ChatMessageContent({
     required this.fragments,
     required this.style,
     this.prefix = const [],
+    this.gigantifyEmote = false,
     super.key,
   });
 
   final List<ChatFragment> fragments;
   final TextStyle style;
   final List<InlineSpan> prefix;
+  final bool gigantifyEmote;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +37,13 @@ class ChatMessageContent extends StatelessWidget {
       spans = [];
     }
 
-    for (final fragment in fragments) {
+    // EventSub flags the message; the last emote occurrence is the target.
+    final giantIndex = gigantifyEmote
+        ? fragments.lastIndexWhere((fragment) => fragment is ChatEmoteFragment)
+        : -1;
+    for (var index = 0; index < fragments.length; index++) {
+      if (index == giantIndex) continue;
+      final fragment = fragments[index];
       if (fragment is ChatGifFragment) {
         flushText();
         children.add(ChatGifImage(fragment: fragment));
@@ -44,12 +52,59 @@ class ChatMessageContent extends StatelessWidget {
       }
     }
     flushText();
+    if (giantIndex != -1) {
+      children.add(
+        ChatGiantEmoteImage(
+          fragment: fragments[giantIndex] as ChatEmoteFragment,
+        ),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: children,
     );
   }
+}
+
+class ChatGiantEmoteImage extends StatelessWidget {
+  const ChatGiantEmoteImage({required this.fragment, super.key});
+
+  final ChatEmoteFragment fragment;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final size = math.min(112.0, constraints.maxWidth);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Semantics(
+          label: fragment.text,
+          image: true,
+          child: SizedBox.square(
+            dimension: size,
+            child: CachedNetworkImage(
+              imageUrl: fragment.giantImageUrl,
+              fit: BoxFit.contain,
+              fadeInDuration: Duration.zero,
+              placeholder: (_, _) => const SizedBox.expand(),
+              errorWidget: (_, _, _) => Center(
+                child: Text(
+                  fragment.text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: chatReadableStyle.merge(
+                    const TextStyle(fontSize: 13.5),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class ChatGifImage extends StatelessWidget {

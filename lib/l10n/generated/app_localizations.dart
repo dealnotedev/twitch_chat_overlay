@@ -236,6 +236,78 @@ abstract class AppLocalizations {
   /// **'Send'**
   String get send;
 
+  /// No description provided for @emotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Emotes'**
+  String get emotes;
+
+  /// No description provided for @highlightedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlighted message'**
+  String get highlightedMessage;
+
+  /// No description provided for @searchEmotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Search emotes'**
+  String get searchEmotes;
+
+  /// No description provided for @noEmotes.
+  ///
+  /// In en, this message translates to:
+  /// **'No emotes available'**
+  String get noEmotes;
+
+  /// No description provided for @noMatchingEmotes.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching emotes'**
+  String get noMatchingEmotes;
+
+  /// No description provided for @emotesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load emotes'**
+  String get emotesLoadFailed;
+
+  /// No description provided for @emotesPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your Twitch emotes to choose the ones available to you.'**
+  String get emotesPermissionRequired;
+
+  /// No description provided for @enableEmotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect emotes'**
+  String get enableEmotes;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @refreshEmotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh emotes'**
+  String get refreshEmotes;
+
+  /// No description provided for @closeEmotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Close emotes'**
+  String get closeEmotes;
+
+  /// No description provided for @messageTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'This emote would exceed the 500-character limit.'**
+  String get messageTooLong;
+
   /// No description provided for @gifLoading.
   ///
   /// In en, this message translates to:
@@ -313,6 +385,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Twitch disabled the {type} subscription: {status}'**
   String subscriptionRevoked(String type, String status);
+
+  /// No description provided for @unknownEmoteOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable channel'**
+  String get unknownEmoteOwner;
 }
 
 class _AppLocalizationsDelegate

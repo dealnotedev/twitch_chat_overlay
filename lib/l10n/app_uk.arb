@@ -21,8 +21,20 @@
   "signInWithTwitch": "Увійти через Twitch",
   "openControlsShortcut": "Ctrl+Shift+O — відкрити керування",
   "signOutOfTwitch": "Вийти з Twitch",
-  "sendMessageHint": "Надіслати повідомлення…",
+  "sendMessageHint": "Напишіть щось…",
   "send": "Надіслати",
+  "emotes": "Смайли",
+  "highlightedMessage": "Важливе повідомлення",
+  "searchEmotes": "Пошук смайлів",
+  "noEmotes": "Немає доступних смайлів",
+  "noMatchingEmotes": "Смайлів не знайдено",
+  "emotesLoadFailed": "Не вдалося завантажити смайли",
+  "emotesPermissionRequired": "Підключіть смайли Twitch, щоб вибирати доступні вам.",
+  "enableEmotes": "Підключити смайли",
+  "retry": "Повторити",
+  "refreshEmotes": "Оновити смайли",
+  "closeEmotes": "Закрити смайли",
+  "messageTooLong": "Цей смайл перевищить ліміт у 500 символів.",
   "gifLoading": "Завантаження GIF…",
   "gifUnavailable": "GIF недоступна",
   "twitchPermissionsChanged": "Увійдіть у Twitch ще раз, щоб увімкнути нагороди за бали каналу.",
@@ -66,5 +78,6 @@
       "type": {"type": "String"},
       "status": {"type": "String"}
     }
-  }
+  },
+  "unknownEmoteOwner": "Недоступний канал"
 }
