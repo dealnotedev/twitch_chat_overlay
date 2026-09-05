@@ -39,6 +39,16 @@ use Twitch's full supplied URL unchanged. Loading/error labels are localized;
 surrounding text stays in order. No extra OAuth scopes are required for viewing.
 Messages marked `power_ups_gigantified_emote` display their last emote occurrence
 in a separate block below the message, up to 112×112 and constrained to chat width.
+Gigantified emotes and Message Effects show a purple diamond, the effect name
+and a Bits currency label. Confirmed Power-up payments (including On-Screen
+Celebration) appear as compact viewer/effect/amount receipts from
+`channel.bits.use`; celebrations also show their emote when supplied.
+The receipt does not repeat chat text. Twitch does not provide a chat message ID
+on Bits events, so receipts remain separate rather than guessing which message
+to attach a price to. A currency label alone does not claim a payment or price
+(for example, broadcasters can use effects for free).
+OAuth requests `bits:read` for payment receipts. EventSub delivery IDs deduplicate
+receipts.
 Other emotes remain inline at 28×28. Giant emotes use Twitch's 3.0 CDN variant,
 including the animated format when available, and reserve space while loading.
 Channel Points highlighted messages (`channel_points_highlighted`) have a purple

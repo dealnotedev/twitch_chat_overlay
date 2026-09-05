@@ -89,5 +89,16 @@
   "deleteNotAllowed": "Twitch не дозволяє видалити це повідомлення.",
   "messageUnavailable": "Повідомлення вже видалено або термін його видалення минув.",
   "dismiss": "Закрити",
-  "@replyingTo": {"placeholders": {"user": {"type": "String"}}}
+  "@replyingTo": {"placeholders": {"user": {"type": "String"}}},
+  "powerUpMessageEffect": "Стилізоване",
+  "powerUpGigantifyEmote": "Гігантський емот",
+  "powerUpCelebration": "Святкування на екрані",
+  "bitsAmount": "{amount} Bits",
+  "@bitsAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -27,6 +27,7 @@ final class ChatTimeline {
           (item) => switch (item) {
             ChatUserMessage() => item.userId == userId,
             ChatRewardRedemption() => item.userId == userId,
+            ChatPowerUp() => item.userId == userId,
             _ => false,
           },
         );

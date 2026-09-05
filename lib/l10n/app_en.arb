@@ -89,5 +89,16 @@
   "deleteNotAllowed": "Twitch does not allow deleting this message.",
   "messageUnavailable": "The message was deleted or is too old to delete.",
   "dismiss": "Dismiss",
-  "@replyingTo": {"placeholders": {"user": {"type": "String"}}}
+  "@replyingTo": {"placeholders": {"user": {"type": "String"}}},
+  "powerUpMessageEffect": "Message Effects",
+  "powerUpGigantifyEmote": "Gigantify an Emote",
+  "powerUpCelebration": "On-Screen Celebration",
+  "bitsAmount": "{amount} Bits",
+  "@bitsAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  }
 }

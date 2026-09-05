@@ -48,6 +48,17 @@ void main() {
         requests.where((r) => (r.data as Map)['type'] == 'channel.raid'),
         isEmpty,
       );
+      await client.createBitsSubscription(
+        sessionId: 'session',
+        broadcasterId: 'owner',
+      );
+      expect(requests.last.data, {
+        'type': 'channel.bits.use',
+        'version': '1',
+        'condition': {'broadcaster_user_id': 'owner'},
+        'transport': {'method': 'websocket', 'session_id': 'session'},
+      });
+      expect(TwitchAuthClient.authorizationScopes, contains('bits:read'));
       await client.getRewards(broadcasterId: 'owner');
       expect(requests.last.path, '/channel_points/custom_rewards');
       expect(requests.last.queryParameters, {

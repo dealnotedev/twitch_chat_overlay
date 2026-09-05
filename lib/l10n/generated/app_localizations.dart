@@ -451,6 +451,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dismiss'**
   String get dismiss;
+
+  /// No description provided for @powerUpMessageEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'Message Effects'**
+  String get powerUpMessageEffect;
+
+  /// No description provided for @powerUpGigantifyEmote.
+  ///
+  /// In en, this message translates to:
+  /// **'Gigantify an Emote'**
+  String get powerUpGigantifyEmote;
+
+  /// No description provided for @powerUpCelebration.
+  ///
+  /// In en, this message translates to:
+  /// **'On-Screen Celebration'**
+  String get powerUpCelebration;
+
+  /// No description provided for @bitsAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} Bits'**
+  String bitsAmount(int amount);
 }
 
 class _AppLocalizationsDelegate

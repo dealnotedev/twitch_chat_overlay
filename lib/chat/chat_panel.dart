@@ -275,6 +275,7 @@ class _ChatPanelState extends State<ChatPanel> {
                 badges: widget.chatState.badges,
                 userColor: switch (items[index]) {
                   ChatRewardRedemption(:final userId) => userColors[userId],
+                  ChatPowerUp(:final userId) => userColors[userId],
                   _ => null,
                 },
                 onReply:
@@ -708,6 +709,10 @@ class _ChatItemView extends StatelessWidget {
         redemption: redemption,
         userColor: userColor,
       ),
+      ChatPowerUp powerUp => PowerUpCard(
+        powerUp: powerUp,
+        userColor: userColor,
+      ),
       ChatRaid raid => RaidCard(raid: raid),
       ChatUserMessage message => ChatMessageActions(
         messageId: message.id,
@@ -736,6 +741,11 @@ class _UserMessageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final powerUpType = switch (message.messageType) {
+      'power_ups_gigantified_emote' => ChatPowerUpType.gigantifyEmote,
+      'power_ups_message_effect' => ChatPowerUpType.messageEffect,
+      _ => null,
+    };
     final highlighted =
         message.messageType != 'text' &&
         message.messageType != 'power_ups_gigantified_emote';
@@ -773,6 +783,11 @@ class _UserMessageView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (powerUpType != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: PowerUpLabel(type: powerUpType),
+            ),
           if (channelPointsHighlight)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),

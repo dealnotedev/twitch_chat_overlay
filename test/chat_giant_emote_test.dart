@@ -13,6 +13,29 @@ import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 
 void main() {
+  for (final type in [
+    'power_ups_gigantified_emote',
+    'power_ups_message_effect',
+  ]) {
+    testWidgets('$type shows Bits currency without inventing a price', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(_message(type: type, emotes: false)));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Bits', findRichText: true), findsOneWidget);
+      expect(find.byIcon(Icons.diamond_outlined), findsOneWidget);
+      expect(find.textContaining('0 Bits', findRichText: true), findsNothing);
+      expect(find.textContaining('Before', findRichText: true), findsOneWidget);
+    });
+  }
+  for (final type in ['text', 'channel_points_highlighted']) {
+    testWidgets('$type is not labeled as Bits', (tester) async {
+      await tester.pumpWidget(_app(_message(type: type, emotes: false)));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Bits', findRichText: true), findsNothing);
+    });
+  }
+
   for (final animated in [false, true]) {
     testWidgets(
       'only the last repeated emote becomes giant (animated: $animated)',

@@ -360,6 +360,10 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
         broadcasterId: broadcasterId,
         userId: token.userId,
       );
+      await _helix.createBitsSubscription(
+        sessionId: sessionId,
+        broadcasterId: broadcasterId,
+      );
       if (socket == _active) {
         _retryAttempt = 0;
         _emit(ChatConnectionStatus.connected);

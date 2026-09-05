@@ -226,4 +226,18 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get dismiss => 'Закрити';
+
+  @override
+  String get powerUpMessageEffect => 'Стилізоване';
+
+  @override
+  String get powerUpGigantifyEmote => 'Гігантський емот';
+
+  @override
+  String get powerUpCelebration => 'Святкування на екрані';
+
+  @override
+  String bitsAmount(int amount) {
+    return '$amount Bits';
+  }
 }

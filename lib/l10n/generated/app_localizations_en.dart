@@ -215,4 +215,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dismiss => 'Dismiss';
+
+  @override
+  String get powerUpMessageEffect => 'Message Effects';
+
+  @override
+  String get powerUpGigantifyEmote => 'Gigantify an Emote';
+
+  @override
+  String get powerUpCelebration => 'On-Screen Celebration';
+
+  @override
+  String bitsAmount(int amount) {
+    return '$amount Bits';
+  }
 }

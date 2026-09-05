@@ -40,6 +40,23 @@ final class TwitchHelixClient {
   static const rewardSubscriptionType =
       'channel.channel_points_custom_reward_redemption.add';
 
+  static const bitsSubscriptionType = 'channel.bits.use';
+
+  Future<void> createBitsSubscription({
+    required String sessionId,
+    required String broadcasterId,
+  }) async {
+    await _post(
+      '/eventsub/subscriptions',
+      data: {
+        'type': bitsSubscriptionType,
+        'version': '1',
+        'condition': {'broadcaster_user_id': broadcasterId},
+        'transport': {'method': 'websocket', 'session_id': sessionId},
+      },
+    );
+  }
+
   Future<void> createRewardSubscription({
     required String sessionId,
     required String broadcasterId,

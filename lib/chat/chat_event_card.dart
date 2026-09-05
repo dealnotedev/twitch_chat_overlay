@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
+import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
@@ -197,6 +198,110 @@ class _EventCard extends StatelessWidget {
               children: children,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A currency label does not imply a known price. Twitch's chat event does not
+/// include the cost of a Power-up; only channel.bits.use confirms the payment.
+class PowerUpLabel extends StatelessWidget {
+  const PowerUpLabel({
+    required this.type,
+    this.bits,
+    this.userName,
+    this.userColor,
+    super.key,
+  });
+
+  final ChatPowerUpType type;
+  final int? bits;
+  final String? userName;
+  final Color? userColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final title = switch (type) {
+      ChatPowerUpType.messageEffect => l10n.powerUpMessageEffect,
+      ChatPowerUpType.gigantifyEmote => l10n.powerUpGigantifyEmote,
+      ChatPowerUpType.celebration => l10n.powerUpCelebration,
+    };
+    return Text.rich(
+      TextSpan(
+        children: [
+          if (userName case final name?)
+            TextSpan(
+              text: '$name · ',
+              style: TextStyle(
+                color: userColor ?? Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          TextSpan(text: '$title · '),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: ExcludeSemantics(
+              child: Icon(
+                Icons.diamond_outlined,
+                size: MediaQuery.textScalerOf(context).scale(13),
+                color: const Color(0xFFBF94FF),
+              ),
+            ),
+          ),
+          TextSpan(
+            text: '\u00a0${bits == null ? 'Bits' : l10n.bitsAmount(bits!)}',
+          ),
+        ],
+      ),
+      style: chatReadableStyle.merge(
+        const TextStyle(
+          fontSize: 11,
+          height: 1.32,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFFBF94FF),
+        ),
+      ),
+    );
+  }
+}
+
+class PowerUpCard extends StatelessWidget {
+  const PowerUpCard({required this.powerUp, this.userColor, super.key});
+
+  final ChatPowerUp powerUp;
+  final Color? userColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: BackgroundOpacity.colorOf(context, const Color(0x149146FF)),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0x809F7AEA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PowerUpLabel(
+            type: powerUp.type,
+            bits: powerUp.bits,
+            userName: powerUp.userName,
+            userColor: userColor,
+          ),
+          // Other Power-ups already have a chat message with their own emote.
+          if (powerUp.type == ChatPowerUpType.celebration &&
+              powerUp.emote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: ChatMessageContent(
+                fragments: [powerUp.emote!],
+                style: const TextStyle(fontSize: 13.5, height: 1.32),
+              ),
+            ),
         ],
       ),
     );

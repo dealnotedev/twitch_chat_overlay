@@ -5,6 +5,26 @@ sealed class ChatItem {
   final DateTime receivedAt;
 }
 
+enum ChatPowerUpType { messageEffect, gigantifyEmote, celebration }
+
+final class ChatPowerUp extends ChatItem {
+  const ChatPowerUp({
+    required super.id,
+    required super.receivedAt,
+    required this.userId,
+    required this.userName,
+    required this.type,
+    required this.bits,
+    this.emote,
+  });
+
+  final String userId;
+  final String userName;
+  final ChatPowerUpType type;
+  final int bits;
+  final ChatEmoteFragment? emote;
+}
+
 final class ChatRewardRedemption extends ChatItem {
   const ChatRewardRedemption({
     required super.id,

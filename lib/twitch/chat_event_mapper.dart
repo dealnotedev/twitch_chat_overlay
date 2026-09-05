@@ -18,6 +18,8 @@ final class TwitchChatEventMapper {
     switch (subscriptionType) {
       case 'channel.chat.message':
         return _message(event, receivedAt);
+      case 'channel.bits.use':
+        return _powerUp(event, receivedAt, metadata);
       case 'channel.chat.notification':
         return _notice(event, receivedAt);
       case 'channel.channel_points_custom_reward_redemption.add':
@@ -66,6 +68,54 @@ final class TwitchChatEventMapper {
               )
             : null,
         sourceChannel: event['source_broadcaster_user_name'] as String?,
+      ),
+    );
+  }
+
+  AddChatItem? _powerUp(
+    Map<String, Object?> event,
+    DateTime receivedAt,
+    Map<String, Object?> metadata,
+  ) {
+    // Cheers already arrive as chat messages. Only confirmed Power-up payments
+    // belong here; free broadcaster uses do not generate channel.bits.use.
+    if (event['type'] != 'power_up') return null;
+    final id = _requiredString(metadata, 'message_id');
+    final userId = _requiredString(event, 'user_id');
+    final userName = _requiredString(event, 'user_name');
+    final bits = event['bits'];
+    final powerUp = _map(event['power_up']);
+    final type = switch (powerUp['type']) {
+      'message_effect' => ChatPowerUpType.messageEffect,
+      'gigantify_an_emote' => ChatPowerUpType.gigantifyEmote,
+      'celebration' => ChatPowerUpType.celebration,
+      _ => null,
+    };
+    if (id == null ||
+        userId == null ||
+        userName == null ||
+        bits is! int ||
+        bits <= 0 ||
+        type == null) {
+      return null;
+    }
+    final emote = _map(powerUp['emote']);
+    final emoteId = _requiredString(emote, 'id');
+    return AddChatItem(
+      ChatPowerUp(
+        id: 'bits:$id',
+        receivedAt: receivedAt,
+        userId: userId,
+        userName: userName,
+        type: type,
+        bits: bits,
+        emote: emoteId == null
+            ? null
+            : ChatEmoteFragment(
+                text: emote['name'] as String? ?? '',
+                id: emoteId,
+                animated: false,
+              ),
       ),
     );
   }
