@@ -61,6 +61,7 @@ final class TwitchChatEventMapper {
             ? ChatReply(
                 parentMessageId: parentId,
                 parentUserName: parentName,
+                parentUserLogin: replyJson['parent_user_login'] as String?,
                 parentMessageBody: parentBody,
               )
             : null,

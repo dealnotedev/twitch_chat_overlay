@@ -52,8 +52,9 @@ the timeline.
 
 Custom Channel Points redemptions appear as a compact inline sentence with
 the viewer's latest known chat color (bold white when unavailable), a bold
-reward title and a painted Channel Points icon beside the price. Optional input
-continues in the same paragraph, including rewards with no separate chat text.
+reward title and a painted Channel Points icon beside the price. Redemption input
+is omitted from the card; its separate chat message retains the text and deletion
+actions.
 The sentence wraps to the overlay width and follows the chat text size.
 Redemption IDs prevent repeated deliveries from adding duplicate messages.
 Raids and Shared Chat raids have dedicated cards with the raider's Twitch

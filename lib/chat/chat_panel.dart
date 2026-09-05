@@ -696,7 +696,7 @@ class _UserMessageView extends StatelessWidget {
               ),
             ),
           ChatMessageContent(
-            fragments: message.fragments,
+            fragments: message.displayFragments,
             gigantifyEmote:
                 message.messageType == 'power_ups_gigantified_emote',
             prefix: [

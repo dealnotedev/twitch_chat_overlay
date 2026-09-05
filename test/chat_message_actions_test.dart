@@ -227,7 +227,7 @@ ChatUserMessage message(
 );
 
 Widget app(
-  List<ChatUserMessage> messages, {
+  List<ChatItem> messages, {
   bool interactive = true,
   Future<SendChatResult> Function(String, {String? replyTo})? send,
   Future<void> Function(String)? delete,

@@ -65,6 +65,43 @@ final class ChatUserMessage extends ChatItem {
   final int? bits;
   final ChatReply? reply;
   final String? sourceChannel;
+
+  /// The recipient is already shown in the reply context above the body.
+  /// Keep the original fragments for message data and only trim their display.
+  List<ChatFragment> get displayFragments {
+    final context = reply;
+    if (context == null || fragments.isEmpty) return fragments;
+    final first = fragments.first;
+    if (first is! ChatTextFragment && first is! ChatMentionFragment) {
+      return fragments;
+    }
+    final names = {
+      context.parentUserName,
+      if (context.parentUserLogin case final login? when login.isNotEmpty)
+        login,
+    }.map(RegExp.escape).join('|');
+    final prefix = RegExp(
+      '^@(?:$names)(?=\\s|\$)\\s*',
+      caseSensitive: false,
+    ).firstMatch(first.text);
+    if (prefix == null) return fragments;
+
+    final body = <ChatFragment>[];
+    final remainder = first.text.substring(prefix.end);
+    if (remainder.isNotEmpty) body.add(ChatTextFragment(text: remainder));
+    var trimLeadingSpace = remainder.isEmpty;
+    for (final fragment in fragments.skip(1)) {
+      if (trimLeadingSpace && fragment is ChatTextFragment) {
+        final text = fragment.text.trimLeft();
+        if (text.isEmpty) continue;
+        body.add(ChatTextFragment(text: text));
+      } else {
+        body.add(fragment);
+      }
+      trimLeadingSpace = false;
+    }
+    return body;
+  }
 }
 
 final class ChatNotice extends ChatItem {
@@ -118,11 +155,13 @@ final class ChatReply {
     required this.parentMessageId,
     required this.parentUserName,
     required this.parentMessageBody,
+    this.parentUserLogin,
   });
 
   final String parentMessageId;
   final String parentUserName;
   final String parentMessageBody;
+  final String? parentUserLogin;
 }
 
 sealed class ChatFragment {

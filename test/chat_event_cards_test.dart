@@ -156,8 +156,7 @@ void main() {
             final preposition = locale == 'uk' ? 'за' : 'for';
             expect(
               plain,
-              'Viewer $action Choose a song $preposition \uFFFC\u00a01500'
-              '${input.isEmpty ? '' : ' — $input'}',
+              'Viewer $action Choose a song $preposition \uFFFC\u00a01500',
             );
             final name = span.children!.first as TextSpan;
             expect(name.style!.fontWeight, FontWeight.w700);

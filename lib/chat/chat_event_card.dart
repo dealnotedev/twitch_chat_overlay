@@ -62,8 +62,6 @@ class RewardRedemptionCard extends StatelessWidget {
               text: '\u00a0${redemption.cost}',
               semanticsLabel: l10n.channelPointsCost(redemption.cost),
             ),
-            if (redemption.userInput.isNotEmpty)
-              TextSpan(text: ' — ${redemption.userInput}'),
           ],
         ),
         style: chatReadableStyle.merge(
