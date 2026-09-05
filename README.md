@@ -22,7 +22,7 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 - Compact Twitch-style composer with sender-specific emote search and cursor insertion.
 - 500-item bounded timeline with moderation mutations.
 - Optional message lifetime from 1 to 60 minutes with a smooth fade-out.
-  The default is unlimited ("-"), selected one step below 1 minute.
+  The default is unlimited ("∞"), selected one step below 1 minute.
   Setup mode provides compact minus/plus controls and saves the setting.
 - Flutter `gen_l10n` localization for English and Ukrainian.
 - Bundled Inter 4.1 fonts for all app text (400–700, upright and italic),

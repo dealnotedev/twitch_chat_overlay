@@ -79,7 +79,7 @@ class MessageLifetimeControl extends StatelessWidget {
                         width: 46,
                         child: Text(
                           minutes == 0
-                              ? '-'
+                              ? '∞'
                               : l10n.messageLifetimeMinutes(minutes),
                           textAlign: TextAlign.center,
                           style: const TextStyle(

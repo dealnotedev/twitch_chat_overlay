@@ -68,7 +68,7 @@ void main() {
     await tester.tap(down);
     await tester.pump();
     expect(minutes, 0);
-    expect(find.text('-'), findsOneWidget);
+    expect(find.text('∞'), findsOneWidget);
     expect(tester.widget<IconButton>(down).onPressed, isNull);
     await tester.tap(up);
     await tester.pump();
