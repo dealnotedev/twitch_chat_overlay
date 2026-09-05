@@ -29,6 +29,23 @@ class AppLocalizationsUk extends AppLocalizations {
   String get setupMode => 'налаштування';
 
   @override
+  String get messageLifetime => 'Час показу повідомлень';
+
+  @override
+  String get messageLifetimeUnlimited => 'Не приховувати повідомлення';
+
+  @override
+  String messageLifetimeMinutes(int minutes) {
+    return '$minutes хв';
+  }
+
+  @override
+  String get increaseMessageLifetime => 'Збільшити час показу';
+
+  @override
+  String get decreaseMessageLifetime => 'Зменшити час показу';
+
+  @override
   String get backgroundTransparency => 'Прозорість фону';
 
   @override
@@ -53,8 +70,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String get chatConnected => 'Чат підключено';
 
   @override
-  String get noChatMessages =>
-      'Повідомлень поки немає.\nЧекаємо на першого чатера.';
+  String get noChatMessages => 'Немає недавніх повідомлень';
 
   @override
   String get waitingForConnection => 'Очікуємо на підключення…';
@@ -234,7 +250,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String get powerUpGigantifyEmote => 'Гігантський емот';
 
   @override
-  String get powerUpCelebration => 'Святкування на екрані';
+  String get powerUpCelebration => 'Святкування';
 
   @override
   String bitsAmount(int amount) {

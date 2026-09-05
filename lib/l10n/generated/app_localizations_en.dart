@@ -28,6 +28,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupMode => 'setup';
 
   @override
+  String get messageLifetime => 'Message lifetime';
+
+  @override
+  String get messageLifetimeUnlimited => 'Keep messages indefinitely';
+
+  @override
+  String messageLifetimeMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get increaseMessageLifetime => 'Increase message lifetime';
+
+  @override
+  String get decreaseMessageLifetime => 'Decrease message lifetime';
+
+  @override
   String get backgroundTransparency => 'Background transparency';
 
   @override
@@ -53,7 +70,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noChatMessages =>
-      'No messages yet.\nWaiting for the first chatter.';
+      'No recent messages.\nNew messages will appear here.';
 
   @override
   String get waitingForConnection => 'Waiting for connection…';

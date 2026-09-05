@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
+import 'package:twitch_chat_overlay/overlay/message_lifetime_control.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
@@ -114,6 +115,13 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       editing: _hostState.interactive,
                       signedIn: _authState.status == TwitchAuthStatus.signedIn,
                       backgroundOpacity: _layout.backgroundOpacity,
+                      messageLifetimeMinutes: _layout.messageLifetimeMinutes,
+                      onMessageLifetimeChanged: (value) {
+                        _updateLayout(
+                          _layout.withMessageLifetimeMinutes(value),
+                        );
+                        _saveLayout();
+                      },
                       onOpacityChanged: (value) =>
                           _updateLayout(_layout.withBackgroundOpacity(value)),
                       onMove: (delta) =>
@@ -128,6 +136,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       child: ChatPanel(
                         authState: _authState,
                         chatState: _chatState,
+                        messageLifetimeMinutes: _layout.messageLifetimeMinutes,
                         interactive: _hostState.interactive,
                         onSignIn: () async {
                           await widget.overlayHost.setInteractive(false);
@@ -205,6 +214,8 @@ class _VirtualChatWindow extends StatelessWidget {
     required this.editing,
     required this.signedIn,
     required this.backgroundOpacity,
+    required this.messageLifetimeMinutes,
+    required this.onMessageLifetimeChanged,
     required this.onOpacityChanged,
     required this.onMove,
     required this.onResize,
@@ -217,6 +228,8 @@ class _VirtualChatWindow extends StatelessWidget {
   final bool editing;
   final bool signedIn;
   final double backgroundOpacity;
+  final int messageLifetimeMinutes;
+  final ValueChanged<int> onMessageLifetimeChanged;
   final ValueChanged<double> onOpacityChanged;
   final ValueChanged<Offset> onMove;
   final void Function(ResizeHandle handle, Offset delta) onResize;
@@ -274,6 +287,11 @@ class _VirtualChatWindow extends StatelessWidget {
                       opacity: backgroundOpacity,
                       onChanged: onOpacityChanged,
                       onChangeEnd: onGestureEnd,
+                    ),
+                  if (editing)
+                    MessageLifetimeControl(
+                      minutes: messageLifetimeMinutes,
+                      onChanged: onMessageLifetimeChanged,
                     ),
                   Expanded(child: child),
                 ],

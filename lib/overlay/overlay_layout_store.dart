@@ -12,6 +12,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   static const String _widthKey = 'overlay.layout.width';
   static const String _heightKey = 'overlay.layout.height';
   static const String _opacityKey = 'overlay.background.opacity';
+  static const String _lifetimeKey = 'overlay.messages.lifetimeMinutes';
 
   @override
   Future<OverlayLayout> load() async {
@@ -21,12 +22,17 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     final width = preferences.getDouble(_widthKey);
     final height = preferences.getDouble(_heightKey);
     final storedOpacity = preferences.getDouble(_opacityKey);
+    final lifetime =
+        preferences.getInt(_lifetimeKey) ??
+        const OverlayLayout.defaults().messageLifetimeMinutes;
     final opacity = storedOpacity != null && storedOpacity.isFinite
         ? storedOpacity.clamp(0.0, 1.0)
         : OverlayLayout.defaultBackgroundOpacity;
 
     if (left == null || top == null || width == null || height == null) {
-      return const OverlayLayout.defaults().withBackgroundOpacity(opacity);
+      return const OverlayLayout.defaults()
+          .withBackgroundOpacity(opacity)
+          .withMessageLifetimeMinutes(lifetime);
     }
 
     return OverlayLayout(
@@ -35,7 +41,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       width: width,
       height: height,
       backgroundOpacity: opacity,
-    );
+    ).withMessageLifetimeMinutes(lifetime);
   }
 
   @override
@@ -47,6 +53,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       preferences.setDouble(_widthKey, layout.width),
       preferences.setDouble(_heightKey, layout.height),
       preferences.setDouble(_opacityKey, layout.backgroundOpacity),
+      preferences.setInt(_lifetimeKey, layout.messageLifetimeMinutes),
     ]);
   }
 }

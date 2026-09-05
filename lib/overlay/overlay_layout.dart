@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
+
 enum ResizeHandle {
   topLeft,
   top,
@@ -19,6 +21,7 @@ final class OverlayLayout {
     required this.width,
     required this.height,
     this.backgroundOpacity = defaultBackgroundOpacity,
+    this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
   });
 
   const OverlayLayout.defaults()
@@ -26,7 +29,8 @@ final class OverlayLayout {
       top = 0.08,
       width = 0.28,
       height = 0.72,
-      backgroundOpacity = defaultBackgroundOpacity;
+      backgroundOpacity = defaultBackgroundOpacity,
+      messageLifetimeMinutes = ChatMessageRetention.defaultMinutes;
 
   static const double defaultBackgroundOpacity = 0.85;
   static const double minimumWidth = 320;
@@ -37,6 +41,19 @@ final class OverlayLayout {
   final double width;
   final double height;
   final double backgroundOpacity;
+  final int messageLifetimeMinutes;
+
+  OverlayLayout withMessageLifetimeMinutes(int value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    messageLifetimeMinutes: value.clamp(
+      ChatMessageRetention.minimumMinutes,
+      ChatMessageRetention.maximumMinutes,
+    ),
+  );
 
   OverlayLayout withBackgroundOpacity(double value) => OverlayLayout(
     left: left,
@@ -44,6 +61,7 @@ final class OverlayLayout {
     width: width,
     height: height,
     backgroundOpacity: value.clamp(0.0, 1.0),
+    messageLifetimeMinutes: messageLifetimeMinutes,
   );
 
   Rect resolve(Size viewport) {
@@ -128,6 +146,7 @@ final class OverlayLayout {
       width: clamped.width / viewport.width,
       height: clamped.height / viewport.height,
       backgroundOpacity: backgroundOpacity,
+      messageLifetimeMinutes: messageLifetimeMinutes,
     );
   }
 

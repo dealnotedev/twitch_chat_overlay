@@ -149,7 +149,7 @@ void main() {
       expect(decoration.color, const Color(0xFF52D273));
       expect(decoration.shape, BoxShape.circle);
       expect(
-        find.text('No messages yet.\nWaiting for the first chatter.'),
+        find.text('No recent messages.\nNew messages will appear here.'),
         findsOneWidget,
       );
 
@@ -167,7 +167,7 @@ void main() {
 
       final notice = ChatNotice(
         id: 'retained',
-        receivedAt: DateTime.utc(2026),
+        receivedAt: DateTime.now(),
         noticeType: 'announcement',
         systemMessage: 'Retained chat message',
         userName: null,
@@ -187,7 +187,7 @@ void main() {
         expect(find.bySemanticsLabel(entry.value), findsOneWidget);
         expect(find.text('Retained chat message'), findsOneWidget);
         expect(
-          find.text('No messages yet.\nWaiting for the first chatter.'),
+          find.text('No recent messages.\nNew messages will appear here.'),
           findsNothing,
         );
         expect(find.text('TWITCH CHAT'), findsNothing);
@@ -199,7 +199,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text('No messages yet.\nWaiting for the first chatter.'),
+        find.text('No recent messages.\nNew messages will appear here.'),
         findsOneWidget,
       );
       chatUpdates.add(
@@ -207,7 +207,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text('No messages yet.\nWaiting for the first chatter.'),
+        find.text('No recent messages.\nNew messages will appear here.'),
         findsNothing,
       );
       expect(find.text('Could not connect to chat'), findsOneWidget);

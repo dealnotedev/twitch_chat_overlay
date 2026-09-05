@@ -8,6 +8,7 @@ import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote_picker.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_entrance.dart';
+import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
@@ -29,11 +30,13 @@ class ChatPanel extends StatefulWidget {
     required this.onSend,
     required this.onLoadEmotes,
     this.onDeleteMessage,
+    this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
     super.key,
   });
 
   final TwitchAuthState authState;
   final ChatState chatState;
+  final int messageLifetimeMinutes;
   final bool interactive;
   final Future<void> Function() onSignIn;
   final Future<void> Function() onSignOut;
@@ -60,6 +63,25 @@ class _ChatPanelState extends State<ChatPanel> {
   final Object _emoteTapGroup = Object();
   final Stopwatch _arrivalClock = Stopwatch()..start();
   final Map<String, Duration> _messageArrivals = {};
+  final ChatMessageRetention _recent = ChatMessageRetention();
+
+  @override
+  void initState() {
+    super.initState();
+    _recent.update(widget.chatState.items, widget.messageLifetimeMinutes);
+    _recent.addListener(_onRecentChanged);
+  }
+
+  void _onRecentChanged() {
+    setState(() {
+      if (_replyTo case final reply?) {
+        if (!_recent.items.any((item) => item.id == reply.parentMessageId)) {
+          _replyTo = null;
+          _sendError = AppLocalizations.of(context).replyUnavailable;
+        }
+      }
+    });
+  }
 
   @override
   void didUpdateWidget(ChatPanel oldWidget) {
@@ -72,6 +94,7 @@ class _ChatPanelState extends State<ChatPanel> {
     if (oldWidget.authState.token?.userId != widget.authState.token?.userId ||
         oldWidget.chatState.broadcasterId != widget.chatState.broadcasterId ||
         widget.authState.status == TwitchAuthStatus.signedOut) {
+      _recent.clear();
       _actionGeneration++;
       _replyTo = null;
       _sendError = null;
@@ -79,6 +102,7 @@ class _ChatPanelState extends State<ChatPanel> {
       _deletingIds.clear();
       _sending = false;
     }
+    _recent.update(widget.chatState.items, widget.messageLifetimeMinutes);
     if (!widget.interactive) _emotesOpen = false;
     final now = _arrivalClock.elapsed;
     final previousIds = oldWidget.chatState.items
@@ -109,6 +133,7 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   void dispose() {
+    _recent.dispose();
     _arrivalClock.stop();
     _messageController.dispose();
     _messageFocus.dispose();
@@ -230,7 +255,8 @@ class _ChatPanelState extends State<ChatPanel> {
   }
 
   Widget _connectedBody(AppLocalizations l10n) {
-    if (widget.chatState.items.isEmpty &&
+    final recentItems = _recent.items;
+    if (recentItems.isEmpty &&
         widget.chatState.status != ChatConnectionStatus.connected) {
       return _CenteredStatus(
         text: switch (widget.chatState.status) {
@@ -252,7 +278,7 @@ class _ChatPanelState extends State<ChatPanel> {
             ? null
             : _parseColor(message.color),
     };
-    final items = widget.chatState.items.reversed.toList(growable: false);
+    final items = recentItems.reversed.toList(growable: false);
     final itemIndices = {
       for (var index = 0; index < items.length; index++) items[index].id: index,
     };
@@ -267,29 +293,40 @@ class _ChatPanelState extends State<ChatPanel> {
               itemIndices[(key as ValueKey<String>).value],
           itemBuilder: (context, index) => RepaintBoundary(
             key: ValueKey(items[index].id),
-            child: ChatMessageEntrance(
-              elapsed: _entranceElapsed(items[index].id),
-              child: _ChatItemView(
-                item: items[index],
-                canCopy: widget.interactive,
-                badges: widget.chatState.badges,
-                userColor: switch (items[index]) {
-                  ChatRewardRedemption(:final userId) => userColors[userId],
-                  ChatPowerUp(:final userId) => userColors[userId],
-                  _ => null,
-                },
-                onReply:
-                    widget.interactive &&
-                        widget.authState.status == TwitchAuthStatus.signedIn
-                    ? _startReply
-                    : null,
-                onDelete:
-                    widget.interactive &&
-                        items[index] is ChatUserMessage &&
-                        _canDelete(items[index] as ChatUserMessage)
-                    ? (message) => unawaited(_deleteMessage(message))
-                    : null,
-                deleting: _deletingIds.contains(items[index].id),
+            child: IgnorePointer(
+              ignoring: _recent.isFading(items[index].id),
+              child: AnimatedOpacity(
+                key: ValueKey('message-fade-${items[index].id}'),
+                opacity: _recent.isFading(items[index].id) ? 0 : 1,
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : ChatMessageRetention.fadeDuration,
+                curve: Curves.easeInOut,
+                child: ChatMessageEntrance(
+                  elapsed: _entranceElapsed(items[index].id),
+                  child: _ChatItemView(
+                    item: items[index],
+                    canCopy: widget.interactive,
+                    badges: widget.chatState.badges,
+                    userColor: switch (items[index]) {
+                      ChatRewardRedemption(:final userId) => userColors[userId],
+                      ChatPowerUp(:final userId) => userColors[userId],
+                      _ => null,
+                    },
+                    onReply:
+                        widget.interactive &&
+                            widget.authState.status == TwitchAuthStatus.signedIn
+                        ? _startReply
+                        : null,
+                    onDelete:
+                        widget.interactive &&
+                            items[index] is ChatUserMessage &&
+                            _canDelete(items[index] as ChatUserMessage)
+                        ? (message) => unawaited(_deleteMessage(message))
+                        : null,
+                    deleting: _deletingIds.contains(items[index].id),
+                  ),
+                ),
               ),
             ),
           ),

@@ -21,6 +21,9 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 - Message sending through the Helix Chat API.
 - Compact Twitch-style composer with sender-specific emote search and cursor insertion.
 - 500-item bounded timeline with moderation mutations.
+- Optional message lifetime from 1 to 60 minutes with a smooth fade-out.
+  The default is unlimited ("-"), selected one step below 1 minute.
+  Setup mode provides compact minus/plus controls and saves the setting.
 - Flutter `gen_l10n` localization for English and Ukrainian.
 - Bundled Inter 4.1 fonts for all app text (400–700, upright and italic),
   available offline without installing fonts in Windows.
@@ -159,7 +162,7 @@ flutter run -d windows
 Once signed in, click-through mode hides the header so chat fills the frame.
 A green dot in the top-right corner shows the active connection; connection
 problems show a compact status label. Connected chats without messages show a
-waiting state until the first chatter arrives. Setup mode keeps its header and controls.
+state explaining that there are no recent messages. Setup mode keeps its header and controls.
 
 The current milestone connects to the signed-in user's channel. The composer
 and Twitch sign-out action are available in setup mode. `Alt+F4` or the tray

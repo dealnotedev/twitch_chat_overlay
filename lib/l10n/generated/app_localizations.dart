@@ -134,6 +134,36 @@ abstract class AppLocalizations {
   /// **'setup'**
   String get setupMode;
 
+  /// No description provided for @messageLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Message lifetime'**
+  String get messageLifetime;
+
+  /// No description provided for @messageLifetimeUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep messages indefinitely'**
+  String get messageLifetimeUnlimited;
+
+  /// No description provided for @messageLifetimeMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String messageLifetimeMinutes(int minutes);
+
+  /// No description provided for @increaseMessageLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase message lifetime'**
+  String get increaseMessageLifetime;
+
+  /// No description provided for @decreaseMessageLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease message lifetime'**
+  String get decreaseMessageLifetime;
+
   /// No description provided for @backgroundTransparency.
   ///
   /// In en, this message translates to:
@@ -185,7 +215,7 @@ abstract class AppLocalizations {
   /// No description provided for @noChatMessages.
   ///
   /// In en, this message translates to:
-  /// **'No messages yet.\nWaiting for the first chatter.'**
+  /// **'No recent messages.\nNew messages will appear here.'**
   String get noChatMessages;
 
   /// No description provided for @waitingForConnection.
