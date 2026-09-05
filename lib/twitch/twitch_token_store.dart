@@ -8,7 +8,7 @@ abstract interface class TwitchTokenStore {
 }
 
 final class SharedPreferencesTwitchTokenStore implements TwitchTokenStore {
-  static const String tokenKey = 'twitch_auth';
+  static const String tokenKey = 'twitch_creds';
 
   SharedPreferencesTwitchTokenStore([this._preferences]);
 

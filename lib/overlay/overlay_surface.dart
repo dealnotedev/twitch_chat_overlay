@@ -128,7 +128,10 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                         authState: _authState,
                         chatState: _chatState,
                         interactive: _hostState.interactive,
-                        onSignIn: widget.twitchAuth.signIn,
+                        onSignIn: () async {
+                          await widget.overlayHost.setInteractive(false);
+                          await widget.twitchAuth.signIn();
+                        },
                         onSignOut: widget.twitchAuth.signOut,
                         onSend: widget.twitchChat.send,
                         onDeleteMessage: widget.twitchChat.deleteMessage,
