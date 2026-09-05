@@ -1,0 +1,548 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:twitch_chat_overlay/chat/chat_panel.dart';
+import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
+import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
+import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
+import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
+import 'package:twitch_chat_overlay/platform/overlay_host.dart';
+import 'package:twitch_chat_overlay/platform/overlay_tray.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
+
+class OverlaySurface extends StatefulWidget {
+  const OverlaySurface({
+    required this.initialLayout,
+    required this.layoutStore,
+    required this.overlayHost,
+    required this.twitchAuth,
+    required this.twitchChat,
+    super.key,
+  });
+
+  final OverlayLayout initialLayout;
+  final OverlayLayoutStore layoutStore;
+  final OverlayHost overlayHost;
+  final TwitchAuth twitchAuth;
+  final TwitchChatSession twitchChat;
+
+  @override
+  State<OverlaySurface> createState() => _OverlaySurfaceState();
+}
+
+class _OverlaySurfaceState extends State<OverlaySurface> {
+  late OverlayLayout _layout;
+  late OverlayHostState _hostState;
+  late TwitchAuthState _authState;
+  late ChatState _chatState;
+  StreamSubscription<OverlayHostState>? _hostSubscription;
+  StreamSubscription<TwitchAuthState>? _authSubscription;
+  StreamSubscription<ChatState>? _chatSubscription;
+  OverlayTray? _tray;
+
+  @override
+  void initState() {
+    super.initState();
+    _layout = widget.initialLayout;
+    _hostState = widget.overlayHost.state;
+    _authState = widget.twitchAuth.state;
+    _chatState = widget.twitchChat.state;
+    _hostSubscription = widget.overlayHost.states.listen((state) {
+      if (mounted) setState(() => _hostState = state);
+    });
+    _authSubscription = widget.twitchAuth.states.listen(_onAuthState);
+    _chatSubscription = widget.twitchChat.states.listen((state) {
+      if (mounted) setState(() => _chatState = state);
+    });
+    unawaited(widget.overlayHost.initialize());
+    unawaited(widget.twitchAuth.initialize());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_tray != null) return;
+    final tray = OverlayTray(
+      host: widget.overlayHost,
+      beforeExit: () => widget.layoutStore.save(_layout),
+    );
+    _tray = tray;
+    unawaited(
+      tray.initialize(AppLocalizations.of(context)).catchError((
+        Object error,
+        StackTrace stack,
+      ) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            library: 'overlay tray initialization',
+          ),
+        );
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_tray?.dispose());
+    _hostSubscription?.cancel();
+    _authSubscription?.cancel();
+    _chatSubscription?.cancel();
+    unawaited(widget.twitchChat.leave());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: ColoredBox(
+        color: Colors.transparent,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final viewport = constraints.biggest;
+            final rect = _layout.resolve(viewport);
+            return Stack(
+              children: [
+                Positioned.fromRect(
+                  rect: rect,
+                  child: BackgroundOpacity(
+                    opacity: _layout.backgroundOpacity,
+                    child: _VirtualChatWindow(
+                      editing: _hostState.interactive,
+                      backgroundOpacity: _layout.backgroundOpacity,
+                      onOpacityChanged: (value) =>
+                          _updateLayout(_layout.withBackgroundOpacity(value)),
+                      onMove: (delta) =>
+                          _updateLayout(_layout.moveBy(delta, viewport)),
+                      onResize: (handle, delta) => _updateLayout(
+                        _layout.resizeBy(handle, delta, viewport),
+                      ),
+                      onGestureEnd: _saveLayout,
+                      onLock: () =>
+                          unawaited(widget.overlayHost.setInteractive(false)),
+                      connectionStatus: _chatState.status,
+                      child: ChatPanel(
+                        authState: _authState,
+                        chatState: _chatState,
+                        interactive: _hostState.interactive,
+                        onSignIn: widget.twitchAuth.signIn,
+                        onSignOut: widget.twitchAuth.signOut,
+                        onSend: (message) => widget.twitchChat.send(message),
+                      ),
+                    ),
+                  ),
+                ),
+                if (_hostState.interactive)
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 18,
+                    child: IgnorePointer(child: _EditModeBanner()),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _updateLayout(OverlayLayout value) {
+    setState(() => _layout = value);
+  }
+
+  void _saveLayout() {
+    unawaited(widget.layoutStore.save(_layout));
+  }
+
+  void _onAuthState(TwitchAuthState state) {
+    if (mounted) setState(() => _authState = state);
+    final token = state.token;
+    if (state.status == TwitchAuthStatus.signedIn && token != null) {
+      unawaited(widget.twitchChat.join(broadcasterId: token.userId));
+    } else if (state.status == TwitchAuthStatus.signedOut ||
+        state.status == TwitchAuthStatus.failure) {
+      unawaited(widget.twitchChat.leave());
+    }
+  }
+}
+
+class _EditModeBanner extends StatelessWidget {
+  const _EditModeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xE61F1F23),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF9146FF)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Text(
+            AppLocalizations.of(context).layoutModeBanner,
+            style: const TextStyle(fontSize: 12, color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VirtualChatWindow extends StatelessWidget {
+  const _VirtualChatWindow({
+    required this.editing,
+    required this.backgroundOpacity,
+    required this.onOpacityChanged,
+    required this.onMove,
+    required this.onResize,
+    required this.onGestureEnd,
+    required this.onLock,
+    required this.connectionStatus,
+    required this.child,
+  });
+
+  final bool editing;
+  final double backgroundOpacity;
+  final ValueChanged<double> onOpacityChanged;
+  final ValueChanged<Offset> onMove;
+  final void Function(ResizeHandle handle, Offset delta) onResize;
+  final VoidCallback onGestureEnd;
+  final VoidCallback onLock;
+  final ChatConnectionStatus connectionStatus;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: BackgroundOpacity.colorOf(
+                context,
+                const Color(0xFF111114),
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: editing
+                    ? const Color(0xFF9146FF)
+                    : BackgroundOpacity.colorOf(
+                        context,
+                        const Color(0x339146FF),
+                      ),
+                width: editing ? 2 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 18,
+                  color: BackgroundOpacity.colorOf(
+                    context,
+                    const Color(0x66000000),
+                  ),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: Column(
+                children: [
+                  _ChatHeader(
+                    editing: editing,
+                    onMove: onMove,
+                    onGestureEnd: onGestureEnd,
+                    onLock: onLock,
+                    connectionStatus: connectionStatus,
+                  ),
+                  if (editing)
+                    _BackgroundTransparencySlider(
+                      opacity: backgroundOpacity,
+                      onChanged: onOpacityChanged,
+                      onChangeEnd: onGestureEnd,
+                    ),
+                  Expanded(child: child),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (editing)
+          for (final handle in ResizeHandle.values)
+            _ResizeHandle(
+              handle: handle,
+              onResize: (delta) => onResize(handle, delta),
+              onGestureEnd: onGestureEnd,
+            ),
+      ],
+    );
+  }
+}
+
+class _BackgroundTransparencySlider extends StatelessWidget {
+  const _BackgroundTransparencySlider({
+    required this.opacity,
+    required this.onChanged,
+    required this.onChangeEnd,
+  });
+
+  final double opacity;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = AppLocalizations.of(context).backgroundTransparency;
+    final transparency = 1 - opacity;
+    final percent = '${(transparency * 100).round()}%';
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      color: const Color(0xF21F1F23),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+          ),
+          Expanded(
+            child: Semantics(
+              label: label,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 2,
+                  activeTrackColor: const Color(0xFFBF94FF),
+                  thumbColor: const Color(0xFFBF94FF),
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 6,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 12,
+                  ),
+                ),
+                child: Slider(
+                  value: transparency,
+                  divisions: 100,
+                  label: percent,
+                  semanticFormatterCallback: (value) =>
+                      '${(value * 100).round()}%',
+                  onChanged: (value) => onChanged(1 - value),
+                  onChangeEnd: (_) => onChangeEnd(),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 34,
+            child: Text(
+              percent,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatHeader extends StatelessWidget {
+  const _ChatHeader({
+    required this.editing,
+    required this.onMove,
+    required this.onGestureEnd,
+    required this.onLock,
+    required this.connectionStatus,
+  });
+
+  final bool editing;
+  final ValueChanged<Offset> onMove;
+  final VoidCallback onGestureEnd;
+  final VoidCallback onLock;
+  final ChatConnectionStatus connectionStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanUpdate: editing ? (details) => onMove(details.delta) : null,
+      onPanEnd: editing ? (_) => onGestureEnd() : null,
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: BackgroundOpacity.colorOf(context, const Color(0xF21F1F23)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.chat_bubble_rounded, size: 17),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.twitchChatTitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.7,
+                ),
+              ),
+            ),
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: _connectionColor(connectionStatus),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Text(
+              editing ? l10n.setupMode : 'Ctrl+Shift+O',
+              style: const TextStyle(fontSize: 10, color: Color(0xFFADADB8)),
+            ),
+            if (editing) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: l10n.lockOverlay,
+                onPressed: onLock,
+                icon: const Icon(Icons.lock_outline_rounded, size: 17),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Color _connectionColor(ChatConnectionStatus status) {
+    return switch (status) {
+      ChatConnectionStatus.connected => const Color(0xFF52D273),
+      ChatConnectionStatus.failure => const Color(0xFFFF7676),
+      ChatConnectionStatus.connecting ||
+      ChatConnectionStatus.reconnecting => const Color(0xFFFFB31A),
+      ChatConnectionStatus.idle => const Color(0xFF6F6F78),
+    };
+  }
+}
+
+class _ResizeHandle extends StatelessWidget {
+  const _ResizeHandle({
+    required this.handle,
+    required this.onResize,
+    required this.onGestureEnd,
+  });
+
+  static const double _thickness = 14;
+  static const double _edgeInset = 10;
+
+  final ResizeHandle handle;
+  final ValueChanged<Offset> onResize;
+  final VoidCallback onGestureEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final corner = _isCorner(handle);
+    final horizontal =
+        handle == ResizeHandle.top || handle == ResizeHandle.bottom;
+    final vertical =
+        handle == ResizeHandle.left || handle == ResizeHandle.right;
+
+    return Positioned(
+      left: _onLeft(handle)
+          ? -_thickness / 2
+          : horizontal
+          ? _edgeInset
+          : null,
+      right: _onRight(handle)
+          ? -_thickness / 2
+          : horizontal
+          ? _edgeInset
+          : null,
+      top: _onTop(handle)
+          ? -_thickness / 2
+          : vertical
+          ? _edgeInset
+          : null,
+      bottom: _onBottom(handle)
+          ? -_thickness / 2
+          : vertical
+          ? _edgeInset
+          : null,
+      width: corner || vertical ? _thickness : null,
+      height: corner || horizontal ? _thickness : null,
+      child: MouseRegion(
+        cursor: _cursor(handle),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onPanUpdate: (details) => onResize(details.delta),
+          onPanEnd: (_) => onGestureEnd(),
+          child: corner
+              ? const Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(0xFF9146FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: SizedBox.square(dimension: 9),
+                  ),
+                )
+              : const SizedBox.expand(),
+        ),
+      ),
+    );
+  }
+
+  static bool _isCorner(ResizeHandle value) => switch (value) {
+    ResizeHandle.topLeft ||
+    ResizeHandle.topRight ||
+    ResizeHandle.bottomRight ||
+    ResizeHandle.bottomLeft => true,
+    _ => false,
+  };
+
+  static bool _onLeft(ResizeHandle value) => switch (value) {
+    ResizeHandle.topLeft ||
+    ResizeHandle.left ||
+    ResizeHandle.bottomLeft => true,
+    _ => false,
+  };
+
+  static bool _onRight(ResizeHandle value) => switch (value) {
+    ResizeHandle.topRight ||
+    ResizeHandle.right ||
+    ResizeHandle.bottomRight => true,
+    _ => false,
+  };
+
+  static bool _onTop(ResizeHandle value) => switch (value) {
+    ResizeHandle.topLeft || ResizeHandle.top || ResizeHandle.topRight => true,
+    _ => false,
+  };
+
+  static bool _onBottom(ResizeHandle value) => switch (value) {
+    ResizeHandle.bottomLeft ||
+    ResizeHandle.bottom ||
+    ResizeHandle.bottomRight => true,
+    _ => false,
+  };
+
+  static MouseCursor _cursor(ResizeHandle handle) {
+    return switch (handle) {
+      ResizeHandle.topLeft ||
+      ResizeHandle.bottomRight => SystemMouseCursors.resizeUpLeftDownRight,
+      ResizeHandle.topRight ||
+      ResizeHandle.bottomLeft => SystemMouseCursors.resizeUpRightDownLeft,
+      ResizeHandle.top ||
+      ResizeHandle.bottom => SystemMouseCursors.resizeUpDown,
+      ResizeHandle.left ||
+      ResizeHandle.right => SystemMouseCursors.resizeLeftRight,
+    };
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "@@locale": "en",
+  "appTitle": "Twitch Chat Overlay",
+  "trayConfigure": "Configure overlay",
+  "exitApp": "Exit",
+  "twitchChatTitle": "TWITCH CHAT",
+  "layoutModeBanner": "Layout mode · Ctrl+Shift+O — lock",
+  "setupMode": "setup",
+  "backgroundTransparency": "Background transparency",
+  "lockOverlay": "Lock overlay",
+  "checkingTwitchSession": "Checking Twitch session…",
+  "finishSignInInBrowser": "Finish signing in in your browser…",
+  "connectingEventSub": "Connecting to EventSub…",
+  "reconnectingChat": "Reconnecting chat…",
+  "chatConnectionFailed": "Could not connect to chat",
+  "waitingForConnection": "Waiting for connection…",
+  "reconnecting": "reconnecting",
+  "messageRejected": "Message was rejected",
+  "unknownError": "Unknown error",
+  "connectTwitchDescription": "Connect Twitch to view your channel chat.",
+  "signInWithTwitch": "Sign in with Twitch",
+  "openControlsShortcut": "Ctrl+Shift+O — open controls",
+  "signOutOfTwitch": "Sign out of Twitch",
+  "sendMessageHint": "Send a message…",
+  "send": "Send",
+  "gifLoading": "Loading GIF…",
+  "gifUnavailable": "GIF unavailable",
+  "twitchPermissionsChanged": "Sign in to Twitch again to enable Channel Points rewards.",
+  "rewardSubscriptionFailed": "Channel Points rewards are unavailable. Reconnect Twitch to retry.",
+  "rewardRedeemedBy": "{user} redeemed a reward",
+  "@rewardRedeemedBy": {"placeholders": {"user": {"type": "String"}}},
+  "channelPointsCost": "{cost} Channel Points",
+  "@channelPointsCost": {"placeholders": {"cost": {"type": "int"}}},
+  "raidFrom": "{user} is raiding!",
+  "@raidFrom": {"placeholders": {"user": {"type": "String"}}},
+  "raidViewers": "{count, plural, =1{1 viewer} other{{count} viewers}}",
+  "@raidViewers": {"placeholders": {"count": {"type": "int"}}},
+  "sharedChatOrigin": "from shared chat: {channel}",
+  "@sharedChatOrigin": {
+    "placeholders": {
+      "channel": {"type": "String"}
+    }
+  },
+  "replyContext": "↳ {user}: {message}",
+  "@replyContext": {
+    "placeholders": {
+      "user": {"type": "String"},
+      "message": {"type": "String"}
+    }
+  },
+  "storedSessionExpired": "Your saved Twitch session has expired: {details}",
+  "@storedSessionExpired": {
+    "placeholders": {
+      "details": {"type": "String"}
+    }
+  },
+  "twitchAuthorizationFailed": "Twitch authorization failed: {details}",
+  "@twitchAuthorizationFailed": {
+    "placeholders": {
+      "details": {"type": "String"}
+    }
+  },
+  "subscriptionRevoked": "Twitch disabled the {type} subscription: {status}",
+  "@subscriptionRevoked": {
+    "placeholders": {
+      "type": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  }
+}

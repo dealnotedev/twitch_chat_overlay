@@ -1,0 +1,70 @@
+{
+  "@@locale": "uk",
+  "appTitle": "Twitch Chat Overlay",
+  "trayConfigure": "Налаштувати оверлей",
+  "exitApp": "Вийти",
+  "twitchChatTitle": "ЧАТ TWITCH",
+  "layoutModeBanner": "Режим налаштування · Ctrl+Shift+O — заблокувати",
+  "setupMode": "налаштування",
+  "backgroundTransparency": "Прозорість фону",
+  "lockOverlay": "Заблокувати оверлей",
+  "checkingTwitchSession": "Перевіряємо сесію Twitch…",
+  "finishSignInInBrowser": "Завершіть вхід у браузері…",
+  "connectingEventSub": "Підключаємося до EventSub…",
+  "reconnectingChat": "Перепідключаємо чат…",
+  "chatConnectionFailed": "Не вдалося підключити чат",
+  "waitingForConnection": "Очікуємо на підключення…",
+  "reconnecting": "перепідключення",
+  "messageRejected": "Повідомлення відхилено",
+  "unknownError": "Невідома помилка",
+  "connectTwitchDescription": "Підключіть Twitch, щоб переглядати чат свого каналу.",
+  "signInWithTwitch": "Увійти через Twitch",
+  "openControlsShortcut": "Ctrl+Shift+O — відкрити керування",
+  "signOutOfTwitch": "Вийти з Twitch",
+  "sendMessageHint": "Надіслати повідомлення…",
+  "send": "Надіслати",
+  "gifLoading": "Завантаження GIF…",
+  "gifUnavailable": "GIF недоступна",
+  "twitchPermissionsChanged": "Увійдіть у Twitch ще раз, щоб увімкнути нагороди за бали каналу.",
+  "rewardSubscriptionFailed": "Нагороди за бали каналу недоступні. Перепідключіть Twitch, щоб повторити спробу.",
+  "rewardRedeemedBy": "{user} отримує нагороду",
+  "@rewardRedeemedBy": {"placeholders": {"user": {"type": "String"}}},
+  "channelPointsCost": "{cost, plural, one{{cost} бал каналу} few{{cost} бали каналу} many{{cost} балів каналу} other{{cost} бала каналу}}",
+  "@channelPointsCost": {"placeholders": {"cost": {"type": "int"}}},
+  "raidFrom": "{user} починає рейд!",
+  "@raidFrom": {"placeholders": {"user": {"type": "String"}}},
+  "raidViewers": "{count, plural, one{{count} глядач} few{{count} глядачі} many{{count} глядачів} other{{count} глядача}}",
+  "@raidViewers": {"placeholders": {"count": {"type": "int"}}},
+  "sharedChatOrigin": "зі спільного чату: {channel}",
+  "@sharedChatOrigin": {
+    "placeholders": {
+      "channel": {"type": "String"}
+    }
+  },
+  "replyContext": "↳ {user}: {message}",
+  "@replyContext": {
+    "placeholders": {
+      "user": {"type": "String"},
+      "message": {"type": "String"}
+    }
+  },
+  "storedSessionExpired": "Збережена сесія Twitch завершилася: {details}",
+  "@storedSessionExpired": {
+    "placeholders": {
+      "details": {"type": "String"}
+    }
+  },
+  "twitchAuthorizationFailed": "Не вдалося авторизуватися у Twitch: {details}",
+  "@twitchAuthorizationFailed": {
+    "placeholders": {
+      "details": {"type": "String"}
+    }
+  },
+  "subscriptionRevoked": "Twitch вимкнув підписку {type}: {status}",
+  "@subscriptionRevoked": {
+    "placeholders": {
+      "type": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  }
+}
