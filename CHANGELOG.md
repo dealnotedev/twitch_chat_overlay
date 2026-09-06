@@ -1,3 +1,29 @@
+# Twitch Chat Overlay 1.1.1
+
+## Overlay
+
+- Added a compact UK/EN button in setup mode. Click it to switch the application language; the choice is saved and restored on startup.
+- The tray menu updates immediately when the language changes, and the updater opens in the selected language.
+- Moved the update notification inside the chat window, below the message list and above the composer.
+- Replaced the large update banner with a small inline row, added comfortable padding, and allowed its height to follow text size.
+- Restored normal version detection for the release build.
+
+## Updater
+
+- Added Markdown rendering for release notes, including headings, lists, emphasis, code blocks, quotes, tables and clickable web links.
+- Made the interface more compact to give release notes substantially more space.
+- Added a dedicated release-notes panel with a border, fixed header and visible scrollbar.
+- Allowed reinstalling the current release or installing the latest GitHub release even when the local version is newer.
+- Added explicit reinstall and downgrade button labels in English and Ukrainian.
+
+## Downloads
+
+- **Release.zip** — complete Windows application with the latest updater. Close the apps and extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+**To get the redesigned updater, use the full Release.zip.** In-app updates preserve the existing updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.1.0
 
 ## Updates

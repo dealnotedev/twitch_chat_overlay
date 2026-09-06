@@ -34,10 +34,12 @@ class ChatPanel extends StatefulWidget {
     required this.onSend,
     required this.onLoadEmotes,
     this.onDeleteMessage,
+    this.messageFooter,
     this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
     super.key,
   });
 
+  final Widget? messageFooter;
   final TwitchAuthState authState;
   final ChatState chatState;
   final int messageLifetimeMinutes;
@@ -209,6 +211,7 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           ),
         ),
+        ?widget.messageFooter,
         if (widget.interactive && _deleteError != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 8, 0),

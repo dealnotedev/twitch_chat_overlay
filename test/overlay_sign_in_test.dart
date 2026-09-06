@@ -229,7 +229,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);
       expect(find.bySemanticsLabel('Chat connected'), findsNothing);
-      expect(tester.getRect(find.byType(ChatPanel)).top, frame.top + 42);
+      expect(
+        tester.getRect(find.byType(ChatPanel)).top,
+        tester.getRect(find.byKey(const ValueKey('chat-header'))).bottom,
+      );
       await host.setInteractive(true);
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);

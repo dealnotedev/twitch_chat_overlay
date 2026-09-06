@@ -27,7 +27,9 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 - Optional message lifetime from 1 to 60 minutes with a smooth fade-out.
   The default is unlimited ("∞"), selected one step below 1 minute.
   Setup mode provides compact minus/plus controls and saves the setting.
-- Flutter `gen_l10n` localization for English and Ukrainian.
+- Flutter `gen_l10n` localization for English and Ukrainian. In setup mode,
+  click the small UK/EN button to cycle the app language; the selection is saved
+  in SharedPreferences and restored on startup, including the tray menu.
 - Bundled Inter 4.1 fonts for all app text (400–700, upright and italic),
   available offline without installing fonts in Windows.
 
@@ -184,7 +186,8 @@ upgrading cannot recover deleted tokens.
 The separate Flutter Windows updater opens from **Перевірити оновлення…** in the
 tray. It downloads the latest stable GitHub release, verifies the package, saves
 and closes the overlay, and replaces application files with rollback support.
-At startup, a background version check shows a bottom notification when a newer
+At startup, a background version check shows a compact notification inside the chat,
+below the message list and above the composer, when a newer
 stable update is available. Press Ctrl+Shift+O to use its Update button or dismiss
 it for the session. Network errors stay silent and never delay chat startup.
 Settings and Twitch sign-in remain in AppData. The updater supports Ukrainian and

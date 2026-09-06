@@ -41,6 +41,14 @@ final class OverlayTray with tray.TrayListener {
     }
   }
 
+  Future<void> updateLocalizations(AppLocalizations strings) async {
+    _strings = strings;
+    await _initialization;
+    if (_disposed || _exiting) return;
+    await tray.trayManager.setToolTip(_strings.appTitle);
+    await _updateMenu();
+  }
+
   Future<void> _updateMenu() async {
     final visible = await host.isVisible();
     if (_disposed || _exiting) return;

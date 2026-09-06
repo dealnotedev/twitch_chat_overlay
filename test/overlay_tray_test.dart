@@ -187,6 +187,19 @@ void main() {
     expect(actions, isEmpty);
   });
 
+  test('changing locale updates the menu and updater arguments without recreating the icon', () async {
+    await controller.initialize(ukrainian);
+    final english = await AppLocalizations.delegate.load(const Locale('en'));
+    await controller.updateLocalizations(english);
+    expect(menuItems().first['label'], english.trayHide);
+    expect(trayCalls.where((call) => call.method == 'setIcon').length, 1);
+    expect(trayCalls.where((call) => call.method == 'destroy'), isEmpty);
+    hostCalls.clear();
+    await clickMenu('update');
+    expect(hostCalls.single.method, 'openUpdater');
+    expect(hostCalls.single.arguments, 'en');
+  });
+
   test('opening the updater keeps the overlay running', () async {
     await controller.initialize(ukrainian);
     hostCalls.clear();

@@ -22,6 +22,8 @@ class OverlaySurface extends StatefulWidget {
     required this.overlayHost,
     required this.twitchAuth,
     required this.twitchChat,
+    this.onCycleLocale,
+    this.beforeExit,
     super.key,
   });
 
@@ -30,6 +32,8 @@ class OverlaySurface extends StatefulWidget {
   final OverlayHost overlayHost;
   final TwitchAuth twitchAuth;
   final TwitchChatSession twitchChat;
+  final VoidCallback? onCycleLocale;
+  final Future<void> Function()? beforeExit;
 
   @override
   State<OverlaySurface> createState() => _OverlaySurfaceState();
@@ -66,25 +70,26 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_tray != null) return;
+    if (_tray case final tray?) {
+      unawaited(
+        tray
+            .updateLocalizations(AppLocalizations.of(context))
+            .catchError(_reportTrayError),
+      );
+      return;
+    }
     final tray = OverlayTray(
       host: widget.overlayHost,
-      beforeExit: () => widget.layoutStore.save(_layout),
+      beforeExit: () async {
+        await widget.layoutStore.save(_layout);
+        await widget.beforeExit?.call();
+      },
     );
     _tray = tray;
     unawaited(
-      tray.initialize(AppLocalizations.of(context)).catchError((
-        Object error,
-        StackTrace stack,
-      ) {
-        FlutterError.reportError(
-          FlutterErrorDetails(
-            exception: error,
-            stack: stack,
-            library: 'overlay tray initialization',
-          ),
-        );
-      }),
+      tray
+          .initialize(AppLocalizations.of(context))
+          .catchError(_reportTrayError),
     );
   }
 
@@ -116,6 +121,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                     opacity: _layout.backgroundOpacity,
                     child: _VirtualChatWindow(
                       editing: _hostState.interactive,
+                      onCycleLocale: widget.onCycleLocale,
                       signedIn: _authState.status == TwitchAuthStatus.signedIn,
                       backgroundOpacity: _layout.backgroundOpacity,
                       messageLifetimeMinutes: _layout.messageLifetimeMinutes,
@@ -137,6 +143,10 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                           unawaited(widget.overlayHost.setInteractive(false)),
                       connectionStatus: _chatState.status,
                       child: ChatPanel(
+                        messageFooter: UpdateNotice(
+                          interactive: _hostState.interactive,
+                          onUpdate: widget.overlayHost.openUpdater,
+                        ),
                         authState: _authState,
                         chatState: _chatState,
                         messageLifetimeMinutes: _layout.messageLifetimeMinutes,
@@ -153,15 +163,6 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: 24,
-                  child: UpdateNotice(
-                    interactive: _hostState.interactive,
-                    onUpdate: widget.overlayHost.openUpdater,
-                  ),
-                ),
                 if (_hostState.interactive)
                   const Positioned(
                     left: 0,
@@ -173,6 +174,16 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  static void _reportTrayError(Object error, StackTrace stack) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: error,
+        stack: stack,
+        library: 'overlay tray localization',
       ),
     );
   }
@@ -233,6 +244,7 @@ class _VirtualChatWindow extends StatelessWidget {
     required this.onResize,
     required this.onGestureEnd,
     required this.onLock,
+    required this.onCycleLocale,
     required this.connectionStatus,
     required this.child,
   });
@@ -247,6 +259,7 @@ class _VirtualChatWindow extends StatelessWidget {
   final void Function(ResizeHandle handle, Offset delta) onResize;
   final VoidCallback onGestureEnd;
   final VoidCallback onLock;
+  final VoidCallback? onCycleLocale;
   final ChatConnectionStatus connectionStatus;
   final Widget child;
 
@@ -292,6 +305,7 @@ class _VirtualChatWindow extends StatelessWidget {
                       onMove: onMove,
                       onGestureEnd: onGestureEnd,
                       onLock: onLock,
+                      onCycleLocale: onCycleLocale,
                       connectionStatus: connectionStatus,
                     ),
                   if (editing)
@@ -396,6 +410,7 @@ class _ChatHeader extends StatelessWidget {
     required this.onMove,
     required this.onGestureEnd,
     required this.onLock,
+    required this.onCycleLocale,
     required this.connectionStatus,
   });
 
@@ -403,6 +418,7 @@ class _ChatHeader extends StatelessWidget {
   final ValueChanged<Offset> onMove;
   final VoidCallback onGestureEnd;
   final VoidCallback onLock;
+  final VoidCallback? onCycleLocale;
   final ChatConnectionStatus connectionStatus;
 
   @override
@@ -413,8 +429,8 @@ class _ChatHeader extends StatelessWidget {
       onPanUpdate: editing ? (details) => onMove(details.delta) : null,
       onPanEnd: editing ? (_) => onGestureEnd() : null,
       child: Container(
-        height: 42,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        key: const ValueKey('chat-header'),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: BackgroundOpacity.colorOf(context, const Color(0xF21F1F23)),
         ),
@@ -446,8 +462,33 @@ class _ChatHeader extends StatelessWidget {
               style: const TextStyle(fontSize: 10, color: Color(0xFFADADB8)),
             ),
             if (editing) ...[
-              const Gap(8),
+              const Gap(6),
+              if (onCycleLocale != null)
+                TextButton(
+                  key: const ValueKey('locale-toggle'),
+                  onPressed: onCycleLocale,
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFBF94FF),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    textStyle: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: Text(l10n.localeName.toUpperCase()),
+                ),
               IconButton(
+                style: IconButton.styleFrom(
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(),
                 visualDensity: VisualDensity.compact,
                 tooltip: l10n.lockOverlay,
                 onPressed: onLock,

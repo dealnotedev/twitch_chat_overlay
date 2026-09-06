@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:twitch_chat_overlay/l10n/locale_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
@@ -22,6 +25,7 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(['Inter'], license);
   });
 
+  final localePreferences = await LocalePreferences.load();
   final layoutStore = SharedPreferencesOverlayLayoutStore();
   final initialLayout = await layoutStore.load();
   final overlayHost = MethodChannelOverlayHost();
@@ -35,6 +39,7 @@ Future<void> main() async {
 
   runApp(
     TwitchChatOverlayApp(
+      localePreferences: localePreferences,
       initialLayout: initialLayout,
       layoutStore: layoutStore,
       overlayHost: overlayHost,
@@ -46,6 +51,7 @@ Future<void> main() async {
 
 class TwitchChatOverlayApp extends StatelessWidget {
   const TwitchChatOverlayApp({
+    required this.localePreferences,
     required this.initialLayout,
     required this.layoutStore,
     required this.overlayHost,
@@ -54,6 +60,7 @@ class TwitchChatOverlayApp extends StatelessWidget {
     super.key,
   });
 
+  final LocalePreferences localePreferences;
   final OverlayLayout initialLayout;
   final OverlayLayoutStore layoutStore;
   final OverlayHost overlayHost;
@@ -62,27 +69,45 @@ class TwitchChatOverlayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        scrollbars: false,
-      ),
-      color: Colors.transparent,
-      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-      locale: const Locale('uk'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.transparent,
-        fontFamily: 'Inter',
-      ),
-      home: OverlaySurface(
-        initialLayout: initialLayout,
-        layoutStore: layoutStore,
-        overlayHost: overlayHost,
-        twitchAuth: twitchAuth,
-        twitchChat: twitchChat,
+    return ListenableBuilder(
+      listenable: localePreferences,
+      builder: (context, _) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        scrollBehavior: const MaterialScrollBehavior().copyWith(
+          scrollbars: false,
+        ),
+        color: Colors.transparent,
+        onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+        locale: localePreferences.value,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: Colors.transparent,
+          fontFamily: 'Inter',
+        ),
+        home: OverlaySurface(
+          onCycleLocale: () => unawaited(
+            localePreferences.cycle().catchError((
+              Object error,
+              StackTrace stack,
+            ) {
+              FlutterError.reportError(
+                FlutterErrorDetails(
+                  exception: error,
+                  stack: stack,
+                  library: 'locale preferences',
+                ),
+              );
+            }),
+          ),
+          beforeExit: localePreferences.flush,
+          initialLayout: initialLayout,
+          layoutStore: layoutStore,
+          overlayHost: overlayHost,
+          twitchAuth: twitchAuth,
+          twitchChat: twitchChat,
+        ),
       ),
     );
   }
