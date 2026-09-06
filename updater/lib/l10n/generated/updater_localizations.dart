@@ -466,6 +466,12 @@ abstract class UpdaterLocalizations {
   /// In en, this message translates to:
   /// **'Close the overlay using Exit in its tray menu, then try again.'**
   String get closeOverlay;
+
+  /// No description provided for @linkOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the link. Try again.'**
+  String get linkOpenFailed;
 }
 
 class _UpdaterLocalizationsDelegate

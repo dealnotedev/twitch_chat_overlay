@@ -214,4 +214,7 @@ class UpdaterLocalizationsUk extends UpdaterLocalizations {
   @override
   String get closeOverlay =>
       'Закрийте оверлей через «Вийти» у треї та повторіть оновлення.';
+
+  @override
+  String get linkOpenFailed => 'Не вдалося відкрити посилання. Спробуйте ще.';
 }

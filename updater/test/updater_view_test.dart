@@ -22,11 +22,7 @@ void main() {
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
-  const notes =
-      'Окремий апдейтер для Twitch Chat Overlay.\n\n'
-      '• Оновлення без ручного розпакування архівів.\n'
-      '• Показ і приховування оверлея через трей.\n'
-      '• Збереження налаштувань і входу в Twitch.';
+  final notes = File('../CHANGELOG.md').readAsStringSync();
   for (final language in ['en', 'uk']) {
     final strings = lookupUpdaterLocalizations(Locale(language));
     final states = {

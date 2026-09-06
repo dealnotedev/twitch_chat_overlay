@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'update_controller.dart';
+import 'release_notes.dart';
 import 'l10n/generated/updater_localizations.dart';
 
 ThemeData updaterTheme() => ThemeData(
@@ -198,18 +199,18 @@ class UpdaterView extends StatelessWidget {
                       Expanded(
                         child: Scrollbar(
                           child: SingleChildScrollView(
-                            child: SelectableText(
-                              state.notes.trim().isEmpty
-                                  ? (state.phase == UpdatePhase.checking
+                            child: state.notes.trim().isEmpty
+                                ? SelectableText(
+                                    state.phase == UpdatePhase.checking
                                         ? strings.loadingNotes
-                                        : strings.noNotes)
-                                  : state.notes,
-                              style: TextStyle(
-                                color: Color(0xffb0acbf),
-                                fontSize: 13,
-                                height: 1.75,
-                              ),
-                            ),
+                                        : strings.noNotes,
+                                    style: const TextStyle(
+                                      color: Color(0xffb0acbf),
+                                      fontSize: 13,
+                                      height: 1.75,
+                                    ),
+                                  )
+                                : ReleaseNotes(data: state.notes),
                           ),
                         ),
                       ),

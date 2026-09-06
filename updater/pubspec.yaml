@@ -16,6 +16,8 @@ dependencies:
   crypto: ^3.0.7
   dio: ^5.11.1
   path: ^1.9.1
+  flutter_markdown_plus: ^1.0.12
+  open_url: ^2.0.1
 
 dev_dependencies:
   flutter_test:

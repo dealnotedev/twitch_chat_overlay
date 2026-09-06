@@ -217,4 +217,7 @@ class UpdaterLocalizationsEn extends UpdaterLocalizations {
   @override
   String get closeOverlay =>
       'Close the overlay using Exit in its tray menu, then try again.';
+
+  @override
+  String get linkOpenFailed => 'Could not open the link. Try again.';
 }

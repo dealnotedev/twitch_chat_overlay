@@ -15,7 +15,9 @@ the latest stable release of `dealnotedev/twitch_chat_overlay` on GitHub.
 
 Open **Перевірити оновлення…** in the overlay tray, or run
 `updater/overlay_updater.exe`. It shows installed/latest versions, release notes
-and download size. Start the update with **Оновити оверлей**.
+and download size. Release notes render Markdown with selectable text, headings,
+lists, links, code blocks, quotes and tables. Web links open in the default browser.
+Start the update with **Оновити оверлей**.
 
 Chat continues running during download and verification. Before replacement, the
 updater asks the matching overlay process to save its layout and exit. After
