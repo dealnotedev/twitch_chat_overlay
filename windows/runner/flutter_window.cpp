@@ -65,6 +65,12 @@ void FlutterWindow::RegisterOverlayChannel() {
           return;
         }
 
+        if (method == "isVisible") {
+          result->Success(flutter::EncodableValue(
+              IsWindowVisible(GetHandle()) != FALSE));
+          return;
+        }
+
         if (method == "forceToTop") {
           overlay_policy_.ForceToTop();
           result->Success();
@@ -85,6 +91,9 @@ void FlutterWindow::RegisterOverlayChannel() {
 
         if (method == "setTopmost") {
           overlay_policy_.SetTopmostEnabled(*enabled);
+          result->Success();
+        } else if (method == "setVisible") {
+          overlay_policy_.SetVisible(*enabled);
           result->Success();
         } else if (method == "setInteractive") {
           overlay_policy_.SetInteractive(*enabled);

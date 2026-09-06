@@ -17,17 +17,20 @@ void main() {
   late MethodChannelOverlayHost host;
   late AppLocalizations ukrainian;
   late List<MethodCall> trayCalls;
+  late List<MethodCall> hostCalls;
+  late bool visible;
   late List<String> actions;
   late Completer<void> closed;
 
-  Future<void> sendEvent(String method, [Object? arguments]) {
+  Future<void> sendEvent(String method, [Object? arguments]) async {
     final reply = Completer<void>();
     binding.channelBuffers.push(
       'tray_manager',
       codec.encodeMethodCall(MethodCall(method, arguments)),
       (_) => reply.complete(),
     );
-    return reply.future;
+    await reply.future;
+    await pumpEventQueue();
   }
 
   List<dynamic> menuItems() =>
@@ -42,6 +45,8 @@ void main() {
 
   setUp(() async {
     trayCalls = [];
+    hostCalls = [];
+    visible = true;
     actions = [];
     closed = Completer<void>();
     ukrainian = await AppLocalizations.delegate.load(const Locale('uk'));
@@ -60,6 +65,12 @@ void main() {
     binding.defaultBinaryMessenger.setMockMethodCallHandler(hostChannel, (
       call,
     ) async {
+      hostCalls.add(call);
+      if (call.method == 'isVisible') return visible;
+      if (call.method == 'setVisible') visible = call.arguments as bool;
+      if (call.method == 'setInteractive' && call.arguments == true) {
+        visible = true;
+      }
       if (call.method == 'close') {
         actions.add('close');
         closed.complete();
@@ -87,22 +98,76 @@ void main() {
         endsWith('/data/flutter_assets/${OverlayTray.iconAsset}'),
       );
       expect(menuItems().map((item) => item['label']), [
+        'Приховати оверлей',
         'Налаштувати оверлей',
         '',
         'Вийти',
       ]);
-      expect(menuItems()[1]['type'], 'separator');
+      expect(menuItems()[2]['type'], 'separator');
 
       await sendEvent('onTrayIconRightMouseDown');
       expect(trayCalls.last.method, 'popUpContextMenu');
       expect(trayCalls.last.arguments, {'bringAppToFront': true});
       expect(host.state.interactive, isFalse);
 
+      await clickMenu('hide');
+      expect(visible, isFalse);
+      await sendEvent('onTrayIconRightMouseDown');
+      expect(menuItems().map((item) => item['key']), [
+        'show',
+        'configure',
+        null,
+        'exit',
+      ]);
+      expect(menuItems().first['label'], 'Показати оверлей');
+      await clickMenu('show');
+      expect(visible, isTrue);
+      await sendEvent('onTrayIconRightMouseDown');
+      expect(menuItems().map((item) => item['key']), [
+        'hide',
+        'configure',
+        null,
+        'exit',
+      ]);
+      expect(
+        hostCalls
+            .where((call) => call.method == 'setVisible')
+            .map((call) => call.arguments),
+        [false, true],
+      );
+      expect(host.state.interactive, isFalse);
+
       await clickMenu('configure');
       expect(host.state.interactive, isTrue);
       await host.setInteractive(false);
+      await host.setVisible(false);
+      hostCalls.clear();
       await sendEvent('onTrayIconMouseDown');
-      expect(host.state.interactive, isTrue);
+      expect(visible, isTrue);
+      expect(host.state.interactive, isFalse);
+      expect(hostCalls.single.method, 'setVisible');
+      expect(hostCalls.single.arguments, isTrue);
+
+      // A second click keeps the visible overlay locked.
+      await sendEvent('onTrayIconMouseDown');
+      expect(visible, isTrue);
+      expect(host.state.interactive, isFalse);
+    },
+  );
+
+  test(
+    'menu reads native visibility after a hotkey shows the overlay',
+    () async {
+      await controller.initialize(ukrainian);
+      await clickMenu('hide');
+      await sendEvent('onTrayIconRightMouseDown');
+      expect(menuItems().first['key'], 'show');
+
+      // Native hotkey changes visibility outside the Dart tray controller.
+      visible = true;
+      await sendEvent('onTrayIconRightMouseDown');
+      expect(menuItems().first['key'], 'hide');
+      expect(menuItems().length, 4);
     },
   );
 

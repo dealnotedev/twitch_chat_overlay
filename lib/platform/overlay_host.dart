@@ -23,6 +23,8 @@ abstract interface class OverlayHost {
   Stream<OverlayHostState> get states;
 
   Future<void> initialize();
+  Future<bool> isVisible();
+  Future<void> setVisible(bool visible);
   Future<void> setInteractive(bool interactive);
   Future<void> setTopmost(bool topmost);
   Future<void> close();
@@ -55,6 +57,14 @@ final class MethodChannelOverlayHost implements OverlayHost {
       ),
     );
   }
+
+  @override
+  Future<bool> isVisible() async =>
+      await _channel.invokeMethod<bool>('isVisible') ?? true;
+
+  @override
+  Future<void> setVisible(bool visible) =>
+      _channel.invokeMethod<void>('setVisible', visible);
 
   @override
   Future<void> setInteractive(bool interactive) async {

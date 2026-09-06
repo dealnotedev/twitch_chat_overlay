@@ -5,6 +5,8 @@
   "@@locale": "en",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Configure overlay",
+  "trayShow": "Show overlay",
+  "trayHide": "Hide overlay",
   "exitApp": "Exit",
   "twitchChatTitle": "TWITCH CHAT",
   "layoutModeBanner": "Layout mode · Ctrl+Shift+O — lock",

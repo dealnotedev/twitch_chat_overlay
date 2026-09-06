@@ -9,9 +9,12 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 - `HWND_TOPMOST` with native one-second topmost enforcement.
 - Topmost protection through `WM_WINDOWPOSCHANGING`.
 - Non-activating click-through mode.
-- Global `Ctrl+Shift+O` shortcut to toggle controls.
+- Global `Ctrl+Shift+O` shortcut to show the overlay and toggle controls.
 - System tray and native context menu through `tray_manager` / `menu_base`:
-  click to configure, right-click → **Вийти** to save the layout and exit.
+  click to show the overlay without changing interaction mode. Right-click for
+  a single Show/Hide action based on current visibility, configuration, or **Вийти**
+  to save the layout and exit. Hiding keeps chat connected; configuring or using
+  the global shortcut shows the overlay again.
   The package restores the icon after Explorer restarts and removes it on exit.
 - Movable and resizable virtual chat window with eight resize handles.
 - Normalized layout persisted across restarts and display resolutions.

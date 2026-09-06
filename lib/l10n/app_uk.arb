@@ -5,6 +5,8 @@
   "@@locale": "uk",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Налаштувати оверлей",
+  "trayShow": "Показати оверлей",
+  "trayHide": "Приховати оверлей",
   "exitApp": "Вийти",
   "twitchChatTitle": "ЧАТ TWITCH",
   "layoutModeBanner": "Режим налаштування · Ctrl+Shift+O — заблокувати",

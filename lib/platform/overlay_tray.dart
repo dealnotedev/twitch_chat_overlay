@@ -15,6 +15,7 @@ final class OverlayTray with tray.TrayListener {
   final Future<void> Function() beforeExit;
   Future<void>? _initialization;
   Future<void>? _disposal;
+  late AppLocalizations _strings;
   bool _iconCreated = false;
   bool _disposed = false;
   bool _exiting = false;
@@ -23,24 +24,35 @@ final class OverlayTray with tray.TrayListener {
       _initialization ??= _initialize(strings);
 
   Future<void> _initialize(AppLocalizations strings) async {
+    _strings = strings;
     try {
       await tray.trayManager.setIcon(iconAsset);
       _iconCreated = true;
       await tray.trayManager.setToolTip(strings.appTitle);
-      await tray.trayManager.setContextMenu(
-        tray.Menu(
-          items: [
-            tray.MenuItem(key: 'configure', label: strings.trayConfigure),
-            tray.MenuItem.separator(),
-            tray.MenuItem(key: 'exit', label: strings.exitApp),
-          ],
-        ),
-      );
+      await _updateMenu();
       if (!_disposed) tray.trayManager.addListener(this);
     } catch (_) {
       await _destroyIcon();
       rethrow;
     }
+  }
+
+  Future<void> _updateMenu() async {
+    final visible = await host.isVisible();
+    if (_disposed || _exiting) return;
+    await tray.trayManager.setContextMenu(
+      tray.Menu(
+        items: [
+          if (visible)
+            tray.MenuItem(key: 'hide', label: _strings.trayHide)
+          else
+            tray.MenuItem(key: 'show', label: _strings.trayShow),
+          tray.MenuItem(key: 'configure', label: _strings.trayConfigure),
+          tray.MenuItem.separator(),
+          tray.MenuItem(key: 'exit', label: _strings.exitApp),
+        ],
+      ),
+    );
   }
 
   Future<void> dispose() {
@@ -67,30 +79,40 @@ final class OverlayTray with tray.TrayListener {
   }
 
   @override
-  void onTrayIconMouseDown() => _configure();
+  void onTrayIconMouseDown() {
+    if (_disposed || _exiting) return;
+    unawaited(host.setVisible(true).catchError(_reportError));
+  }
 
   @override
   void onTrayIconRightMouseDown() {
     if (_disposed || _exiting) return;
+    unawaited(_openMenu().catchError(_reportError));
+  }
+
+  Future<void> _openMenu() async {
+    // Read native visibility on every opening, including after the hotkey.
+    await _updateMenu();
+    if (_disposed || _exiting) return;
     // Windows needs the menu owner in the foreground to dismiss the native
     // popup on an outside click, including while the overlay is click-through.
-    unawaited(
-      tray.trayManager
-          .popUpContextMenu(
-            // ignore: deprecated_member_use
-            bringAppToFront: true,
-          )
-          .catchError(_reportError),
+    await tray.trayManager.popUpContextMenu(
+      // ignore: deprecated_member_use
+      bringAppToFront: true,
     );
   }
 
   @override
   void onTrayMenuItemClick(tray.MenuItem menuItem) {
+    if (_disposed || _exiting) return;
     switch (menuItem.key) {
+      case 'show':
+        unawaited(host.setVisible(true).catchError(_reportError));
+      case 'hide':
+        unawaited(host.setVisible(false).catchError(_reportError));
       case 'configure':
         _configure();
       case 'exit':
-        if (_disposed || _exiting) return;
         _exiting = true;
         unawaited(_exit().catchError(_reportError));
     }

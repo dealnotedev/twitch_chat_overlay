@@ -22,6 +22,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trayConfigure => 'Configure overlay';
 
   @override
+  String get trayShow => 'Show overlay';
+
+  @override
+  String get trayHide => 'Hide overlay';
+
+  @override
   String get exitApp => 'Exit';
 
   @override

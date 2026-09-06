@@ -21,6 +21,8 @@ class OverlayWindowPolicy {
   bool topmost_enabled() const { return topmost_enabled_; }
   void ForceToTop();
 
+  void SetVisible(bool visible);
+
   void SetInteractive(bool interactive);
   bool interactive() const { return interactive_; }
 

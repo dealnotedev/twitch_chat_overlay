@@ -58,6 +58,17 @@ void OverlayWindowPolicy::ForceToTop() {
                    SWP_NOSENDCHANGING);
 }
 
+void OverlayWindowPolicy::SetVisible(bool visible) {
+  if (window_ == nullptr) {
+    return;
+  }
+
+  ShowWindow(window_, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+  if (visible) {
+    ForceToTop();
+  }
+}
+
 void OverlayWindowPolicy::SetInteractive(bool interactive) {
   interactive_ = interactive;
   if (window_ == nullptr) {
@@ -77,6 +88,7 @@ void OverlayWindowPolicy::SetInteractive(bool interactive) {
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 
   if (interactive) {
+    SetVisible(true);
     SetForegroundWindow(window_);
   }
 }
@@ -106,6 +118,7 @@ bool OverlayWindowPolicy::HandleMessage(UINT message,
   }
 
   if (message == WM_HOTKEY && wparam == kInteractionHotkeyId) {
+    SetVisible(true);
     SetInteractive(!interactive_);
     *interaction_changed = true;
     *result = 0;

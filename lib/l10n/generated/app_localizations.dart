@@ -122,6 +122,18 @@ abstract class AppLocalizations {
   /// **'Configure overlay'**
   String get trayConfigure;
 
+  /// No description provided for @trayShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show overlay'**
+  String get trayShow;
+
+  /// No description provided for @trayHide.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide overlay'**
+  String get trayHide;
+
   /// No description provided for @exitApp.
   ///
   /// In en, this message translates to:

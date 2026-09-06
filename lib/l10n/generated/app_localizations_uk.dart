@@ -22,6 +22,12 @@ class AppLocalizationsUk extends AppLocalizations {
   String get trayConfigure => 'Налаштувати оверлей';
 
   @override
+  String get trayShow => 'Показати оверлей';
+
+  @override
+  String get trayHide => 'Приховати оверлей';
+
+  @override
   String get exitApp => 'Вийти';
 
   @override
