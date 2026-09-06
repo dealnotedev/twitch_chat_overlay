@@ -70,223 +70,124 @@ class UpdaterView extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 840),
-          child: Column(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(32, 26, 32, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          constraints: const BoxConstraints(maxWidth: 840),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: const Color(0xff291b40),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: const Icon(
+                        Icons.system_update_alt_rounded,
+                        color: accent,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        strings.heading,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'TWITCH CHAT OVERLAY',
+                      style: TextStyle(
+                        color: muted,
+                        fontSize: 9,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff19171e),
+                    border: Border.all(color: const Color(0xff302b39)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'TWITCH CHAT OVERLAY',
-                                  style: TextStyle(
-                                    color: muted,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.3,
-                                  ),
-                                ),
-                                SizedBox(height: 12),
-                                Text(
-                                  strings.heading,
-                                  style: TextStyle(
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: 7),
-                                Text(
-                                  strings.subtitle,
-                                  style: TextStyle(color: muted, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 58,
-                            height: 58,
-                            decoration: BoxDecoration(
-                              color: Color(0xff291b40),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Icon(
-                              Icons.system_update_alt_rounded,
-                              color: accent,
-                              size: 29,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 24),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 22,
-                          vertical: 18,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Color(0xff1a191f),
-                          border: Border.all(color: Color(0xff302d39)),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _Version(
-                                label: strings.installedLabel,
-                                value: state.current,
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 22),
-                              child: Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 20,
-                                color: Color(0xff78668f),
-                              ),
-                            ),
-                            Expanded(
-                              child: _Version(
-                                label: strings.latestLabel,
-                                value: state.latest,
-                                color: accent,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 23),
-                      Row(
-                        children: [
-                          Text(
-                            strings.whatsNew,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Spacer(),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Color(0xff26212f),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              strings.stableRelease,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Color(0xffb6a6cf),
-                                letterSpacing: .5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 13),
                       Expanded(
-                        child: Scrollbar(
-                          child: SingleChildScrollView(
-                            child: state.notes.trim().isEmpty
-                                ? SelectableText(
-                                    state.phase == UpdatePhase.checking
-                                        ? strings.loadingNotes
-                                        : strings.noNotes,
-                                    style: const TextStyle(
-                                      color: Color(0xffb0acbf),
-                                      fontSize: 13,
-                                      height: 1.75,
-                                    ),
-                                  )
-                                : ReleaseNotes(data: state.notes),
-                          ),
+                        child: _Version(
+                          label: strings.installedLabel,
+                          value: state.current,
                         ),
                       ),
-                      SizedBox(height: 20),
-                      _Status(state: state),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 14),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: Color(0xff78668f),
+                        ),
+                      ),
+                      Expanded(
+                        child: _Version(
+                          label: strings.latestLabel,
+                          value: state.latest,
+                          color: accent,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 21),
-                decoration: BoxDecoration(
-                  color: Color(0xff151218),
-                  border: Border(top: BorderSide(color: Color(0xff2b2732))),
-                ),
-                child: Row(
+                const SizedBox(height: 12),
+                Expanded(child: _NotesPanel(state: state)),
+                const SizedBox(height: 10),
+                _Status(state: state, onCancel: onCancel),
+                const SizedBox(height: 12),
+                Row(
                   children: [
+                    const Icon(Icons.shield_outlined, size: 16, color: muted),
+                    const SizedBox(width: 7),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            strings.settingsHeading,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            strings.settingsDetail,
-                            style: TextStyle(color: muted, fontSize: 11),
-                          ),
-                          if (state.busy &&
-                              !state.critical &&
-                              state.phase == UpdatePhase.downloading)
-                            Padding(
-                              padding: EdgeInsets.only(top: 6),
-                              child: InkWell(
-                                onTap: onCancel,
-                                borderRadius: BorderRadius.circular(4),
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 4),
-                                  child: Text(
-                                    strings.cancelDownload,
-                                    style: TextStyle(
-                                      color: accent,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
+                      child: Text(
+                        strings.settingsDetail,
+                        style: const TextStyle(
+                          color: muted,
+                          fontSize: 11,
+                          height: 1.35,
+                        ),
                       ),
                     ),
-                    SizedBox(width: 18),
+                    const SizedBox(width: 16),
                     FilledButton(
                       onPressed: state.busy ? null : onAction,
                       style: FilledButton.styleFrom(
-                        minimumSize: Size(174, 46),
-                        backgroundColor: Color(0xff9146ff),
+                        minimumSize: const Size(146, 36),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        backgroundColor: const Color(0xff9146ff),
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: Color(0xff38234f),
-                        disabledForegroundColor: Color(0xff9e85bd),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 21,
-                          vertical: 16,
+                        disabledBackgroundColor: const Color(0xff38234f),
+                        disabledForegroundColor: const Color(0xff9e85bd),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(7),
                         ),
                       ),
                       child: Text(
                         state.action,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -294,10 +195,106 @@ class UpdaterView extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NotesPanel extends StatefulWidget {
+  const _NotesPanel({required this.state});
+  final UpdatePresentation state;
+
+  @override
+  State<_NotesPanel> createState() => _NotesPanelState();
+}
+
+class _NotesPanelState extends State<_NotesPanel> {
+  final _scroll = ScrollController();
+
+  @override
+  void didUpdateWidget(covariant _NotesPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.notes != widget.state.notes && _scroll.hasClients) {
+      _scroll.jumpTo(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = UpdaterLocalizations.of(context);
+    final state = widget.state;
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xff141218),
+        border: Border.all(color: const Color(0xff39313f)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xff1c1822),
+              border: Border(bottom: BorderSide(color: Color(0xff39313f))),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  strings.whatsNew,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  strings.stableRelease,
+                  style: const TextStyle(
+                    color: Color(0xffb6a6cf),
+                    fontSize: 9,
+                    letterSpacing: .4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Scrollbar(
+              controller: _scroll,
+              thumbVisibility: true,
+              thickness: 4,
+              radius: const Radius.circular(4),
+              child: SingleChildScrollView(
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(14, 12, 18, 14),
+                child: state.notes.trim().isEmpty
+                    ? SelectableText(
+                        state.phase == UpdatePhase.checking
+                            ? strings.loadingNotes
+                            : strings.noNotes,
+                        style: const TextStyle(
+                          color: Color(0xffb0acbf),
+                          fontSize: 13,
+                          height: 1.65,
+                        ),
+                      )
+                    : ReleaseNotes(data: state.notes),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -311,9 +308,12 @@ class _Version extends StatelessWidget {
   });
   final String label, value;
   final Color color;
+
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 3,
+    crossAxisAlignment: WrapCrossAlignment.center,
     children: [
       Text(
         label,
@@ -321,15 +321,14 @@ class _Version extends StatelessWidget {
           color: UpdaterView.muted,
           fontSize: 9,
           fontWeight: FontWeight.w500,
-          letterSpacing: .6,
+          letterSpacing: .4,
         ),
       ),
-      const SizedBox(height: 8),
       Text(
         value,
         style: TextStyle(
           color: color,
-          fontSize: value.length > 12 ? 17 : 23,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -338,17 +337,21 @@ class _Version extends StatelessWidget {
 }
 
 class _Status extends StatelessWidget {
-  const _Status({required this.state});
+  const _Status({required this.state, required this.onCancel});
   final UpdatePresentation state;
+  final VoidCallback onCancel;
+
   @override
   Widget build(BuildContext context) {
     final error = state.phase == UpdatePhase.error;
+    final downloading = state.phase == UpdatePhase.downloading;
+    final showProgress = state.busy && !error;
+    final strings = UpdaterLocalizations.of(context);
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: error ? const Color(0xff281b24) : const Color(0xff1a1720),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,51 +365,70 @@ class _Status extends StatelessWidget {
                           state.phase == UpdatePhase.current
                     ? Icons.check_circle_outline_rounded
                     : Icons.downloading_rounded,
-                size: 17,
+                size: 15,
                 color: error ? const Color(0xfff2a6bc) : UpdaterView.accent,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Expanded(
                 child: Text(
                   state.title,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              if (state.phase == UpdatePhase.downloading &&
-                  state.progress != null)
+              if (downloading && state.progress != null)
                 Text(
                   '${(state.progress! * 100).round()}%',
                   style: const TextStyle(
                     color: UpdaterView.accent,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
+              if (downloading && state.busy && !state.critical) ...[
+                const SizedBox(width: 10),
+                TextButton(
+                  onPressed: onCancel,
+                  style: TextButton.styleFrom(
+                    foregroundColor: UpdaterView.accent,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  child: Text(strings.cancelDownload),
+                ),
+              ],
             ],
           ),
-          if (!error) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: state.progress,
-                minHeight: 4,
-                backgroundColor: const Color(0xff332b40),
-                color: const Color(0xffa970ff),
-              ),
-            ),
-          ],
-          const SizedBox(height: 11),
+          const SizedBox(height: 4),
           Text(
             state.detail,
             style: const TextStyle(
               color: UpdaterView.muted,
               fontSize: 11,
-              height: 1.6,
+              height: 1.4,
             ),
           ),
+          if (showProgress) ...[
+            const SizedBox(height: 7),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: state.progress,
+                minHeight: 3,
+                backgroundColor: const Color(0xff332b40),
+                color: const Color(0xffa970ff),
+              ),
+            ),
+          ],
         ],
       ),
     );

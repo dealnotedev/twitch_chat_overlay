@@ -220,4 +220,18 @@ class UpdaterLocalizationsEn extends UpdaterLocalizations {
 
   @override
   String get linkOpenFailed => 'Could not open the link. Try again.';
+
+  @override
+  String get reinstallOverlay => 'Reinstall overlay';
+
+  @override
+  String get reinstallTitle => 'This version is already installed';
+
+  @override
+  String downgradeOverlay(String version) {
+    return 'Downgrade to $version';
+  }
+
+  @override
+  String get downgradeTitle => 'Your version is newer than the GitHub release';
 }

@@ -472,6 +472,30 @@ abstract class UpdaterLocalizations {
   /// In en, this message translates to:
   /// **'Could not open the link. Try again.'**
   String get linkOpenFailed;
+
+  /// No description provided for @reinstallOverlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Reinstall overlay'**
+  String get reinstallOverlay;
+
+  /// No description provided for @reinstallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This version is already installed'**
+  String get reinstallTitle;
+
+  /// No description provided for @downgradeOverlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Downgrade to {version}'**
+  String downgradeOverlay(String version);
+
+  /// No description provided for @downgradeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your version is newer than the GitHub release'**
+  String get downgradeTitle;
 }
 
 class _UpdaterLocalizationsDelegate

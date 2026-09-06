@@ -217,4 +217,18 @@ class UpdaterLocalizationsUk extends UpdaterLocalizations {
 
   @override
   String get linkOpenFailed => 'Не вдалося відкрити посилання. Спробуйте ще.';
+
+  @override
+  String get reinstallOverlay => 'Перевстановити оверлей';
+
+  @override
+  String get reinstallTitle => 'Ця версія вже встановлена';
+
+  @override
+  String downgradeOverlay(String version) {
+    return 'Повернутися до $version';
+  }
+
+  @override
+  String get downgradeTitle => 'Ваша версія новіша за реліз на GitHub';
 }

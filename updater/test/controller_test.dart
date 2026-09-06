@@ -19,9 +19,15 @@ void main() {
   late UpdateController controller;
   const target = AppVersion(1, 1, 0, 3);
   var corrupt = false;
+  var tag = '1.1.0';
+  var missingPackage = false;
+  var noRelease = false;
 
   setUp(() {
     corrupt = false;
+    tag = '1.1.0';
+    missingPackage = false;
+    noRelease = false;
     directory = Directory.systemTemp.createTempSync('updater-controller-');
     File(p.join(directory.path, overlayExecutable)).writeAsStringSync('old');
     host = FakeHost();
@@ -51,20 +57,22 @@ void main() {
     final dio = Dio()
       ..httpClientAdapter = Responses((options) {
         if (options.uri.host == 'api.github.com') {
+          if (noRelease) return ResponseBody.fromString('', 404);
           return ResponseBody.fromString(
             jsonEncode({
-              'tag_name': '1.1.0',
+              'tag_name': tag,
               'draft': false,
               'prerelease': false,
               'body': 'Release notes',
               'assets': [
-                {
-                  'name': 'update.zip',
-                  'size': bytes.length,
-                  'digest':
-                      'sha256:${corrupt ? '0' * 64 : sha256.convert(bytes)}',
-                  'browser_download_url': 'https://github.com/dealnotedev/twitch_chat_overlay/releases/download/1.1.0/update.zip',
-                },
+                if (!missingPackage)
+                  {
+                    'name': 'update.zip',
+                    'size': bytes.length,
+                    'digest':
+                        'sha256:${corrupt ? '0' * 64 : sha256.convert(bytes)}',
+                    'browser_download_url': 'https://github.com/dealnotedev/twitch_chat_overlay/releases/download/1.1.0/update.zip',
+                  },
               ],
             }),
             200,
@@ -102,6 +110,77 @@ void main() {
     await controller.activate();
     expect(host.calls.sublist(host.calls.length - 2), ['start', 'close']);
   });
+
+  for (final scenario in [
+    (installed: target, tag: '1.1.0', reinstall: true),
+    (installed: target, tag: '1.1.0+3', reinstall: true),
+    (installed: const AppVersion(2, 0, 0, 9), tag: '1.1.0', reinstall: false),
+    (installed: const AppVersion(1, 1, 0, 4), tag: '1.1.0+3', reinstall: false),
+  ]) {
+    test('installs ${scenario.tag} over ${scenario.installed}', () async {
+      host.version = scenario.installed;
+      tag = scenario.tag;
+      await controller.check();
+      expect(controller.phase, UpdatePhase.available);
+      expect(
+        controller.action,
+        scenario.reinstall
+            ? controller.strings.reinstallOverlay
+            : controller.strings.downgradeOverlay(tag),
+      );
+      expect(host.calls, ['initialize', 'version']);
+      expect(
+        File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
+        'old',
+      );
+      await controller.activate();
+      expect(controller.phase, UpdatePhase.done);
+      expect(controller.current, target);
+      expect(
+        File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
+        'new',
+      );
+      expect(host.calls, ['initialize', 'version', 'begin', 'stop', 'end']);
+      expect(controller.action, controller.strings.openOverlay);
+      await controller.activate();
+      expect(host.calls.sublist(host.calls.length - 2), ['start', 'close']);
+    });
+  }
+  test(
+    'reinstallation still verifies the checksum before closing the overlay',
+    () async {
+      host.version = target;
+      corrupt = true;
+      await controller.check();
+      await controller.activate();
+      expect(controller.phase, UpdatePhase.error);
+      expect(host.calls, ['initialize', 'version']);
+      expect(
+        File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
+        'old',
+      );
+    },
+  );
+  test('missing package cannot reinstall or downgrade', () async {
+    host.version = const AppVersion(2, 0, 0);
+    missingPackage = true;
+    await controller.check();
+    expect(controller.phase, UpdatePhase.error);
+    expect(controller.detail, controller.strings.packageUnavailable);
+    expect(host.calls, ['initialize', 'version']);
+  });
+  test(
+    'no GitHub release still offers opening the installed overlay',
+    () async {
+      noRelease = true;
+      await controller.check();
+      expect(controller.phase, UpdatePhase.current);
+      expect(controller.action, controller.strings.openOverlay);
+      await controller.activate();
+      expect(host.calls, ['initialize', 'version', 'start', 'close']);
+    },
+  );
+
   test('bad checksum never closes the overlay or replaces files', () async {
     corrupt = true;
     await controller.check();
@@ -156,6 +235,7 @@ void main() {
 
 final class FakeHost implements UpdaterHost {
   final calls = <String>[];
+  AppVersion version = const AppVersion(1, 0, 1, 2);
   bool failStop = false;
   bool lockAvailable = true;
   @override
@@ -166,7 +246,7 @@ final class FakeHost implements UpdaterHost {
   @override
   Future<AppVersion> readVersion() async {
     calls.add('version');
-    return const AppVersion(1, 0, 1, 2);
+    return version;
   }
 
   @override

@@ -78,5 +78,10 @@
       }
     }
   },
-"linkOpenFailed": "Could not open the link. Try again."
+"linkOpenFailed": "Could not open the link. Try again.",
+"reinstallOverlay": "Reinstall overlay",
+  "reinstallTitle": "This version is already installed",
+  "downgradeOverlay": "Downgrade to {version}",
+  "downgradeTitle": "Your version is newer than the GitHub release",
+"@downgradeOverlay": {"placeholders": {"version": {"type": "String"}}}
 }

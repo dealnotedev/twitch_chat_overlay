@@ -63,14 +63,27 @@ final class UpdateController extends ChangeNotifier {
   double? progress;
   int received = 0;
 
-  bool get available =>
-      release != null &&
-      current != null &&
-      release!.version.compareTo(current!) > 0;
+  bool get canInstall => release?.download != null && current != null;
+
+  int get _releaseComparison => current!.matchesRelease(release!.version)
+      ? 0
+      : release!.version.compareTo(current!);
+
+  String get _installAction => switch (_releaseComparison) {
+    > 0 => strings.updateOverlay,
+    0 => strings.reinstallOverlay,
+    _ => strings.downgradeOverlay(release!.version.toString()),
+  };
+
+  String get _offerTitle => switch (_releaseComparison) {
+    > 0 => strings.availableTitle,
+    0 => strings.reinstallTitle,
+    _ => strings.downgradeTitle,
+  };
   String get action => switch (phase) {
     UpdatePhase.error => strings.retry,
     UpdatePhase.current || UpdatePhase.done => strings.openOverlay,
-    UpdatePhase.available => strings.updateOverlay,
+    UpdatePhase.available => _installAction,
     UpdatePhase.downloading => strings.downloadingAction,
     UpdatePhase.checking => strings.checkingAction,
     _ => strings.preparingAction,
@@ -115,13 +128,13 @@ final class UpdateController extends ChangeNotifier {
       }
       current = await host.readVersion();
       release = await client.latest(_cancellation);
-      if (available) {
+      if (release != null) {
         if (release!.download == null) {
           throw const UpdateFailure(UpdateIssue.packageUnavailable);
         }
         _status(
           UpdatePhase.available,
-          strings.availableTitle,
+          _offerTitle,
           strings.packageSize(_megabytes(release!.size)),
           fraction: 0,
         );
@@ -147,7 +160,7 @@ final class UpdateController extends ChangeNotifier {
       await check();
       return;
     }
-    if (!available || phase == UpdatePhase.done) {
+    if (!canInstall || phase == UpdatePhase.done) {
       try {
         await host.startOverlay();
         await host.close();

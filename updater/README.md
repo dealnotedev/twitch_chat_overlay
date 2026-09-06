@@ -19,6 +19,11 @@ and download size. Release notes render Markdown with selectable text, headings,
 lists, links, code blocks, quotes and tables. Web links open in the default browser.
 Start the update with **Оновити оверлей**.
 
+The latest GitHub release can be installed even when the installed version is the
+same or newer. The action shows **Reinstall overlay** for the same release and
+**Downgrade to <version>** for an older release. Both use the same download checks
+and rollback process as a normal upgrade.
+
 Chat continues running during download and verification. Before replacement, the
 updater asks the matching overlay process to save its layout and exit. After
 installation, **Відкрити оверлей** starts the app again.

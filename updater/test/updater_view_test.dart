@@ -36,6 +36,25 @@ void main() {
         notes: notes,
         progress: 0,
       ),
+      'reinstall': UpdatePresentation(
+        phase: UpdatePhase.available,
+        title: strings.reinstallTitle,
+        detail: strings.packageSize(language == 'uk' ? '13,8' : '13.8'),
+        action: strings.reinstallOverlay,
+        current: '1.1.0+3',
+        latest: '1.1.0',
+        notes: notes,
+      ),
+      'downgrade': UpdatePresentation(
+        phase: UpdatePhase.available,
+        title: strings.downgradeTitle,
+        detail: strings.packageSize(language == 'uk' ? '13,8' : '13.8'),
+        action: strings.downgradeOverlay('1.1.0'),
+        current: '1.2.0+4',
+        latest: '1.1.0',
+        notes: notes,
+      ),
+
       'downloading': UpdatePresentation(
         phase: UpdatePhase.downloading,
         title: strings.downloadTitle,
