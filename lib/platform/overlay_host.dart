@@ -21,12 +21,14 @@ final class OverlayHostState {
 abstract interface class OverlayHost {
   OverlayHostState get state;
   Stream<OverlayHostState> get states;
+  Stream<void> get closeRequests;
 
   Future<void> initialize();
   Future<bool> isVisible();
   Future<void> setVisible(bool visible);
   Future<void> setInteractive(bool interactive);
   Future<void> setTopmost(bool topmost);
+  Future<void> openUpdater(String locale);
   Future<void> close();
 }
 
@@ -36,6 +38,9 @@ final class MethodChannelOverlayHost implements OverlayHost {
   final StreamController<OverlayHostState> _states =
       StreamController<OverlayHostState>.broadcast(sync: true);
 
+  final StreamController<void> _closeRequests =
+      StreamController<void>.broadcast(sync: true);
+
   OverlayHostState _state = const OverlayHostState.initial();
 
   @override
@@ -43,6 +48,9 @@ final class MethodChannelOverlayHost implements OverlayHost {
 
   @override
   Stream<OverlayHostState> get states => _states.stream;
+
+  @override
+  Stream<void> get closeRequests => _closeRequests.stream;
 
   @override
   Future<void> initialize() async {
@@ -79,10 +87,16 @@ final class MethodChannelOverlayHost implements OverlayHost {
   }
 
   @override
+  Future<void> openUpdater(String locale) =>
+      _channel.invokeMethod<void>('openUpdater', locale);
+
+  @override
   Future<void> close() => _channel.invokeMethod<void>('close');
 
   Future<void> _handleNativeCall(MethodCall call) async {
-    if (call.method == 'interactionChanged') {
+    if (call.method == 'closeRequested') {
+      _closeRequests.add(null);
+    } else if (call.method == 'interactionChanged') {
       _emit(_state.copyWith(interactive: call.arguments as bool));
     }
   }

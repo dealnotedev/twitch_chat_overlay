@@ -5,6 +5,7 @@
   "@@locale": "uk",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Налаштувати оверлей",
+  "trayUpdate": "Перевірити оновлення…",
   "trayShow": "Показати оверлей",
   "trayHide": "Приховати оверлей",
   "exitApp": "Вийти",
@@ -111,5 +112,13 @@
         "type": "int"
       }
     }
-  }
+  },
+"updateNoticeTitle": "Доступна версія {version}",
+  "updateNoticeDetail": "Нове оновлення для вашого оверлея.",
+  "updateNoticeShortcut": "Натисніть Ctrl+Shift+O, щоб оновити.",
+  "updateNow": "Оновити",
+  "updateOpening": "Відкриваємо…",
+  "updateDismiss": "Нагадати наступного разу",
+  "updateLaunchFailed": "Не вдалося відкрити апдейтер. Спробуйте ще.",
+"@updateNoticeTitle": {"placeholders": {"version": {"type": "String"}}}
 }

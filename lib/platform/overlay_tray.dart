@@ -16,6 +16,7 @@ final class OverlayTray with tray.TrayListener {
   Future<void>? _initialization;
   Future<void>? _disposal;
   late AppLocalizations _strings;
+  StreamSubscription<void>? _closeSubscription;
   bool _iconCreated = false;
   bool _disposed = false;
   bool _exiting = false;
@@ -30,7 +31,10 @@ final class OverlayTray with tray.TrayListener {
       _iconCreated = true;
       await tray.trayManager.setToolTip(strings.appTitle);
       await _updateMenu();
-      if (!_disposed) tray.trayManager.addListener(this);
+      if (!_disposed) {
+        tray.trayManager.addListener(this);
+        _closeSubscription = host.closeRequests.listen((_) => _requestExit());
+      }
     } catch (_) {
       await _destroyIcon();
       rethrow;
@@ -48,6 +52,7 @@ final class OverlayTray with tray.TrayListener {
           else
             tray.MenuItem(key: 'show', label: _strings.trayShow),
           tray.MenuItem(key: 'configure', label: _strings.trayConfigure),
+          tray.MenuItem(key: 'update', label: _strings.trayUpdate),
           tray.MenuItem.separator(),
           tray.MenuItem(key: 'exit', label: _strings.exitApp),
         ],
@@ -58,6 +63,8 @@ final class OverlayTray with tray.TrayListener {
   Future<void> dispose() {
     _disposed = true;
     tray.trayManager.removeListener(this);
+    unawaited(_closeSubscription?.cancel());
+    _closeSubscription = null;
     return _disposal ??= _destroy();
   }
 
@@ -112,15 +119,24 @@ final class OverlayTray with tray.TrayListener {
         unawaited(host.setVisible(false).catchError(_reportError));
       case 'configure':
         _configure();
+      case 'update':
+        unawaited(
+          host.openUpdater(_strings.localeName).catchError(_reportError),
+        );
       case 'exit':
-        _exiting = true;
-        unawaited(_exit().catchError(_reportError));
+        _requestExit();
     }
   }
 
   void _configure() {
     if (_disposed || _exiting) return;
     unawaited(host.setInteractive(true).catchError(_reportError));
+  }
+
+  void _requestExit() {
+    if (_disposed || _exiting) return;
+    _exiting = true;
+    unawaited(_exit().catchError(_reportError));
   }
 
   Future<void> _exit() async {

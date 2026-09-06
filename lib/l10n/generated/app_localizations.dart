@@ -122,6 +122,12 @@ abstract class AppLocalizations {
   /// **'Configure overlay'**
   String get trayConfigure;
 
+  /// No description provided for @trayUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates…'**
+  String get trayUpdate;
+
   /// No description provided for @trayShow.
   ///
   /// In en, this message translates to:
@@ -529,6 +535,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{amount} Bits'**
   String bitsAmount(int amount);
+
+  /// No description provided for @updateNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available'**
+  String updateNoticeTitle(String version);
+
+  /// No description provided for @updateNoticeDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'A fresh update for your overlay.'**
+  String get updateNoticeDetail;
+
+  /// No description provided for @updateNoticeShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'Press Ctrl+Shift+O to update.'**
+  String get updateNoticeShortcut;
+
+  /// No description provided for @updateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateNow;
+
+  /// No description provided for @updateOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening…'**
+  String get updateOpening;
+
+  /// No description provided for @updateDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me next time'**
+  String get updateDismiss;
+
+  /// No description provided for @updateLaunchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the updater. Try again.'**
+  String get updateLaunchFailed;
 }
 
 class _AppLocalizationsDelegate

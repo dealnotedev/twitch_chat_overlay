@@ -1,6 +1,8 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <filesystem>
+#include <shellapi.h>
 
 #include <flutter/method_result_functions.h>
 
@@ -55,6 +57,11 @@ void FlutterWindow::RegisterOverlayChannel() {
                  result) {
         const std::string& method = call.method_name();
 
+        if (method == "getAppVersion") {
+          result->Success(flutter::EncodableValue(FLUTTER_VERSION));
+          return;
+        }
+
         if (method == "getState") {
           flutter::EncodableMap state;
           state[flutter::EncodableValue("topmost")] =
@@ -73,6 +80,36 @@ void FlutterWindow::RegisterOverlayChannel() {
 
         if (method == "forceToTop") {
           overlay_policy_.ForceToTop();
+          result->Success();
+          return;
+        }
+
+        if (method == "openUpdater") {
+          const auto* requested_locale = call.arguments() ? std::get_if<std::string>(call.arguments()) : nullptr;
+          const bool ukrainian = requested_locale && *requested_locale == "uk";
+          const std::wstring locale = ukrainian ? L"uk" : L"en";
+          wchar_t module_path[32768];
+          const DWORD length = GetModuleFileNameW(nullptr, module_path, 32768);
+          if (length == 0 || length >= 32768) {
+            result->Error("UPDATER_PATH", "Cannot locate the application directory");
+            return;
+          }
+          const auto directory = std::filesystem::path(module_path).parent_path();
+          const auto updater = directory / L"updater" / L"overlay_updater.exe";
+          const std::wstring arguments = L"--install-dir \"" + directory.wstring() + L"\" --locale " + locale;
+          const auto launched = reinterpret_cast<INT_PTR>(
+              ShellExecuteW(GetHandle(), L"open", updater.c_str(), arguments.c_str(),
+                            directory.c_str(), SW_SHOWNORMAL));
+          if (launched <= 32) {
+            MessageBoxW(GetHandle(),
+                        ukrainian ? L"Не вдалося відкрити апдейтер. Завантажте повний Release.zip "
+                        L"зі сторінки релізів і розпакуйте його разом із папкою updater." :
+                        L"Cannot open the updater. Download the full Release.zip from GitHub Releases "
+                        L"and extract it together with the updater folder.",
+                        L"Twitch Chat Overlay", MB_OK | MB_ICONINFORMATION);
+            result->Error("UPDATER_LAUNCH", "Cannot launch the updater");
+            return;
+          }
           result->Success();
           return;
         }
@@ -127,6 +164,13 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  static const UINT update_close_message =
+      RegisterWindowMessageW(L"TwitchChatOverlay.PrepareForUpdate");
+  if (message == update_close_message && overlay_channel_) {
+    overlay_channel_->InvokeMethod("closeRequested", nullptr);
+    return 0;
+  }
+
   LRESULT overlay_result = 0;
   bool interaction_changed = false;
   if (overlay_policy_.HandleMessage(message, wparam, lparam, &overlay_result,

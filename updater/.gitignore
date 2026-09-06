@@ -31,11 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/updater/build/
 /coverage/
-
-# Local Twitch application credentials. Never commit these.
-/lib/secrets.dart
 
 # Symbolication related
 app.*.symbols

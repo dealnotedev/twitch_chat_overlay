@@ -77,6 +77,8 @@ void main() {
       }
       return null;
     });
+    await host.initialize();
+    hostCalls.clear();
   });
 
   tearDown(() async {
@@ -100,10 +102,11 @@ void main() {
       expect(menuItems().map((item) => item['label']), [
         'Приховати оверлей',
         'Налаштувати оверлей',
+        'Перевірити оновлення…',
         '',
         'Вийти',
       ]);
-      expect(menuItems()[2]['type'], 'separator');
+      expect(menuItems()[3]['type'], 'separator');
 
       await sendEvent('onTrayIconRightMouseDown');
       expect(trayCalls.last.method, 'popUpContextMenu');
@@ -116,6 +119,7 @@ void main() {
       expect(menuItems().map((item) => item['key']), [
         'show',
         'configure',
+        'update',
         null,
         'exit',
       ]);
@@ -126,6 +130,7 @@ void main() {
       expect(menuItems().map((item) => item['key']), [
         'hide',
         'configure',
+        'update',
         null,
         'exit',
       ]);
@@ -167,7 +172,41 @@ void main() {
       visible = true;
       await sendEvent('onTrayIconRightMouseDown');
       expect(menuItems().first['key'], 'hide');
-      expect(menuItems().length, 4);
+      expect(menuItems().length, 5);
+    },
+  );
+
+  test('passes English from the active overlay localization', () async {
+    await controller.initialize(
+      await AppLocalizations.delegate.load(const Locale('en')),
+    );
+    hostCalls.clear();
+    await clickMenu('update');
+    expect(hostCalls.single.method, 'openUpdater');
+    expect(hostCalls.single.arguments, 'en');
+    expect(actions, isEmpty);
+  });
+
+  test('opening the updater keeps the overlay running', () async {
+    await controller.initialize(ukrainian);
+    hostCalls.clear();
+    await clickMenu('update');
+    expect(hostCalls.single.method, 'openUpdater');
+    expect(hostCalls.single.arguments, 'uk');
+    expect(actions, isEmpty);
+  });
+
+  test(
+    'updater shutdown request saves layout and removes the tray icon',
+    () async {
+      await controller.initialize(ukrainian);
+      binding.channelBuffers.push(
+        'overlay/window',
+        codec.encodeMethodCall(const MethodCall('closeRequested')),
+        (_) {},
+      );
+      await closed.future;
+      expect(actions, ['save', 'destroy', 'close']);
     },
   );
 

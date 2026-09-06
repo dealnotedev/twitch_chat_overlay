@@ -179,6 +179,27 @@ upgrading cannot recover deleted tokens.
 - Reply context and a reply composer are supported; thread navigation is not implemented.
 - Previous chat history depends on Recent Messages availability; third-party emotes are not supported.
 
+## Updates
+
+The separate Flutter Windows updater opens from **Перевірити оновлення…** in the
+tray. It downloads the latest stable GitHub release, verifies the package, saves
+and closes the overlay, and replaces application files with rollback support.
+At startup, a background version check shows a bottom notification when a newer
+stable update is available. Press Ctrl+Shift+O to use its Update button or dismiss
+it for the session. Network errors stay silent and never delay chat startup.
+Settings and Twitch sign-in remain in AppData. The updater supports Ukrainian and
+English and receives the overlay's active locale through `--locale`.
+Incoming packages may overwrite any overlay
+files, including new names. The `updater` folder is always skipped.
+
+Run `./tool/build_release.ps1` to test and build both applications and create
+`Release.zip` (full distribution) and `update.zip` (updates). After committing
+and pushing, add `-Publish` to publish the release on GitHub. Existing users need
+the full distribution once to get the updater.
+
+See [updater/README.md](updater/README.md) for the package contract and development
+instructions.
+
 ## Run
 
 ```powershell

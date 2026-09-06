@@ -22,6 +22,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trayConfigure => 'Configure overlay';
 
   @override
+  String get trayUpdate => 'Check for updates…';
+
+  @override
   String get trayShow => 'Show overlay';
 
   @override
@@ -258,4 +261,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String bitsAmount(int amount) {
     return '$amount Bits';
   }
+
+  @override
+  String updateNoticeTitle(String version) {
+    return 'Version $version is available';
+  }
+
+  @override
+  String get updateNoticeDetail => 'A fresh update for your overlay.';
+
+  @override
+  String get updateNoticeShortcut => 'Press Ctrl+Shift+O to update.';
+
+  @override
+  String get updateNow => 'Update';
+
+  @override
+  String get updateOpening => 'Opening…';
+
+  @override
+  String get updateDismiss => 'Remind me next time';
+
+  @override
+  String get updateLaunchFailed => 'Couldn\'t open the updater. Try again.';
 }

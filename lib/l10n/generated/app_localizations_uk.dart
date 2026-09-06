@@ -22,6 +22,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get trayConfigure => 'Налаштувати оверлей';
 
   @override
+  String get trayUpdate => 'Перевірити оновлення…';
+
+  @override
   String get trayShow => 'Показати оверлей';
 
   @override
@@ -268,4 +271,28 @@ class AppLocalizationsUk extends AppLocalizations {
   String bitsAmount(int amount) {
     return '$amount Bits';
   }
+
+  @override
+  String updateNoticeTitle(String version) {
+    return 'Доступна версія $version';
+  }
+
+  @override
+  String get updateNoticeDetail => 'Нове оновлення для вашого оверлея.';
+
+  @override
+  String get updateNoticeShortcut => 'Натисніть Ctrl+Shift+O, щоб оновити.';
+
+  @override
+  String get updateNow => 'Оновити';
+
+  @override
+  String get updateOpening => 'Відкриваємо…';
+
+  @override
+  String get updateDismiss => 'Нагадати наступного разу';
+
+  @override
+  String get updateLaunchFailed =>
+      'Не вдалося відкрити апдейтер. Спробуйте ще.';
 }

@@ -5,6 +5,7 @@
   "@@locale": "en",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Configure overlay",
+  "trayUpdate": "Check for updates…",
   "trayShow": "Show overlay",
   "trayHide": "Hide overlay",
   "exitApp": "Exit",
@@ -111,5 +112,13 @@
         "type": "int"
       }
     }
-  }
+  },
+"updateNoticeTitle": "Version {version} is available",
+  "updateNoticeDetail": "A fresh update for your overlay.",
+  "updateNoticeShortcut": "Press Ctrl+Shift+O to update.",
+  "updateNow": "Update",
+  "updateOpening": "Opening…",
+  "updateDismiss": "Remind me next time",
+  "updateLaunchFailed": "Couldn't open the updater. Try again.",
+"@updateNoticeTitle": {"placeholders": {"version": {"type": "String"}}}
 }

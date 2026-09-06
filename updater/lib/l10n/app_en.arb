@@ -1,0 +1,81 @@
+{
+  "@@locale": "en",
+  "windowTitle": "Twitch Chat Overlay — Updates",
+  "heading": "Updates",
+  "subtitle": "Everything new for your chat, in one place.",
+  "installedLabel": "INSTALLED",
+  "latestLabel": "LATEST VERSION",
+  "whatsNew": "What's new",
+  "stableRelease": "STABLE RELEASE",
+  "loadingNotes": "Getting release notes from GitHub.",
+  "noNotes": "The author has not added release notes yet.",
+  "settingsHeading": "Your chat stays yours",
+  "settingsDetail": "Your Twitch sign-in and settings will be kept.",
+  "cancelDownload": "Cancel download",
+  "retry": "Try again",
+  "openOverlay": "Open overlay",
+  "updateOverlay": "Update overlay",
+  "downloadingAction": "Downloading…",
+  "checkingAction": "Checking…",
+  "preparingAction": "Preparing update…",
+  "checkingTitle": "Checking for updates",
+  "checkingDetail": "The overlay keeps running.",
+  "recoveryTitle": "Restoring the previous version",
+  "recoveryDetail": "The previous installation was interrupted. Please wait.",
+  "availableTitle": "A new version is available",
+  "packageSize": "Package: {size} MB. Chat keeps running until installation.",
+  "currentTitle": "You're up to date",
+  "currentDetail": "You can return to your chat.",
+  "downloadTitle": "Downloading the update",
+  "downloadDetail": "You can cancel the download. The overlay keeps running.",
+  "downloadProgress": "{received} / {total} MB",
+  "verifyTitle": "Checking and extracting",
+  "verifyDetail": "The SHA-256 checksum has been verified.",
+  "stopTitle": "Saving and closing the overlay",
+  "stopDetail": "Settings will be saved before replacing files.",
+  "installTitle": "Installing the update",
+  "installDetail": "Keep your computer on. The previous version is backed up.",
+  "doneTitle": "Update installed",
+  "doneDetail": "All done. Open the overlay and return to your chat.",
+  "errorTitle": "Couldn't complete the update",
+  "cancelled": "Update cancelled. Application files have not changed.",
+  "networkError": "Couldn't connect to GitHub. Check your connection and try again.",
+  "fileError": "Couldn't update application files. Check folder permissions and free disk space.",
+  "unexpectedError": "Something went wrong. Restart the updater and try again.",
+  "invalidVersion": "The version number has an unsupported format.",
+  "invalidUrl": "The release contains an invalid download link.",
+  "rateLimited": "GitHub has temporarily limited requests. Please try again later.",
+  "packageUnavailable": "The release has no update package yet. Please try again later.",
+  "invalidMetadata": "The update package has no valid size or SHA-256 checksum.",
+  "downloadSizeMismatch": "The download size does not match the release.",
+  "checksumMismatch": "The archive is damaged. SHA-256 verification failed.",
+  "unsafePath": "The package contains a path outside the allowed installation area.",
+  "linksUnsupported": "The update contains a symbolic link, or the installation folder uses one.",
+  "invalidPackage": "The package is invalid or is not for Twitch Chat Overlay.",
+  "tooManyFiles": "The update archive contains too many files.",
+  "packageTooLarge": "The extracted update is too large.",
+  "versionMismatch": "The package version does not match the selected release.",
+  "missingRuntime": "The package is missing a required application file.",
+  "invalidInstallation": "Overlay not found. Place the updater folder next to the overlay application.",
+  "recoveryRequired": "The previous installation must be restored first. Try again.",
+  "invalidJournal": "The recovery journal is damaged. The backup has been kept.",
+  "updateBusy": "Another update is already in progress.",
+  "closeOverlay": "Close the overlay using Exit in its tray menu, then try again.",
+  "@packageSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "@downloadProgress": {
+    "placeholders": {
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  }
+}

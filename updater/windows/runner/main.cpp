@@ -1,27 +1,24 @@
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
+#include <filesystem>
 
 #include "flutter_window.h"
 #include "utils.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
-  // The updater holds this gate only while recovering or replacing app files.
-  HANDLE update_mutex = OpenMutexW(
-      SYNCHRONIZE, FALSE, L"Local\\TwitchChatOverlay.UpdateInProgress");
-  if (update_mutex) {
-    CloseHandle(update_mutex);
-    return EXIT_FAILURE;
-  }
-
-  HANDLE single_instance_mutex =
-      CreateMutex(nullptr, TRUE, L"TwitchChatOverlay_SingleInstance");
+  HANDLE single_instance = CreateMutexW(nullptr, TRUE, L"Local\\TwitchChatOverlay.Updater");
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    if (single_instance_mutex) {
-      CloseHandle(single_instance_mutex);
-    }
-    return EXIT_FAILURE;
+    HWND existing = FindWindowW(nullptr, L"Twitch Chat Overlay — Оновлення");
+    if (!existing) existing = FindWindowW(nullptr, L"Twitch Chat Overlay — Updates");
+    if (existing) { ShowWindow(existing, SW_RESTORE); SetForegroundWindow(existing); }
+    if (single_instance) CloseHandle(single_instance);
+    return EXIT_SUCCESS;
+  }
+  wchar_t module_path[32768];
+  if (GetModuleFileNameW(nullptr, module_path, 32768)) {
+    SetCurrentDirectoryW(std::filesystem::path(module_path).parent_path().c_str());
   }
 
   // Attach to console when present (e.g., 'flutter run') or create a
@@ -42,9 +39,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
-  if (!window.Create(L"twitch_chat_overlay", origin, size)) {
+  Win32Window::Point origin(100, 80);
+  Win32Window::Size size(720, 680);
+  if (!window.Create(L"Twitch Chat Overlay — Updates", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
@@ -56,10 +53,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   ::CoUninitialize();
-
-  if (single_instance_mutex) {
-    ReleaseMutex(single_instance_mutex);
-    CloseHandle(single_instance_mutex);
-  }
+  if (single_instance) { ReleaseMutex(single_instance); CloseHandle(single_instance); }
   return EXIT_SUCCESS;
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:twitch_chat_overlay/updates/update_notice.dart';
+
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
@@ -149,6 +151,15 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                         onLoadEmotes: widget.twitchChat.loadEmotes,
                       ),
                     ),
+                  ),
+                ),
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: 24,
+                  child: UpdateNotice(
+                    interactive: _hostState.interactive,
+                    onUpdate: widget.overlayHost.openUpdater,
                   ),
                 ),
                 if (_hostState.interactive)
