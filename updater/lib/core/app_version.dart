@@ -4,7 +4,7 @@ final class AppVersion implements Comparable<AppVersion> {
   const AppVersion(this.major, this.minor, this.patch, [this.build = 0]);
 
   factory AppVersion.parse(String value) {
-    final match = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)(?:[+.](\d+))?$')
+    final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)(?:\+(\d+))?$')
         .firstMatch(value.trim());
     if (match == null) throw const UpdateFailure(UpdateIssue.invalidVersion);
     return AppVersion(

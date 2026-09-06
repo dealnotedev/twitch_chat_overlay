@@ -64,15 +64,16 @@ for the clean, pushed source commit and attaches both archives. Existing tags ar
 not overwritten. The project's existing ignored `lib/secrets.dart` remains a
 local prerequisite for overlay builds; it must not be committed.
 
-Existing users need the full distribution once to obtain the updater.
-Afterwards they update from the tray. Release 1.0.1 contains only `Release.zip`;
-the updater does not guess its format or treat it as an update package.
+Install the complete `Release.zip`, then use the tray for subsequent updates.
 
 ## Installation contract
 
 `update.zip` has the Flutter Release files at archive root and
 `overlay-update.json` with schema 1, application `twitch_chat_overlay`, version,
 and the managed top-level roots. It excludes the updater directory.
+The installed application must also have this manifest; installations without
+it are not supported. Versions use `major.minor.patch` with an optional `+build`
+suffix; alternate version formats are not accepted.
 
 Size and SHA-256 must match the GitHub release asset metadata. Missing checksums,
 unexpected URLs, mismatching versions, unsafe paths, duplicate paths, symlinks,
@@ -98,12 +99,11 @@ retains the backup.
 The small native Windows bridge only reads EXE version metadata, manages the
 installation mutex and communicates with the overlay process. It matches the
 full executable path, sends `TwitchChatOverlay.PrepareForUpdate`, and Dart polls
-for exit for up to 12 seconds. It never kills processes by name. An older or
-unresponsive overlay must be closed manually through its tray.
+for exit for up to 12 seconds. It never kills processes by name. An unresponsive overlay must be closed manually through its tray.
 
 The updater and overlay have separate Flutter engines and data directories.
 The updater's running files are excluded from updates. Changing the updater
-itself requires a full distribution; schema 1 application updates remain compatible.
+itself requires a full distribution.
 
 ## Develop and test
 

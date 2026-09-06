@@ -1,3 +1,25 @@
+# Twitch Chat Overlay 1.1.3
+
+## Changes
+
+- Removed compatibility paths for previous application and session formats.
+- Twitch sessions now use one complete format, including login, scopes and expiration time, stored under a new preferences key.
+- Removed the hardcoded list of files used for installations without a manifest. The updater now requires the installed application's `overlay-update.json` and uses its recorded roots.
+- Standardized version parsing on `major.minor.patch` with an optional `+build` suffix.
+- Updated documentation and tests for the current formats and stabilized the message fade animation test.
+
+## Sign-in
+
+**You will need to sign in to Twitch again after installing this release.** Previously stored credentials are not imported. Your overlay layout and language preferences are preserved.
+
+## Downloads
+
+- **Release.zip** — complete Windows application with the updated updater. Close the apps and extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+Use **Release.zip** to get the updater changes in this release. In-app updates preserve the existing updater folder.
+
 # Twitch Chat Overlay 1.1.2
 
 ## Changes

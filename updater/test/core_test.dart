@@ -73,6 +73,20 @@ void main() {
     File(p.join(root, 'updater', 'overlay_updater.exe'))
         .writeAsStringSync('updater');
     File(p.join(root, 'notes.txt')).writeAsStringSync('user file');
+    File(p.join(root, manifestName)).writeAsStringSync(
+      jsonEncode(
+        const PackageManifest(
+          version: AppVersion(1, 0, 0),
+          roots: [
+            overlayExecutable,
+            'flutter_windows.dll',
+            'tray_manager_plugin.dll',
+            'data',
+            manifestName,
+          ],
+        ).toJson(),
+      ),
+    );
     final installer = Installation(root)..prepare();
     final package = extractPackage(zip(payload()), installer.stage, version);
     return (root: root, installer: installer, package: package);
@@ -98,10 +112,12 @@ void main() {
 
   test('versions compare numbers and Flutter build suffixes', () {
     expect(
-      AppVersion.parse('v1.10.0').compareTo(AppVersion.parse('1.9.9')),
+      AppVersion.parse('1.10.0').compareTo(AppVersion.parse('1.9.9')),
       greaterThan(0),
     );
-    expect(AppVersion.parse('1.1.0+3'), AppVersion.parse('1.1.0.3'));
+    expect(AppVersion.parse('1.1.0+3'), version);
+    expect(() => AppVersion.parse('1.1.0.3'), throwsFormatException);
+    expect(() => AppVersion.parse('v1.1.0'), throwsFormatException);
     expect(version.matchesRelease(const AppVersion(1, 1, 0)), true);
     expect(() => AppVersion.parse('1.1.0-beta'), throwsFormatException);
   });
@@ -231,6 +247,18 @@ void main() {
       throwsFormatException,
     );
   });
+  test('requires the installed manifest before touching application files', () {
+    final f = fixture();
+    File(p.join(f.root, manifestName)).deleteSync();
+    expect(() => Installation(f.root), throwsA(isA<FileSystemException>()));
+    expect(
+      () => f.installer.apply(f.package),
+      throwsA(isA<FileSystemException>()),
+    );
+    expect(f.installer.needsRecovery, false);
+    original(f.root);
+  });
+
   test('reject an unrelated installation directory', () {
     expect(() => Installation(folder()), throwsA(isA<FileSystemException>()));
   });

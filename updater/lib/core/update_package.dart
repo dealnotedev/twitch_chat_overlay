@@ -64,7 +64,7 @@ final class PackageManifest {
     final json = jsonDecode(
       File(p.join(directory, manifestName)).readAsStringSync(),
     ) as Map<String, dynamic>;
-    final roots = (json['roots'] as List<dynamic>? ?? []).cast<String>();
+    final roots = (json['roots'] as List<dynamic>).cast<String>();
     if (json['schema'] != 1 ||
         json['application'] != 'twitch_chat_overlay' ||
         roots.any((name) => !isReplaceableRoot(name) && !isUpdaterRoot(name)) ||

@@ -9,7 +9,7 @@ import 'package:twitch_chat_overlay/twitch/twitch_token_store.dart';
 
 void main() {
   test(
-    'startup refreshes rejected legacy access token without signing out',
+    'startup refreshes rejected stored access token without signing out',
     () async {
       final store = MemoryStore();
       var refreshes = 0;
@@ -440,8 +440,14 @@ void reject(
 }
 
 class MemoryStore implements TwitchTokenStore {
-  TwitchToken? token = TwitchToken.fromJson(
-    '{"broadcasterId":"owner","accessToken":"old","refreshToken":"refresh","client_id":"client"}',
+  TwitchToken? token = TwitchToken(
+    accessToken: 'old',
+    refreshToken: 'refresh',
+    clientId: 'client',
+    userId: 'owner',
+    userLogin: 'streamer',
+    scopes: const ['user:read:chat', 'user:write:chat'],
+    expiresAt: DateTime.utc(2030),
   );
   int clears = 0;
   @override

@@ -41,16 +41,13 @@ void main() {
     ).newerVersion();
   }
 
-  test(
-    'compares numeric versions and handles tag prefixes and build suffixes',
-    () async {
-      expect(await check('1.9.0+3', 'v1.10.0'), '1.10.0');
-      expect(await check('1.1.0+3', '1.1.0'), null);
-      expect(await check('1.1.0+3', '1.1.0+4'), '1.1.0+4');
-      expect(await check('2.0.0', '1.9.9'), null);
-      expect(await check('1.1.0', '1.1.0'), null);
-    },
-  );
+  test('compares numeric versions and handles build suffixes', () async {
+    expect(await check('1.9.0+3', '1.10.0'), '1.10.0');
+    expect(await check('1.1.0+3', '1.1.0'), null);
+    expect(await check('1.1.0+3', '1.1.0+4'), '1.1.0+4');
+    expect(await check('2.0.0', '1.9.9'), null);
+    expect(await check('1.1.0', '1.1.0'), null);
+  });
   test(
     'silently ignores unavailable, unstable and malformed releases',
     () async {
@@ -61,6 +58,8 @@ void main() {
       expect(await check('1.0.0', '1.1.0', status: 404), null);
       expect(await check('1.0.0', '1.1.0-beta'), null);
       expect(await check('broken', '1.1.0'), null);
+      expect(await check('1.0.0', 'v1.1.0'), null);
+      expect(await check('1.0.0', '1.1.0.3'), null);
     },
   );
   test('network failures and disposal do not escape into startup', () async {

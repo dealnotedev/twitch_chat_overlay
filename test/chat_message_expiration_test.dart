@@ -57,7 +57,15 @@ void main() {
         );
         final fade = find.byKey(const ValueKey('message-fade-expiring'));
         expect(tester.widget<AnimatedOpacity>(fade).opacity, 1);
-        await tester.pump(const Duration(seconds: 1));
+        // Stop at the start of the fade: initial rendering consumes real time,
+        // so a full-second jump can skip part of the removal animation.
+        for (
+          var i = 0;
+          i < 100 && tester.widget<AnimatedOpacity>(fade).opacity == 1;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
         expect(tester.widget<AnimatedOpacity>(fade).opacity, 0);
         await tester.pump(const Duration(milliseconds: 350));
         final transition = tester.widget<FadeTransition>(

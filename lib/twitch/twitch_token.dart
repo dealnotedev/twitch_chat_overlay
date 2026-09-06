@@ -43,32 +43,25 @@ final class TwitchToken {
   }
 
   String toJson() => jsonEncode({
-    'broadcasterId': userId,
     'accessToken': accessToken,
     'refreshToken': refreshToken,
-    'client_id': clientId,
+    'clientId': clientId,
+    'userId': userId,
+    'userLogin': userLogin,
+    'scopes': scopes,
+    'expiresAt': expiresAt.toUtc().toIso8601String(),
   });
 
   static TwitchToken fromJson(String value) {
     final json = (jsonDecode(value) as Map).cast<String, Object?>();
     return TwitchToken(
-      accessToken: (json['accessToken'] ?? json['access_token']) as String,
-      refreshToken: (json['refreshToken'] ?? json['refresh_token']) as String,
-      clientId: json['client_id'] as String,
-      userId: (json['broadcasterId'] ?? json['user_id']) as String,
-      userLogin: (json['userLogin'] ?? json['user_login']) as String?,
-      scopes: (json['scopes'] as List? ?? const []).whereType<String>().toList(
-        growable: false,
-      ),
-      expiresAt: _readExpiry(json),
+      accessToken: json['accessToken'] as String,
+      refreshToken: json['refreshToken'] as String,
+      clientId: json['clientId'] as String,
+      userId: json['userId'] as String,
+      userLogin: json['userLogin'] as String?,
+      scopes: (json['scopes'] as List).cast<String>(),
+      expiresAt: DateTime.parse(json['expiresAt'] as String).toUtc(),
     );
-  }
-
-  static DateTime _readExpiry(Map<String, Object?> json) {
-    final value = json['expiresAt'] ?? json['expires_at'];
-    return value is String
-        ? DateTime.tryParse(value)?.toUtc() ??
-              DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)
-        : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   }
 }

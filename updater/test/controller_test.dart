@@ -30,6 +30,14 @@ void main() {
     noRelease = false;
     directory = Directory.systemTemp.createTempSync('updater-controller-');
     File(p.join(directory.path, overlayExecutable)).writeAsStringSync('old');
+    File(p.join(directory.path, manifestName)).writeAsStringSync(
+      jsonEncode(
+        const PackageManifest(
+          version: AppVersion(1, 0, 0),
+          roots: [overlayExecutable, manifestName],
+        ).toJson(),
+      ),
+    );
     host = FakeHost();
     final archive = Archive();
     final files = {

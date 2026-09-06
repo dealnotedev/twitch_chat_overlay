@@ -18,7 +18,7 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
   The package restores the icon after Explorer restarts and removes it on exit.
 - Movable and resizable virtual chat window with eight resize handles.
 - Normalized layout persisted across restarts and display resolutions.
-- Familiar localhost OAuth flow opened with `open_url`.
+- Localhost OAuth flow opened with `open_url`.
 - Twitch credentials stored as `twitch_auth` JSON in `SharedPreferences`.
 - EventSub WebSocket with keepalive, deduplication, reconnect URL, and backoff.
 - Message sending through the Helix Chat API.
@@ -155,16 +155,16 @@ composer without clearing its draft.
 
 OAuth sign-in also requests `moderator:manage:chat_messages` for message deletion.
 
-### Session recovery (1.0.1)
+### Session recovery
 
 Startup validation refreshes rejected access tokens before requesting login.
 Helix retries a request once after a 401, sharing one refresh across concurrent
 requests and persisting rotated credentials before further validation. Network
 failures, rate limits and server outages retain the account and retry through
 the existing reconnect loop. Signing out invalidates pending refresh work.
-The `twitch_auth` storage key and JSON format are unchanged from 1.0.0.
-Users whose credentials were already deleted by 1.0.0 must sign in once again;
-upgrading cannot recover deleted tokens.
+Twitch sessions use one JSON format in `twitch_oauth`: access and refresh tokens,
+client/user IDs, login, scopes and expiration time. Other stored formats are
+rejected and require signing in again; no migration is performed.
 
 ### Differences from Twitch web chat
 
@@ -197,8 +197,8 @@ files, including new names. The `updater` folder is always skipped.
 
 Run `./tool/build_release.ps1` to test and build both applications and create
 `Release.zip` (full distribution) and `update.zip` (updates). After committing
-and pushing, add `-Publish` to publish the release on GitHub. Existing users need
-the full distribution once to get the updater.
+and pushing, add `-Publish` to publish the release on GitHub. Both the installed
+application and update package require `overlay-update.json`.
 
 See [updater/README.md](updater/README.md) for the package contract and development
 instructions.
@@ -229,9 +229,8 @@ menu's **Вийти** command closes the app.
 ## Temporary credentials
 
 `lib/secrets.dart` was copied from the reference project as requested and is
-excluded from Git. The OAuth flow and the intentionally non-secure
-`SharedPreferences` credential storage match the familiar reference-project
-approach. The current desktop flow temporarily embeds a client secret. Before
+excluded from Git. Credentials are stored in `SharedPreferences` without
+encryption. The current desktop flow temporarily embeds a client secret. Before
 distributing the application, replace it with a flow that does not embed a
 secret in the client binary, then revoke the old secret.
 

@@ -24,7 +24,9 @@ final class Installation {
       }
     }
     rejectLinks(work);
-    if (!File(p.join(root, overlayExecutable)).existsSync() && !needsRecovery) {
+    if (!needsRecovery &&
+        (!File(p.join(root, overlayExecutable)).existsSync() ||
+            !File(p.join(root, manifestName)).existsSync())) {
       throw const UpdateFileFailure(UpdateIssue.invalidInstallation);
     }
   }
@@ -49,17 +51,7 @@ final class Installation {
     if (needsRecovery) {
       throw const UpdateFileFailure(UpdateIssue.recoveryRequired);
     }
-    final previous = File(p.join(root, manifestName)).existsSync()
-        ? PackageManifest.read(root).roots
-        : [
-            overlayExecutable,
-            'flutter_windows.dll',
-            'dartjni.dll',
-            'tray_manager_plugin.dll',
-            'data',
-            'native_assets.json',
-            'app_icon.ico',
-          ];
+    final previous = PackageManifest.read(root).roots;
     final entries = <Map<String, dynamic>>[];
     final names = {
       for (final name in [...previous, ...package.roots])

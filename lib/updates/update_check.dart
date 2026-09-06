@@ -48,12 +48,14 @@ final class UpdateCheck {
       if (latest == null) return null;
       final assets = release['assets'];
       if (assets is! List ||
-          !assets.any((asset) => asset is Map && asset['name'] == 'update.zip')) {
+          !assets.any(
+            (asset) => asset is Map && asset['name'] == 'update.zip',
+          )) {
         return null;
       }
       for (var i = 0; i < latest.length; i++) {
         if (latest[i] > installed[i]) {
-          return (tag as String).replaceFirst(RegExp(r'^v'), '');
+          return tag as String;
         }
         if (latest[i] < installed[i]) return null;
       }
@@ -71,7 +73,7 @@ final class UpdateCheck {
   }
 
   static List<int>? _version(String? value) {
-    final match = RegExp(r'^v?(\d+)\.(\d+)\.(\d+)(?:\+(\d+))?$')
+    final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)(?:\+(\d+))?$')
         .firstMatch(value ?? '');
     if (match == null) return null;
     return [for (var i = 1; i <= 4; i++) int.parse(match.group(i) ?? '0')];
