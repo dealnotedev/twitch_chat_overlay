@@ -1,3 +1,21 @@
+# Twitch Chat Overlay 1.1.2
+
+## Changes
+
+- Opening the updater from the chat notification or tray now exits interactive mode first, keeping the overlay click-through while the updater is open.
+- Removed the redundant **Setup** label from the interactive toolbar.
+- Added more spacing around toolbar controls and settings.
+- Enlarged the inline **Update** button with more internal padding and slightly larger text.
+- Let settings rows size to their contents instead of using a fixed height.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.1.1
 
 ## Overlay

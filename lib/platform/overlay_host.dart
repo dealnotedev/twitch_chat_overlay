@@ -87,8 +87,10 @@ final class MethodChannelOverlayHost implements OverlayHost {
   }
 
   @override
-  Future<void> openUpdater(String locale) =>
-      _channel.invokeMethod<void>('openUpdater', locale);
+  Future<void> openUpdater(String locale) async {
+    await setInteractive(false);
+    await _channel.invokeMethod<void>('openUpdater', locale);
+  }
 
   @override
   Future<void> close() => _channel.invokeMethod<void>('close');

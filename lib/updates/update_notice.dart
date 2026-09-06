@@ -78,7 +78,7 @@ class _UpdateNoticeState extends State<UpdateNotice> {
     return Material(
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: BackgroundOpacity.colorOf(context, const Color(0xFF211A2C)),
           border: Border(
@@ -123,10 +123,13 @@ class _UpdateNoticeState extends State<UpdateNotice> {
                 disabledForegroundColor: const Color(0xFFAC8ACE),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 textStyle: const TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),

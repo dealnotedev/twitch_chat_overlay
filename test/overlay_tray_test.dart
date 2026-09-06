@@ -182,8 +182,12 @@ void main() {
     );
     hostCalls.clear();
     await clickMenu('update');
-    expect(hostCalls.single.method, 'openUpdater');
-    expect(hostCalls.single.arguments, 'en');
+    expect(hostCalls.map((call) => call.method), [
+      'setInteractive',
+      'openUpdater',
+    ]);
+    expect(hostCalls.first.arguments, false);
+    expect(hostCalls.last.arguments, 'en');
     expect(actions, isEmpty);
   });
 
@@ -196,18 +200,31 @@ void main() {
     expect(trayCalls.where((call) => call.method == 'destroy'), isEmpty);
     hostCalls.clear();
     await clickMenu('update');
-    expect(hostCalls.single.method, 'openUpdater');
-    expect(hostCalls.single.arguments, 'en');
+    expect(hostCalls.map((call) => call.method), [
+      'setInteractive',
+      'openUpdater',
+    ]);
+    expect(hostCalls.first.arguments, false);
+    expect(hostCalls.last.arguments, 'en');
   });
 
-  test('opening the updater keeps the overlay running', () async {
-    await controller.initialize(ukrainian);
-    hostCalls.clear();
-    await clickMenu('update');
-    expect(hostCalls.single.method, 'openUpdater');
-    expect(hostCalls.single.arguments, 'uk');
-    expect(actions, isEmpty);
-  });
+  test(
+    'opening the updater exits interactive mode and keeps the overlay running',
+    () async {
+      await controller.initialize(ukrainian);
+      await host.setInteractive(true);
+      hostCalls.clear();
+      await clickMenu('update');
+      expect(hostCalls.map((call) => call.method), [
+        'setInteractive',
+        'openUpdater',
+      ]);
+      expect(hostCalls.first.arguments, false);
+      expect(hostCalls.last.arguments, 'uk');
+      expect(host.state.interactive, false);
+      expect(actions, isEmpty);
+    },
+  );
 
   test(
     'updater shutdown request saves layout and removes the tray icon',

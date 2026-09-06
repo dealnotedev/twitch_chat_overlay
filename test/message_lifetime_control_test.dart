@@ -48,7 +48,6 @@ void main() {
       greaterThan(tester.getCenter(find.text('5 хв')).dx),
     );
     expect(tester.getCenter(up).dy, tester.getCenter(down).dy);
-    expect(tester.getSize(find.byType(MessageLifetimeControl)).height, 36);
     await tester.tap(up);
     await tester.pump();
     expect(minutes, 6);

@@ -31,8 +31,7 @@ class MessageLifetimeControl extends StatelessWidget {
     }
 
     return Container(
-      height: 36,
-      padding: const EdgeInsets.only(left: 12, right: 10),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       color: const Color(0xF21F1F23),
       child: Row(
         children: [

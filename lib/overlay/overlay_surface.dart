@@ -354,8 +354,7 @@ class _BackgroundTransparencySlider extends StatelessWidget {
     final transparency = 1 - opacity;
     final percent = '${(transparency * 100).round()}%';
     return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       color: const Color(0xF21F1F23),
       child: Row(
         children: [
@@ -430,7 +429,7 @@ class _ChatHeader extends StatelessWidget {
       onPanEnd: editing ? (_) => onGestureEnd() : null,
       child: Container(
         key: const ValueKey('chat-header'),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: BackgroundOpacity.colorOf(context, const Color(0xF21F1F23)),
         ),
@@ -456,13 +455,15 @@ class _ChatHeader extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const Gap(7),
-            Text(
-              editing ? l10n.setupMode : 'Ctrl+Shift+O',
-              style: const TextStyle(fontSize: 10, color: Color(0xFFADADB8)),
-            ),
+            if (!editing) ...[
+              const Gap(10),
+              const Text(
+                'Ctrl+Shift+O',
+                style: TextStyle(fontSize: 10, color: Color(0xFFADADB8)),
+              ),
+            ],
             if (editing) ...[
-              const Gap(6),
+              const Gap(12),
               if (onCycleLocale != null)
                 TextButton(
                   key: const ValueKey('locale-toggle'),
@@ -472,8 +473,8 @@ class _ChatHeader extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
+                      horizontal: 8,
+                      vertical: 6,
                     ),
                     textStyle: const TextStyle(
                       fontFamily: 'Inter',
@@ -483,11 +484,12 @@ class _ChatHeader extends StatelessWidget {
                   ),
                   child: Text(l10n.localeName.toUpperCase()),
                 ),
+              const Gap(4),
               IconButton(
                 style: IconButton.styleFrom(
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(8),
                 constraints: const BoxConstraints(),
                 visualDensity: VisualDensity.compact,
                 tooltip: l10n.lockOverlay,

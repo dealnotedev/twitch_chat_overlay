@@ -80,7 +80,7 @@ void main() {
     testWidgets(
       '$locale banner keeps click-through mode and launches with its locale',
       (tester) async {
-        tester.view.physicalSize = const Size(360, 100);
+        tester.view.physicalSize = const Size(360, 140);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
