@@ -14,6 +14,7 @@ import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_recent_messages.dart';
 import 'package:web_socket_channel/io.dart';
 
 enum ChatConnectionStatus { idle, connecting, connected, reconnecting, failure }
@@ -69,11 +70,15 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     this._auth,
     this._helix, {
     this.eventSubUrl = _defaultEventSubUrl,
+    this.history,
   });
 
   static const String _defaultEventSubUrl =
       'wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30';
   final String eventSubUrl;
+  final TwitchRecentMessages? history;
+  bool _historyStarted = false;
+  List<ChatMutation>? _historyJournal;
 
   final TwitchAuth _auth;
   final TwitchHelixClient _helix;
@@ -121,6 +126,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     await leave();
     _broadcasterId = broadcasterId;
     _timeline.clear();
+    // Capture moderation as soon as subscriptions can start delivering events.
+    _historyJournal = history == null ? null : [];
     _messageIds.clear();
     _messageIdOrder.clear();
     _retryAttempt = 0;
@@ -137,6 +144,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   @override
   Future<void> leave() async {
     _generation++;
+    _historyStarted = false;
+    _historyJournal = null;
     _viewerTimer?.cancel();
     _viewerTimer = null;
     _viewerCount = null;
@@ -238,7 +247,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       messageId: messageId,
     );
     if (generation == _generation &&
-        _timeline.apply(DeleteChatMessage(messageId))) {
+        _applyMutation(DeleteChatMessage(messageId))) {
       _emit(_state.status, error: _state.error);
     }
   }
@@ -296,7 +305,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
         return;
       case 'notification':
         final mutation = _mapper.map(envelope);
-        if (mutation != null && _timeline.apply(mutation)) {
+        if (mutation != null && _applyMutation(mutation)) {
           unawaited(_loadBadges(''));
           if (_broadcasterId case final channel?) {
             unawaited(_loadBadges(channel));
@@ -329,7 +338,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
         final subscription = _map(_map(envelope['payload'])['subscription']);
         final type = subscription['type'] as String? ?? 'unknown';
         final status = subscription['status'] as String? ?? 'revoked';
-        _timeline.apply(
+        _applyMutation(
           AddChatItem(
             ChatSubscriptionRevoked(
               id:
@@ -386,6 +395,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       if (socket == _active) {
         _retryAttempt = 0;
         _emit(ChatConnectionStatus.connected);
+        unawaited(_loadHistory());
         unawaited(_subscribeRewards(socket, broadcasterId, sessionId));
       }
     } catch (error) {
@@ -429,6 +439,50 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       _rewardSubscriptionFailed = true;
     }
     _emit(_state.status, error: _state.error);
+  }
+
+  bool _applyMutation(ChatMutation mutation) {
+    _historyJournal?.add(mutation);
+    return _timeline.apply(mutation);
+  }
+
+  Future<void> _loadHistory() async {
+    final source = history;
+    final broadcasterId = _broadcasterId;
+    if (source == null || broadcasterId == null || _historyStarted) return;
+    _historyStarted = true;
+    final generation = _generation;
+    final journal = _historyJournal ?? [];
+    _historyJournal = journal;
+    try {
+      final items = await (() async {
+        final login = await _helix.getChannelLogin(
+          broadcasterId: broadcasterId,
+        );
+        if (generation != _generation || !identical(_historyJournal, journal)) {
+          return <ChatItem>[];
+        }
+        return source.load(login);
+      })().timeout(const Duration(seconds: 20));
+      if (generation != _generation) return;
+      _timeline.restoreHistory(items, journal);
+      for (final item in _timeline.items) {
+        final badges = switch (item) {
+          ChatUserMessage() => item.badges,
+          ChatNotice() => item.badges,
+          _ => const <ChatBadge>[],
+        };
+        for (final channel
+            in badges.map((b) => b.broadcasterId).nonNulls.toSet()) {
+          unawaited(_loadBadges(channel));
+        }
+      }
+      _emit(_state.status, error: _state.error);
+    } catch (_) {
+      // History is optional: outages or an untracked channel never stop chat.
+    } finally {
+      if (generation == _generation) _historyJournal = null;
+    }
   }
 
   Future<void> _loadRewards() async {

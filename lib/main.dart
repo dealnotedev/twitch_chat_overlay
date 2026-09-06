@@ -10,6 +10,7 @@ import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_token_store.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_recent_messages.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,11 @@ Future<void> main() async {
   final overlayHost = MethodChannelOverlayHost();
   final twitchAuth = TwitchAuthClient(SharedPreferencesTwitchTokenStore());
   final twitchHelix = TwitchHelixClient(twitchAuth);
-  final twitchChat = EventSubTwitchChatSession(twitchAuth, twitchHelix);
+  final twitchChat = EventSubTwitchChatSession(
+    twitchAuth,
+    twitchHelix,
+    history: TwitchRecentMessages(),
+  );
 
   runApp(
     TwitchChatOverlayApp(

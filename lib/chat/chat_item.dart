@@ -1,8 +1,13 @@
 sealed class ChatItem {
-  const ChatItem({required this.id, required this.receivedAt});
+  const ChatItem({
+    required this.id,
+    required this.receivedAt,
+    this.isHistorical = false,
+  });
 
   final String id;
   final DateTime receivedAt;
+  final bool isHistorical;
 }
 
 enum ChatPowerUpType { messageEffect, gigantifyEmote, celebration }
@@ -65,6 +70,7 @@ final class ChatUserMessage extends ChatItem {
   const ChatUserMessage({
     required super.id,
     required super.receivedAt,
+    super.isHistorical,
     required this.userId,
     required this.userName,
     required this.color,
@@ -128,6 +134,7 @@ final class ChatNotice extends ChatItem {
   const ChatNotice({
     required super.id,
     required super.receivedAt,
+    super.isHistorical,
     required this.noticeType,
     required this.systemMessage,
     required this.userName,

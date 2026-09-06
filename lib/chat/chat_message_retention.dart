@@ -51,6 +51,11 @@ final class ChatMessageRetention extends ChangeNotifier {
       final remaining = item.receivedAt
           .add(Duration(minutes: minutes))
           .difference(now);
+      // Expired history must never flash on screen when it is first loaded.
+      if (existing == null && item.isHistorical && remaining <= Duration.zero) {
+        entry.hidden = true;
+        continue;
+      }
       entry.timer = Timer(remaining.isNegative ? Duration.zero : remaining, () {
         entry.fading = true;
         entry.timer = Timer(fadeDuration, () {

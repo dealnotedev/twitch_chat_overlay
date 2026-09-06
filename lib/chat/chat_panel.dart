@@ -125,8 +125,10 @@ class _ChatPanelState extends State<ChatPanel> {
           !currentIds.contains(id) ||
           now - arrivedAt >= ChatMessageEntrance.duration,
     );
-    for (final id in currentIds.difference(previousIds)) {
-      _messageArrivals[id] = now;
+    for (final item in widget.chatState.items) {
+      if (!item.isHistorical && !previousIds.contains(item.id)) {
+        _messageArrivals[item.id] = now;
+      }
     }
   }
 

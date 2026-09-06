@@ -37,8 +37,24 @@ Detection uses Twitch user IDs for mentions and replies, with case-insensitive
 @login matching for plain text; longer usernames and self-mentions do not trigger
 it. The accent stays visible at zero background opacity, and Channel Points and
 Power-up styling is retained. History has no item-count limit within the current
-session; the optional lifetime still controls fading, and history is not restored
-after restarting or joining a channel again.
+session; the optional lifetime still controls fading. On startup and rejoining,
+available channel history is restored through
+[Recent Messages](https://recent-messages.robotty.de/). The request starts after
+live chat subscriptions are established and runs without blocking incoming chat.
+Original message timestamps control expiration: already-expired history never
+appears, and remaining lifetime is not reset by restarting. Unlimited lifetime
+shows all history returned by the service, within its own retention limits.
+
+History is merged chronologically and deduplicated by Twitch message ID, with
+live EventSub content taking precedence. Moderation received while connecting or
+loading is replayed over history so deleted messages are not restored. Responses
+from a session that has been left are ignored. A missing history, excluded channel,
+timeout or service outage leaves live chat working normally; loading is attempted
+once per channel join. The service may have no history on a channel's first request.
+Only the public channel login is sent to Recent Messages, never OAuth credentials.
+IRC history preserves text, static Twitch emotes, badges, replies and supplied
+subscription notices; richer EventSub-only fragments and payment receipts cannot
+be reconstructed from it. Third-party emotes are not interpreted.
 
 Global and channel badge catalogs are loaded through Helix using the existing
 OAuth token (no extra scopes). Channel images override global versions by
@@ -158,7 +174,7 @@ upgrading cannot recover deleted tokens.
 - AutoMod held-message queues, suspicious-user/moderator notices, chat mode
   updates and whispers are not subscribed to or rendered.
 - Reply context and a reply composer are supported; thread navigation is not implemented.
-- There is no previous chat history on connection, or third-party emote support.
+- Previous chat history depends on Recent Messages availability; third-party emotes are not supported.
 
 ## Run
 

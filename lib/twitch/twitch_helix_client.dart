@@ -49,6 +49,24 @@ final class TwitchHelixClient {
     return count;
   }
 
+  Future<String> getChannelLogin({required String broadcasterId}) async {
+    final response = await _request(
+      '/users',
+      queryParameters: {'id': broadcasterId},
+    );
+    final data = response.data?['data'];
+    if (data is List) {
+      for (final user in data) {
+        if (user is Map &&
+            user['id'] == broadcasterId &&
+            user['login'] is String) {
+          return user['login'] as String;
+        }
+      }
+    }
+    throw const FormatException('Channel login unavailable');
+  }
+
   // Only metadata is cached here; its lifetime is the client/app session.
   (String, String)? _emoteContext;
   List<TwitchEmote>? _emoteCache;
