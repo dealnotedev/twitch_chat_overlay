@@ -43,6 +43,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupMode => 'setup';
 
   @override
+  String get gifPlaybackDisabled => 'Do not animate GIFs';
+
+  @override
+  String get gifPlayCount => 'GIF plays';
+
+  @override
+  String get gifPlayCountUnlimited => 'Repeat GIFs indefinitely';
+
+  @override
+  String gifPlayCountValue(int count) {
+    return '$count plays';
+  }
+
+  @override
+  String get increaseGifPlayCount => 'Increase GIF plays';
+
+  @override
+  String get decreaseGifPlayCount => 'Decrease GIF plays';
+
+  @override
   String get messageLifetime => 'Message lifetime';
 
   @override

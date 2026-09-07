@@ -1,3 +1,21 @@
+# Twitch Chat Overlay 1.1.4
+
+## Changes
+
+- Added a saved GIF playback setting beside message lifetime, with the same compact minus/plus controls and keyboard shortcuts.
+- Choose **∞** (the default), **0** for a still first frame, or **1–60** complete plays.
+- GIFs stop on the last frame after the selected number of plays. Scrolling or chat updates do not restart finite playback; each new message plays independently.
+- Changing the setting applies to existing GIFs immediately.
+- Added English and Ukrainian labels and tests for playback limits, static GIFs, scrolling and saved preferences.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.1.3
 
 ## Changes

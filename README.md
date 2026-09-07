@@ -71,6 +71,9 @@ Twitch GIF fragments from the July 2026 update accept both `gif_id` and `id`.
 GIFs animate in separate blocks up to 240×160, preserve their aspect ratio and
 use Twitch's full supplied URL unchanged. Loading/error labels are localized;
 surrounding text stays in order. No extra OAuth scopes are required for viewing.
+Setup mode includes a saved GIF playback count: ∞ (default), 0 for a still first
+frame, or 1–60 complete plays. Finite playback stops on the last frame and does
+not restart when scrolling or receiving chat updates. New messages play independently.
 Messages marked `power_ups_gigantified_emote` display their last emote occurrence
 in a separate block below the message, up to 112×112 and constrained to chat width.
 Gigantified emotes and Message Effects show a purple diamond, the effect name

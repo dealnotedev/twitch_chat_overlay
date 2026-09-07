@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
+import 'package:twitch_chat_overlay/chat/gif_playback.dart';
+import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
 import 'package:twitch_chat_overlay/chat/viewer_count.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
@@ -27,6 +29,7 @@ void main() {
     final locked = Completer<void>();
     final host = MethodChannelOverlayHost();
     final auth = _Auth();
+    final layoutStore = _LayoutStore();
     final interactionRequests = <bool>[];
     messenger.setMockMethodCallHandler(hostChannel, (call) async {
       if (call.method == 'getState') {
@@ -51,7 +54,7 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: OverlaySurface(
           initialLayout: const OverlayLayout.defaults(),
-          layoutStore: _LayoutStore(),
+          layoutStore: layoutStore,
           overlayHost: host,
           twitchAuth: auth,
           twitchChat: _Chat(),
@@ -60,6 +63,18 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(host.state.interactive, isTrue);
+
+    final gifControl = find.byType(GifPlaybackControl);
+    expect(tester.widget<GifPlaybackControl>(gifControl).playCount, -1);
+    await tester.tap(
+      find.descendant(
+        of: gifControl,
+        matching: find.widgetWithIcon(IconButton, Icons.add_rounded),
+      ),
+    );
+    await tester.pump();
+    expect(layoutStore.saved!.gifPlayCount, 0);
+    expect(GifPlayback.countOf(tester.element(find.byType(ChatPanel))), 0);
 
     await tester.tap(find.text('Sign in with Twitch'));
     await tester.pump();
@@ -291,4 +306,11 @@ class _Chat extends Fake implements TwitchChatSession {
   Future<void> leave() async {}
 }
 
-class _LayoutStore extends Fake implements OverlayLayoutStore {}
+class _LayoutStore extends Fake implements OverlayLayoutStore {
+  OverlayLayout? saved;
+
+  @override
+  Future<void> save(OverlayLayout layout) async {
+    saved = layout;
+  }
+}

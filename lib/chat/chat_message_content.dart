@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
+import 'package:twitch_chat_overlay/chat/chat_gif_provider.dart';
+import 'package:twitch_chat_overlay/chat/gif_playback.dart';
 import 'package:twitch_chat_overlay/chat/streamer_mention.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
@@ -110,13 +112,59 @@ class ChatGiantEmoteImage extends StatelessWidget {
   );
 }
 
-class ChatGifImage extends StatelessWidget {
+class ChatGifImage extends StatefulWidget {
   const ChatGifImage({required this.fragment, super.key});
 
   final ChatGifFragment fragment;
 
   @override
+  State<ChatGifImage> createState() => _ChatGifImageState();
+}
+
+class _ChatGifImageState extends State<ChatGifImage>
+    with AutomaticKeepAliveClientMixin {
+  late ChatGifProvider _image;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final count = GifPlayback.countOf(context);
+    if (_initialized && _image.playCount == count) return;
+    if (_initialized) _image.evict();
+    _image = ChatGifProvider(widget.fragment.url, playCount: count);
+    _initialized = true;
+    updateKeepAlive();
+  }
+
+  bool _initialized = false;
+
+  // Preserve finite playback when ListView moves this message offscreen. Removing
+  // the message from the list still disposes its row and last frame.
+  @override
+  bool get wantKeepAlive => _initialized && _image.playCount > 0;
+
+  @override
+  void didUpdateWidget(ChatGifImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fragment.url != widget.fragment.url) {
+      _image.evict();
+      _image = ChatGifProvider(
+        widget.fragment.url,
+        playCount: _image.playCount,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _image.evict();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+    final fragment = widget.fragment;
     final l10n = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -129,38 +177,41 @@ class ChatGifImage extends StatelessWidget {
             child: Semantics(
               label: fragment.text.isEmpty ? 'GIF' : fragment.text,
               image: true,
-              child: CachedNetworkImage(
-                imageUrl: fragment.url,
+              child: SizedBox(
                 width: width,
                 height: width * 2 / 3,
-                fit: BoxFit.contain,
-                fadeInDuration: Duration.zero,
-                placeholder: (_, _) => ColoredBox(
-                  color: BackgroundOpacity.colorOf(
-                    context,
-                    const Color(0x331F1F23),
-                  ),
-                  child: Center(
-                    child: Text(
-                      l10n.gifLoading,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFADADB8),
-                      ),
-                    ),
-                  ),
-                ),
-                errorWidget: (_, _, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      fragment.text.isEmpty
-                          ? l10n.gifUnavailable
-                          : '${l10n.gifUnavailable}\n${fragment.text}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFADADB8),
+                child: Image(
+                  image: _image,
+                  fit: BoxFit.contain,
+                  frameBuilder: (_, child, frame, _) => frame != null
+                      ? child
+                      : ColoredBox(
+                          color: BackgroundOpacity.colorOf(
+                            context,
+                            const Color(0x331F1F23),
+                          ),
+                          child: Center(
+                            child: Text(
+                              l10n.gifLoading,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFFADADB8),
+                              ),
+                            ),
+                          ),
+                        ),
+                  errorBuilder: (_, _, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        fragment.text.isEmpty
+                            ? l10n.gifUnavailable
+                            : '${l10n.gifUnavailable}\n${fragment.text}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFADADB8),
+                        ),
                       ),
                     ),
                   ),

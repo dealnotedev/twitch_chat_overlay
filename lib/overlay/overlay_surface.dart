@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:twitch_chat_overlay/chat/gif_playback.dart';
+import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
+
 import 'package:twitch_chat_overlay/updates/update_notice.dart';
 
 import 'package:flutter/material.dart';
@@ -125,6 +128,11 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       signedIn: _authState.status == TwitchAuthStatus.signedIn,
                       backgroundOpacity: _layout.backgroundOpacity,
                       messageLifetimeMinutes: _layout.messageLifetimeMinutes,
+                      gifPlayCount: _layout.gifPlayCount,
+                      onGifPlayCountChanged: (value) {
+                        _updateLayout(_layout.withGifPlayCount(value));
+                        _saveLayout();
+                      },
                       onMessageLifetimeChanged: (value) {
                         _updateLayout(
                           _layout.withMessageLifetimeMinutes(value),
@@ -239,6 +247,8 @@ class _VirtualChatWindow extends StatelessWidget {
     required this.backgroundOpacity,
     required this.messageLifetimeMinutes,
     required this.onMessageLifetimeChanged,
+    required this.gifPlayCount,
+    required this.onGifPlayCountChanged,
     required this.onOpacityChanged,
     required this.onMove,
     required this.onResize,
@@ -253,6 +263,8 @@ class _VirtualChatWindow extends StatelessWidget {
   final bool signedIn;
   final double backgroundOpacity;
   final int messageLifetimeMinutes;
+  final int gifPlayCount;
+  final ValueChanged<int> onGifPlayCountChanged;
   final ValueChanged<int> onMessageLifetimeChanged;
   final ValueChanged<double> onOpacityChanged;
   final ValueChanged<Offset> onMove;
@@ -319,7 +331,14 @@ class _VirtualChatWindow extends StatelessWidget {
                       minutes: messageLifetimeMinutes,
                       onChanged: onMessageLifetimeChanged,
                     ),
-                  Expanded(child: child),
+                  if (editing)
+                    GifPlaybackControl(
+                      playCount: gifPlayCount,
+                      onChanged: onGifPlayCountChanged,
+                    ),
+                  Expanded(
+                    child: GifPlayback(playCount: gifPlayCount, child: child),
+                  ),
                 ],
               ),
             ),

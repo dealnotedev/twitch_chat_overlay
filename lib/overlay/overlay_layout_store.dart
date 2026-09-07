@@ -12,6 +12,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   static const String _widthKey = 'overlay.layout.width';
   static const String _heightKey = 'overlay.layout.height';
   static const String _opacityKey = 'overlay.background.opacity';
+  static const String _gifCountKey = 'overlay.gif.playCount';
   static const String _lifetimeKey = 'overlay.messages.lifetimeMinutes';
 
   @override
@@ -21,6 +22,9 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     final top = preferences.getDouble(_topKey);
     final width = preferences.getDouble(_widthKey);
     final height = preferences.getDouble(_heightKey);
+    final gifPlayCount =
+        preferences.getInt(_gifCountKey) ??
+        const OverlayLayout.defaults().gifPlayCount;
     final storedOpacity = preferences.getDouble(_opacityKey);
     final lifetime =
         preferences.getInt(_lifetimeKey) ??
@@ -32,7 +36,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     if (left == null || top == null || width == null || height == null) {
       return const OverlayLayout.defaults()
           .withBackgroundOpacity(opacity)
-          .withMessageLifetimeMinutes(lifetime);
+          .withMessageLifetimeMinutes(lifetime)
+          .withGifPlayCount(gifPlayCount);
     }
 
     return OverlayLayout(
@@ -41,7 +46,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       width: width,
       height: height,
       backgroundOpacity: opacity,
-    ).withMessageLifetimeMinutes(lifetime);
+    ).withMessageLifetimeMinutes(lifetime).withGifPlayCount(gifPlayCount);
   }
 
   @override
@@ -54,6 +59,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       preferences.setDouble(_heightKey, layout.height),
       preferences.setDouble(_opacityKey, layout.backgroundOpacity),
       preferences.setInt(_lifetimeKey, layout.messageLifetimeMinutes),
+      preferences.setInt(_gifCountKey, layout.gifPlayCount),
     ]);
   }
 }

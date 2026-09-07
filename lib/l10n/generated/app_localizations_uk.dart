@@ -44,6 +44,26 @@ class AppLocalizationsUk extends AppLocalizations {
   String get setupMode => 'налаштування';
 
   @override
+  String get gifPlaybackDisabled => 'Не анімувати GIF';
+
+  @override
+  String get gifPlayCount => 'Кількість відтворень GIF';
+
+  @override
+  String get gifPlayCountUnlimited => 'Повторювати GIF без обмежень';
+
+  @override
+  String gifPlayCountValue(int count) {
+    return 'Кількість відтворень: $count';
+  }
+
+  @override
+  String get increaseGifPlayCount => 'Збільшити кількість відтворень GIF';
+
+  @override
+  String get decreaseGifPlayCount => 'Зменшити кількість відтворень GIF';
+
+  @override
   String get messageLifetime => 'Час показу повідомлень';
 
   @override

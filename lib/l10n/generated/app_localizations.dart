@@ -164,6 +164,42 @@ abstract class AppLocalizations {
   /// **'setup'**
   String get setupMode;
 
+  /// No description provided for @gifPlaybackDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Do not animate GIFs'**
+  String get gifPlaybackDisabled;
+
+  /// No description provided for @gifPlayCount.
+  ///
+  /// In en, this message translates to:
+  /// **'GIF plays'**
+  String get gifPlayCount;
+
+  /// No description provided for @gifPlayCountUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat GIFs indefinitely'**
+  String get gifPlayCountUnlimited;
+
+  /// No description provided for @gifPlayCountValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} plays'**
+  String gifPlayCountValue(int count);
+
+  /// No description provided for @increaseGifPlayCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase GIF plays'**
+  String get increaseGifPlayCount;
+
+  /// No description provided for @decreaseGifPlayCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease GIF plays'**
+  String get decreaseGifPlayCount;
+
   /// No description provided for @messageLifetime.
   ///
   /// In en, this message translates to:

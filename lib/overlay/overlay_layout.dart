@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:twitch_chat_overlay/chat/gif_playback.dart';
+
 import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
 
 enum ResizeHandle {
@@ -22,6 +24,7 @@ final class OverlayLayout {
     required this.height,
     this.backgroundOpacity = defaultBackgroundOpacity,
     this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
+    this.gifPlayCount = GifPlayback.defaultCount,
   });
 
   const OverlayLayout.defaults()
@@ -30,7 +33,8 @@ final class OverlayLayout {
       width = 0.28,
       height = 0.72,
       backgroundOpacity = defaultBackgroundOpacity,
-      messageLifetimeMinutes = ChatMessageRetention.defaultMinutes;
+      messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
+      gifPlayCount = GifPlayback.defaultCount;
 
   static const double defaultBackgroundOpacity = 0.85;
   static const double minimumWidth = 320;
@@ -42,6 +46,7 @@ final class OverlayLayout {
   final double height;
   final double backgroundOpacity;
   final int messageLifetimeMinutes;
+  final int gifPlayCount;
 
   OverlayLayout withMessageLifetimeMinutes(int value) => OverlayLayout(
     left: left,
@@ -49,6 +54,7 @@ final class OverlayLayout {
     width: width,
     height: height,
     backgroundOpacity: backgroundOpacity,
+    gifPlayCount: gifPlayCount,
     messageLifetimeMinutes: value.clamp(
       ChatMessageRetention.minimumMinutes,
       ChatMessageRetention.maximumMinutes,
@@ -61,7 +67,21 @@ final class OverlayLayout {
     width: width,
     height: height,
     backgroundOpacity: value.clamp(0.0, 1.0),
+    gifPlayCount: gifPlayCount,
     messageLifetimeMinutes: messageLifetimeMinutes,
+  );
+
+  OverlayLayout withGifPlayCount(int value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+    gifPlayCount: value.clamp(
+      GifPlayback.unlimitedCount,
+      GifPlayback.maximumCount,
+    ),
   );
 
   Rect resolve(Size viewport) {
@@ -146,6 +166,7 @@ final class OverlayLayout {
       width: clamped.width / viewport.width,
       height: clamped.height / viewport.height,
       backgroundOpacity: backgroundOpacity,
+      gifPlayCount: gifPlayCount,
       messageLifetimeMinutes: messageLifetimeMinutes,
     );
   }
