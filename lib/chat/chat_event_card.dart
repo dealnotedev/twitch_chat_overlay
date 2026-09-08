@@ -300,7 +300,7 @@ class PowerUpCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: ChatMessageContent(
                 fragments: [powerUp.emote!],
-                style: const TextStyle(fontSize: 14, height: 1.5),
+                style: const TextStyle(fontSize: 13.5, height: 1.32),
               ),
             ),
         ],

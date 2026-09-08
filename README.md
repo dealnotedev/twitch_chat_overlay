@@ -216,8 +216,10 @@ flutter run -d windows
 1. Press `Ctrl+Shift+O` to make the overlay interactive.
 2. Select **Sign in with Twitch** and finish OAuth in the browser.
 3. Drag the header or resize the window from any edge or corner.
-   The transparency slider below the header adjusts backgrounds from 0% to 100%
-   without fading text or Twitch images; the value is saved when you release it.
+   The background transparency slider below the header adjusts backgrounds from 0% to 100%
+   without fading text or Twitch images. The content transparency slider fades
+   chat and window decoration while keeping setup controls visible.
+   Both values are saved when you release their sliders.
 4. Press `Ctrl+Shift+O` again to restore click-through mode.
 
 Once signed in, click-through mode hides the header so chat fills the frame.

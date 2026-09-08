@@ -1,3 +1,21 @@
+# Twitch Chat Overlay 1.2.0
+
+## Changes
+
+- Added a saved content transparency slider in setup mode. Fade chat text, images and the window decoration while keeping setup controls visible.
+- Background transparency remains separately adjustable; both settings are preserved across restarts and layout changes.
+- Changed chat text to regular Inter weight while retaining the compact font size, line spacing, black outline and shadow.
+- Refined GIF corners with a 4 px radius applied to the displayed image as well as its container.
+- Added English and Ukrainian labels and tests for content transparency and saved preferences.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.1.4
 
 ## Changes

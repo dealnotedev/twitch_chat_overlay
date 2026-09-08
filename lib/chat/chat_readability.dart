@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 
-/// A soft shadow keeps text legible without thickening the glyph outlines.
+/// Opaque glyph protection, independent of the panel background opacity.
+/// Sharp shadows preserve inline emotes and a single text layout.
 const chatReadableStyle = TextStyle(
   color: Colors.white,
   fontWeight: FontWeight.w400,
   shadows: [
-    Shadow(color: Color(0x99000000), blurRadius: 2, offset: Offset(0, 1)),
+    Shadow(color: Color(0xE6000000), blurRadius: 4),
+    Shadow(color: Colors.black, offset: Offset(-1, 0)),
+    Shadow(color: Colors.black, offset: Offset(1, 0)),
+    Shadow(color: Colors.black, offset: Offset(0, -1)),
+    Shadow(color: Colors.black, offset: Offset(0, 1)),
+    Shadow(color: Colors.black, offset: Offset(-0.75, -0.75)),
+    Shadow(color: Colors.black, offset: Offset(0.75, -0.75)),
+    Shadow(color: Colors.black, offset: Offset(-0.75, 0.75)),
+    Shadow(color: Colors.black, offset: Offset(0.75, 0.75)),
   ],
 );
 
-/// Keep Twitch hues with at least 4.5:1 contrast against black.
+/// Keep Twitch hues with at least 4.5:1 contrast against the black contour.
 Color readableChatColor(Color color) {
   final opaque = color.withValues(alpha: 1);
   if (opaque.computeLuminance() >= 0.175) return opaque;
