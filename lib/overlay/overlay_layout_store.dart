@@ -11,6 +11,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   static const String _topKey = 'overlay.layout.top';
   static const String _widthKey = 'overlay.layout.width';
   static const String _heightKey = 'overlay.layout.height';
+  static const String _contentOpacityKey = 'overlay.content.opacity';
   static const String _opacityKey = 'overlay.background.opacity';
   static const String _gifCountKey = 'overlay.gif.playCount';
   static const String _lifetimeKey = 'overlay.messages.lifetimeMinutes';
@@ -25,6 +26,9 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     final gifPlayCount =
         preferences.getInt(_gifCountKey) ??
         const OverlayLayout.defaults().gifPlayCount;
+    final contentOpacity =
+        preferences.getDouble(_contentOpacityKey) ??
+        OverlayLayout.defaultContentOpacity;
     final storedOpacity = preferences.getDouble(_opacityKey);
     final lifetime =
         preferences.getInt(_lifetimeKey) ??
@@ -35,18 +39,22 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
 
     if (left == null || top == null || width == null || height == null) {
       return const OverlayLayout.defaults()
+          .withContentOpacity(contentOpacity)
           .withBackgroundOpacity(opacity)
           .withMessageLifetimeMinutes(lifetime)
           .withGifPlayCount(gifPlayCount);
     }
 
     return OverlayLayout(
-      left: left,
-      top: top,
-      width: width,
-      height: height,
-      backgroundOpacity: opacity,
-    ).withMessageLifetimeMinutes(lifetime).withGifPlayCount(gifPlayCount);
+          left: left,
+          top: top,
+          width: width,
+          height: height,
+          backgroundOpacity: opacity,
+        )
+        .withContentOpacity(contentOpacity)
+        .withMessageLifetimeMinutes(lifetime)
+        .withGifPlayCount(gifPlayCount);
   }
 
   @override
@@ -58,6 +66,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       preferences.setDouble(_widthKey, layout.width),
       preferences.setDouble(_heightKey, layout.height),
       preferences.setDouble(_opacityKey, layout.backgroundOpacity),
+      preferences.setDouble(_contentOpacityKey, layout.contentOpacity),
       preferences.setInt(_lifetimeKey, layout.messageLifetimeMinutes),
       preferences.setInt(_gifCountKey, layout.gifPlayCount),
     ]);

@@ -23,6 +23,7 @@ final class OverlayLayout {
     required this.width,
     required this.height,
     this.backgroundOpacity = defaultBackgroundOpacity,
+    this.contentOpacity = defaultContentOpacity,
     this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
     this.gifPlayCount = GifPlayback.defaultCount,
   });
@@ -33,9 +34,11 @@ final class OverlayLayout {
       width = 0.28,
       height = 0.72,
       backgroundOpacity = defaultBackgroundOpacity,
+      contentOpacity = defaultContentOpacity,
       messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
       gifPlayCount = GifPlayback.defaultCount;
 
+  static const double defaultContentOpacity = 1.0;
   static const double defaultBackgroundOpacity = 0.85;
   static const double minimumWidth = 320;
   static const double minimumHeight = 220;
@@ -45,6 +48,7 @@ final class OverlayLayout {
   final double width;
   final double height;
   final double backgroundOpacity;
+  final double contentOpacity;
   final int messageLifetimeMinutes;
   final int gifPlayCount;
 
@@ -54,6 +58,7 @@ final class OverlayLayout {
     width: width,
     height: height,
     backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
     gifPlayCount: gifPlayCount,
     messageLifetimeMinutes: value.clamp(
       ChatMessageRetention.minimumMinutes,
@@ -67,6 +72,20 @@ final class OverlayLayout {
     width: width,
     height: height,
     backgroundOpacity: value.clamp(0.0, 1.0),
+    contentOpacity: contentOpacity,
+    gifPlayCount: gifPlayCount,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+  );
+
+  OverlayLayout withContentOpacity(double value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    contentOpacity: value.isFinite
+        ? value.clamp(0.0, 1.0)
+        : defaultContentOpacity,
     gifPlayCount: gifPlayCount,
     messageLifetimeMinutes: messageLifetimeMinutes,
   );
@@ -77,6 +96,7 @@ final class OverlayLayout {
     width: width,
     height: height,
     backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
     messageLifetimeMinutes: messageLifetimeMinutes,
     gifPlayCount: value.clamp(
       GifPlayback.unlimitedCount,
@@ -166,6 +186,7 @@ final class OverlayLayout {
       width: clamped.width / viewport.width,
       height: clamped.height / viewport.height,
       backgroundOpacity: backgroundOpacity,
+      contentOpacity: contentOpacity,
       gifPlayCount: gifPlayCount,
       messageLifetimeMinutes: messageLifetimeMinutes,
     );

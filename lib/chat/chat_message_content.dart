@@ -173,7 +173,7 @@ class _ChatGifImageState extends State<ChatGifImage>
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(4),
             child: Semantics(
               label: fragment.text.isEmpty ? 'GIF' : fragment.text,
               image: true,
@@ -184,7 +184,12 @@ class _ChatGifImageState extends State<ChatGifImage>
                   image: _image,
                   fit: BoxFit.contain,
                   frameBuilder: (_, child, frame, _) => frame != null
-                      ? child
+                      ? Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: child,
+                          ),
+                        )
                       : ColoredBox(
                           color: BackgroundOpacity.colorOf(
                             context,

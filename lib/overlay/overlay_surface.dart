@@ -127,6 +127,9 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       onCycleLocale: widget.onCycleLocale,
                       signedIn: _authState.status == TwitchAuthStatus.signedIn,
                       backgroundOpacity: _layout.backgroundOpacity,
+                      contentOpacity: _layout.contentOpacity,
+                      onContentOpacityChanged: (value) =>
+                          _updateLayout(_layout.withContentOpacity(value)),
                       messageLifetimeMinutes: _layout.messageLifetimeMinutes,
                       gifPlayCount: _layout.gifPlayCount,
                       onGifPlayCountChanged: (value) {
@@ -245,6 +248,8 @@ class _VirtualChatWindow extends StatelessWidget {
     required this.editing,
     required this.signedIn,
     required this.backgroundOpacity,
+    required this.contentOpacity,
+    required this.onContentOpacityChanged,
     required this.messageLifetimeMinutes,
     required this.onMessageLifetimeChanged,
     required this.gifPlayCount,
@@ -262,6 +267,8 @@ class _VirtualChatWindow extends StatelessWidget {
   final bool editing;
   final bool signedIn;
   final double backgroundOpacity;
+  final double contentOpacity;
+  final ValueChanged<double> onContentOpacityChanged;
   final int messageLifetimeMinutes;
   final int gifPlayCount;
   final ValueChanged<int> onGifPlayCountChanged;
@@ -281,67 +288,98 @@ class _VirtualChatWindow extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              color: BackgroundOpacity.colorOf(
-                context,
-                const Color(0xFF111114),
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: editing
-                    ? const Color(0xFF9146FF)
-                    : BackgroundOpacity.colorOf(
-                        context,
-                        const Color(0x339146FF),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Opacity(
+                opacity: contentOpacity,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BackgroundOpacity.colorOf(
+                      context,
+                      const Color(0xFF111114),
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: editing
+                          ? const Color(0xFF9146FF)
+                          : BackgroundOpacity.colorOf(
+                              context,
+                              const Color(0x339146FF),
+                            ),
+                      width: editing ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: 18,
+                        color: BackgroundOpacity.colorOf(
+                          context,
+                          const Color(0x66000000),
+                        ),
                       ),
-                width: editing ? 2 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  blurRadius: 18,
-                  color: BackgroundOpacity.colorOf(
-                    context,
-                    const Color(0x66000000),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(editing ? 10 : 11),
-              child: Column(
-                children: [
-                  if (editing || !signedIn)
-                    _ChatHeader(
-                      editing: editing,
-                      onMove: onMove,
-                      onGestureEnd: onGestureEnd,
-                      onLock: onLock,
-                      onCycleLocale: onCycleLocale,
-                      connectionStatus: connectionStatus,
-                    ),
-                  if (editing)
-                    _BackgroundTransparencySlider(
-                      opacity: backgroundOpacity,
-                      onChanged: onOpacityChanged,
-                      onChangeEnd: onGestureEnd,
-                    ),
-                  if (editing)
-                    MessageLifetimeControl(
-                      minutes: messageLifetimeMinutes,
-                      onChanged: onMessageLifetimeChanged,
-                    ),
-                  if (editing)
-                    GifPlaybackControl(
-                      playCount: gifPlayCount,
-                      onChanged: onGifPlayCountChanged,
-                    ),
-                  Expanded(
-                    child: GifPlayback(playCount: gifPlayCount, child: child),
-                  ),
-                ],
               ),
-            ),
+              Padding(
+                padding: EdgeInsets.all(editing ? 2 : 1),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(editing ? 10 : 11),
+                  child: Column(
+                    children: [
+                      if (editing || !signedIn)
+                        Opacity(
+                          opacity: editing ? 1 : contentOpacity,
+                          child: _ChatHeader(
+                            editing: editing,
+                            onMove: onMove,
+                            onGestureEnd: onGestureEnd,
+                            onLock: onLock,
+                            onCycleLocale: onCycleLocale,
+                            connectionStatus: connectionStatus,
+                          ),
+                        ),
+                      if (editing)
+                        _TransparencySlider(
+                          label: AppLocalizations.of(context)
+                              .backgroundTransparency,
+                          opacity: backgroundOpacity,
+                          onChanged: onOpacityChanged,
+                          onChangeEnd: onGestureEnd,
+                        ),
+                      if (editing)
+                        _TransparencySlider(
+                          label: AppLocalizations.of(context)
+                              .contentTransparency,
+                          opacity: contentOpacity,
+                          onChanged: onContentOpacityChanged,
+                          onChangeEnd: onGestureEnd,
+                        ),
+                      if (editing)
+                        MessageLifetimeControl(
+                          minutes: messageLifetimeMinutes,
+                          onChanged: onMessageLifetimeChanged,
+                        ),
+                      if (editing)
+                        GifPlaybackControl(
+                          playCount: gifPlayCount,
+                          onChanged: onGifPlayCountChanged,
+                        ),
+                      Expanded(
+                        child: Opacity(
+                          key: const ValueKey('chat-content-opacity'),
+                          opacity: contentOpacity,
+                          child: GifPlayback(
+                            playCount: gifPlayCount,
+                            child: child,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         if (editing)
@@ -356,24 +394,26 @@ class _VirtualChatWindow extends StatelessWidget {
   }
 }
 
-class _BackgroundTransparencySlider extends StatelessWidget {
-  const _BackgroundTransparencySlider({
+class _TransparencySlider extends StatelessWidget {
+  const _TransparencySlider({
+    required this.label,
     required this.opacity,
     required this.onChanged,
     required this.onChangeEnd,
   });
 
+  final String label;
   final double opacity;
   final ValueChanged<double> onChanged;
   final VoidCallback onChangeEnd;
 
   @override
   Widget build(BuildContext context) {
-    final label = AppLocalizations.of(context).backgroundTransparency;
     final transparency = 1 - opacity;
     final percent = '${(transparency * 100).round()}%';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       color: const Color(0xF21F1F23),
       child: Row(
         children: [

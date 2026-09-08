@@ -25,6 +25,7 @@
   "@messageLifetimeMinutes": {"placeholders": {"minutes": {"type": "int"}}},
   "increaseMessageLifetime": "Increase message lifetime",
   "decreaseMessageLifetime": "Decrease message lifetime",
+  "contentTransparency": "Content transparency",
   "backgroundTransparency": "Background transparency",
   "lockOverlay": "Lock overlay",
   "checkingTwitchSession": "Checking Twitch session…",

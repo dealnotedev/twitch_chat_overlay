@@ -954,7 +954,7 @@ class _UserMessageView extends StatelessWidget {
                 ),
               ),
             ],
-            style: const TextStyle(fontSize: 13.5, height: 1.32),
+            style: const TextStyle(fontSize: 14, height: 1.5),
           ),
           if (message.sourceChannel case final source?)
             Text(

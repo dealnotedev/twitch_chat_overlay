@@ -64,6 +64,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(host.state.interactive, isTrue);
 
+    final transparencySlider = find.byType(Slider).last;
+    final contentOpacity = find.byKey(const ValueKey('chat-content-opacity'));
+    for (final transparency in [0.5, 1.0, 0.0]) {
+      tester.widget<Slider>(transparencySlider).onChanged!(transparency);
+      await tester.pump();
+      tester.widget<Slider>(transparencySlider).onChangeEnd!(transparency);
+      expect(tester.widget<Opacity>(contentOpacity).opacity, 1 - transparency);
+      expect(layoutStore.saved!.contentOpacity, 1 - transparency);
+      expect(layoutStore.saved!.backgroundOpacity, 0.85);
+      expect(
+        find.ancestor(of: transparencySlider, matching: find.byType(Opacity)),
+        findsNothing,
+      );
+    }
+
     final gifControl = find.byType(GifPlaybackControl);
     expect(tester.widget<GifPlaybackControl>(gifControl).playCount, -1);
     await tester.tap(
@@ -182,7 +197,7 @@ void main() {
       await host.setInteractive(true);
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);
-      expect(find.byType(Slider), findsOneWidget);
+      expect(find.byType(Slider), findsNWidgets(2));
       expect(find.byTooltip('Lock overlay'), findsOneWidget);
       expect(find.byType(ChatComposer), findsOneWidget);
       expect(find.bySemanticsLabel('Chat connected'), findsNothing);
@@ -251,7 +266,7 @@ void main() {
       await host.setInteractive(true);
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);
-      expect(find.byType(Slider), findsOneWidget);
+      expect(find.byType(Slider), findsNWidgets(2));
       expect(find.text('Sign in with Twitch'), findsOneWidget);
       expect(tester.takeException(), isNull);
       semantics.dispose();

@@ -81,6 +81,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get decreaseMessageLifetime => 'Зменшити час показу';
 
   @override
+  String get contentTransparency => 'Прозорість вмісту';
+
+  @override
   String get backgroundTransparency => 'Прозорість фону';
 
   @override

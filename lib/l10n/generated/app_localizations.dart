@@ -230,6 +230,12 @@ abstract class AppLocalizations {
   /// **'Decrease message lifetime'**
   String get decreaseMessageLifetime;
 
+  /// No description provided for @contentTransparency.
+  ///
+  /// In en, this message translates to:
+  /// **'Content transparency'**
+  String get contentTransparency;
+
   /// No description provided for @backgroundTransparency.
   ///
   /// In en, this message translates to:

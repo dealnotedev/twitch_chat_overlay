@@ -80,6 +80,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get decreaseMessageLifetime => 'Decrease message lifetime';
 
   @override
+  String get contentTransparency => 'Content transparency';
+
+  @override
   String get backgroundTransparency => 'Background transparency';
 
   @override

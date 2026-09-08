@@ -25,6 +25,7 @@
   "@messageLifetimeMinutes": {"placeholders": {"minutes": {"type": "int"}}},
   "increaseMessageLifetime": "Збільшити час показу",
   "decreaseMessageLifetime": "Зменшити час показу",
+  "contentTransparency": "Прозорість вмісту",
   "backgroundTransparency": "Прозорість фону",
   "lockOverlay": "Заблокувати оверлей",
   "checkingTwitchSession": "Перевіряємо сесію Twitch…",
