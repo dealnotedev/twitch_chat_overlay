@@ -1,3 +1,23 @@
+# Twitch Chat Overlay 1.3.0
+
+## Changes
+
+- Added a saved chat font-size slider from **12 to 24**, in **0.25** increments, with the current value shown beside the slider.
+- Added a saved font-weight slider from **300 to 900**, in **100** increments. Usernames and emphasized text retain their relative emphasis.
+- Font settings apply immediately to the message list, including replies, shared-chat attribution and event cards. Setup controls, the composer and status indicators keep their existing sizes and weights.
+- Bundled upright Inter Light, ExtraBold and Black for the full 300–900 weight range; removed unused italic font assets.
+- Replaced the hard text outline with layered soft shadows. Default chat typography is **13.5 / 500**.
+- Added English and Ukrainian settings labels and tests for sliders, persistence and typography scope.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
+
 # Twitch Chat Overlay 1.2.0
 
 ## Changes

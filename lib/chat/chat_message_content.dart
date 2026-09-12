@@ -1,9 +1,10 @@
 import 'dart:math' as math;
 
+import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
-import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/chat/chat_gif_provider.dart';
 import 'package:twitch_chat_overlay/chat/gif_playback.dart';
 import 'package:twitch_chat_overlay/chat/streamer_mention.dart';
@@ -36,7 +37,7 @@ class ChatMessageContent extends StatelessWidget {
       children.add(
         Text.rich(
           TextSpan(children: spans),
-          style: chatReadableStyle.merge(style),
+          style: ChatFontWeight.readableStyleOf(context).merge(style),
         ),
       );
       spans = [];
@@ -53,7 +54,7 @@ class ChatMessageContent extends StatelessWidget {
         flushText();
         children.add(ChatGifImage(fragment: fragment));
       } else {
-        spans.add(_fragmentSpan(fragment, mentionTarget));
+        spans.add(_fragmentSpan(context, fragment, mentionTarget));
       }
     }
     flushText();
@@ -99,9 +100,8 @@ class ChatGiantEmoteImage extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: chatReadableStyle.merge(
-                    const TextStyle(fontSize: 13.5),
-                  ),
+                  style: ChatFontWeight.readableStyleOf(context)
+                      .merge(const TextStyle(fontSize: 13.5)),
                 ),
               ),
             ),
@@ -231,6 +231,7 @@ class _ChatGifImageState extends State<ChatGifImage>
 }
 
 InlineSpan _fragmentSpan(
+  BuildContext context,
   ChatFragment fragment,
   StreamerMentionTarget? mentionTarget,
 ) {
@@ -240,7 +241,12 @@ InlineSpan _fragmentSpan(
     var end = 0;
     for (final match in pattern.allMatches(fragment.text)) {
       spans.add(TextSpan(text: fragment.text.substring(end, match.start)));
-      spans.add(TextSpan(text: match.group(0), style: streamerMentionStyle));
+      spans.add(
+        TextSpan(
+          text: match.group(0),
+          style: ChatFontWeight.mentionStyleOf(context),
+        ),
+      );
       end = match.end;
     }
     spans.add(TextSpan(text: fragment.text.substring(end)));
@@ -252,17 +258,17 @@ InlineSpan _fragmentSpan(
     ChatMentionFragment() => TextSpan(
       text: fragment.text,
       style: (mentionTarget?.matchesMention(fragment) ?? false)
-          ? streamerMentionStyle
-          : const TextStyle(
+          ? ChatFontWeight.mentionStyleOf(context)
+          : TextStyle(
               color: Color(0xFFBF94FF),
-              fontWeight: FontWeight.w600,
+              fontWeight: ChatFontWeight.resolve(context, FontWeight.w600),
             ),
     ),
     ChatCheermoteFragment() => TextSpan(
       text: fragment.text,
-      style: const TextStyle(
+      style: TextStyle(
         color: Color(0xFFFFC83D),
-        fontWeight: FontWeight.w700,
+        fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
       ),
     ),
     ChatEmoteFragment() => _emoteSpan(fragment),

@@ -1,5 +1,9 @@
 import 'dart:ui';
 
+import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
+
+import 'package:twitch_chat_overlay/chat/chat_font_size.dart';
+
 import 'package:twitch_chat_overlay/chat/gif_playback.dart';
 
 import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
@@ -26,6 +30,8 @@ final class OverlayLayout {
     this.contentOpacity = defaultContentOpacity,
     this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
     this.gifPlayCount = GifPlayback.defaultCount,
+    this.chatFontSize = ChatFontSize.defaultSize,
+    this.chatFontWeight = ChatFontWeight.defaultWeight,
   });
 
   const OverlayLayout.defaults()
@@ -36,7 +42,9 @@ final class OverlayLayout {
       backgroundOpacity = defaultBackgroundOpacity,
       contentOpacity = defaultContentOpacity,
       messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
-      gifPlayCount = GifPlayback.defaultCount;
+      gifPlayCount = GifPlayback.defaultCount,
+      chatFontSize = ChatFontSize.defaultSize,
+      chatFontWeight = ChatFontWeight.defaultWeight;
 
   static const double defaultContentOpacity = 1.0;
   static const double defaultBackgroundOpacity = 0.85;
@@ -51,8 +59,38 @@ final class OverlayLayout {
   final double contentOpacity;
   final int messageLifetimeMinutes;
   final int gifPlayCount;
+  final double chatFontSize;
+  final int chatFontWeight;
+
+  OverlayLayout withChatFontWeight(int value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+    gifPlayCount: gifPlayCount,
+    chatFontSize: chatFontSize,
+    chatFontWeight: ChatFontWeight.normalize(value),
+  );
+
+  OverlayLayout withChatFontSize(double value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+    gifPlayCount: gifPlayCount,
+    chatFontSize: ChatFontSize.normalize(value),
+    chatFontWeight: chatFontWeight,
+  );
 
   OverlayLayout withMessageLifetimeMinutes(int value) => OverlayLayout(
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
     left: left,
     top: top,
     width: width,
@@ -67,6 +105,8 @@ final class OverlayLayout {
   );
 
   OverlayLayout withBackgroundOpacity(double value) => OverlayLayout(
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
     left: left,
     top: top,
     width: width,
@@ -78,6 +118,8 @@ final class OverlayLayout {
   );
 
   OverlayLayout withContentOpacity(double value) => OverlayLayout(
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
     left: left,
     top: top,
     width: width,
@@ -91,6 +133,8 @@ final class OverlayLayout {
   );
 
   OverlayLayout withGifPlayCount(int value) => OverlayLayout(
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
     left: left,
     top: top,
     width: width,
@@ -181,6 +225,8 @@ final class OverlayLayout {
     if (viewport.isEmpty) return this;
     final clamped = _clamp(rect, viewport);
     return OverlayLayout(
+      chatFontSize: chatFontSize,
+      chatFontWeight: chatFontWeight,
       left: clamped.left / viewport.width,
       top: clamped.top / viewport.height,
       width: clamped.width / viewport.width,

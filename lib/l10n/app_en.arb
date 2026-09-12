@@ -3,6 +3,8 @@
   "streamOffline": "Offline",
 
   "@@locale": "en",
+  "chatFontWeight": "Font weight",
+  "chatFontSize": "Chat font size",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Configure overlay",
   "trayUpdate": "Check for updates…",

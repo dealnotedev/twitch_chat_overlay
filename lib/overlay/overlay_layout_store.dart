@@ -14,11 +14,19 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   static const String _contentOpacityKey = 'overlay.content.opacity';
   static const String _opacityKey = 'overlay.background.opacity';
   static const String _gifCountKey = 'overlay.gif.playCount';
+  static const String _fontWeightKey = 'overlay.messages.fontWeight';
+  static const String _fontSizeKey = 'overlay.messages.fontSize';
   static const String _lifetimeKey = 'overlay.messages.lifetimeMinutes';
 
   @override
   Future<OverlayLayout> load() async {
     final preferences = await SharedPreferences.getInstance();
+    final fontWeight =
+        preferences.getInt(_fontWeightKey) ??
+        const OverlayLayout.defaults().chatFontWeight;
+    final fontSize =
+        preferences.getDouble(_fontSizeKey) ??
+        const OverlayLayout.defaults().chatFontSize;
     final left = preferences.getDouble(_leftKey);
     final top = preferences.getDouble(_topKey);
     final width = preferences.getDouble(_widthKey);
@@ -39,6 +47,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
 
     if (left == null || top == null || width == null || height == null) {
       return const OverlayLayout.defaults()
+          .withChatFontWeight(fontWeight)
+          .withChatFontSize(fontSize)
           .withContentOpacity(contentOpacity)
           .withBackgroundOpacity(opacity)
           .withMessageLifetimeMinutes(lifetime)
@@ -52,6 +62,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
           height: height,
           backgroundOpacity: opacity,
         )
+        .withChatFontWeight(fontWeight)
+        .withChatFontSize(fontSize)
         .withContentOpacity(contentOpacity)
         .withMessageLifetimeMinutes(lifetime)
         .withGifPlayCount(gifPlayCount);
@@ -69,6 +81,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       preferences.setDouble(_contentOpacityKey, layout.contentOpacity),
       preferences.setInt(_lifetimeKey, layout.messageLifetimeMinutes),
       preferences.setInt(_gifCountKey, layout.gifPlayCount),
+      preferences.setDouble(_fontSizeKey, layout.chatFontSize),
+      preferences.setInt(_fontWeightKey, layout.chatFontWeight),
     ]);
   }
 }

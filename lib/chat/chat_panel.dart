@@ -1,5 +1,9 @@
 import 'dart:async';
 
+import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
+
+import 'package:twitch_chat_overlay/chat/chat_font_size.dart';
+
 import 'package:twitch_chat_overlay/chat/viewer_count.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -35,11 +39,15 @@ class ChatPanel extends StatefulWidget {
     required this.onLoadEmotes,
     this.onDeleteMessage,
     this.messageFooter,
+    this.chatFontSize = ChatFontSize.defaultSize,
+    this.chatFontWeight = ChatFontWeight.defaultWeight,
     this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
     super.key,
   });
 
   final Widget? messageFooter;
+  final double chatFontSize;
+  final int chatFontWeight;
   final TwitchAuthState authState;
   final ChatState chatState;
   final int messageLifetimeMinutes;
@@ -302,47 +310,67 @@ class _ChatPanelState extends State<ChatPanel> {
 
     return Stack(
       children: [
-        ListView.builder(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-          itemCount: items.length,
-          reverse: true,
-          findChildIndexCallback: (key) =>
-              itemIndices[(key as ValueKey<String>).value],
-          itemBuilder: (context, index) => RepaintBoundary(
-            key: ValueKey(items[index].id),
-            child: IgnorePointer(
-              ignoring: _recent.isFading(items[index].id),
-              child: AnimatedOpacity(
-                key: ValueKey('message-fade-${items[index].id}'),
-                opacity: _recent.isFading(items[index].id) ? 0 : 1,
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : ChatMessageRetention.fadeDuration,
-                curve: Curves.easeInOut,
-                child: ChatMessageEntrance(
-                  elapsed: _entranceElapsed(items[index].id),
-                  child: _ChatItemView(
-                    item: items[index],
-                    canCopy: widget.interactive,
-                    badges: widget.chatState.badges,
-                    mentionTarget: mentionTarget,
-                    userColor: switch (items[index]) {
-                      ChatRewardRedemption(:final userId) => userColors[userId],
-                      ChatPowerUp(:final userId) => userColors[userId],
-                      _ => null,
-                    },
-                    onReply:
-                        widget.interactive &&
-                            widget.authState.status == TwitchAuthStatus.signedIn
-                        ? _startReply
-                        : null,
-                    onDelete:
-                        widget.interactive &&
-                            items[index] is ChatUserMessage &&
-                            _canDelete(items[index] as ChatUserMessage)
-                        ? (message) => unawaited(_deleteMessage(message))
-                        : null,
-                    deleting: _deletingIds.contains(items[index].id),
+        // Scale only timeline content, leaving surrounding controls unchanged.
+        MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(
+              ChatFontSize.normalize(widget.chatFontSize) /
+                  ChatFontSize.defaultSize,
+            ),
+          ),
+          child: ChatFontWeight(
+            value: widget.chatFontWeight,
+            child: Builder(
+              builder: (context) => DefaultTextStyle.merge(
+                style: TextStyle(fontWeight: ChatFontWeight.resolve(context)),
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  itemCount: items.length,
+                  reverse: true,
+                  findChildIndexCallback: (key) =>
+                      itemIndices[(key as ValueKey<String>).value],
+                  itemBuilder: (context, index) => RepaintBoundary(
+                    key: ValueKey(items[index].id),
+                    child: IgnorePointer(
+                      ignoring: _recent.isFading(items[index].id),
+                      child: AnimatedOpacity(
+                        key: ValueKey('message-fade-${items[index].id}'),
+                        opacity: _recent.isFading(items[index].id) ? 0 : 1,
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? Duration.zero
+                            : ChatMessageRetention.fadeDuration,
+                        curve: Curves.easeInOut,
+                        child: ChatMessageEntrance(
+                          elapsed: _entranceElapsed(items[index].id),
+                          child: _ChatItemView(
+                            item: items[index],
+                            canCopy: widget.interactive,
+                            badges: widget.chatState.badges,
+                            mentionTarget: mentionTarget,
+                            userColor: switch (items[index]) {
+                              ChatRewardRedemption(:final userId) =>
+                                userColors[userId],
+                              ChatPowerUp(:final userId) => userColors[userId],
+                              _ => null,
+                            },
+                            onReply:
+                                widget.interactive &&
+                                    widget.authState.status ==
+                                        TwitchAuthStatus.signedIn
+                                ? _startReply
+                                : null,
+                            onDelete:
+                                widget.interactive &&
+                                    items[index] is ChatUserMessage &&
+                                    _canDelete(items[index] as ChatUserMessage)
+                                ? (message) =>
+                                      unawaited(_deleteMessage(message))
+                                : null,
+                            deleting: _deletingIds.contains(items[index].id),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -906,10 +934,13 @@ class _UserMessageView extends StatelessWidget {
                       l10n.highlightedMessage,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: chatReadableStyle.merge(
-                        const TextStyle(
+                      style: ChatFontWeight.readableStyleOf(context).merge(
+                        TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: ChatFontWeight.resolve(
+                            context,
+                            FontWeight.w600,
+                          ),
                           color: Color(0xFFBF94FF),
                         ),
                       ),
@@ -922,7 +953,7 @@ class _UserMessageView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
               child: Text.rich(
-                _replyContextSpan(l10n, reply, mentionTarget),
+                _replyContextSpan(context, l10n, reply, mentionTarget),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -938,11 +969,14 @@ class _UserMessageView extends StatelessWidget {
                 message.messageType == 'power_ups_gigantified_emote',
             prefix: [
               if (mentioned)
-                const TextSpan(
+                TextSpan(
                   text: '@ ',
                   style: TextStyle(
                     color: Color(0xFFBF94FF),
-                    fontWeight: FontWeight.w700,
+                    fontWeight: ChatFontWeight.resolve(
+                      context,
+                      FontWeight.w700,
+                    ),
                   ),
                 ),
               for (final badge in message.badges) _badgeSpan(badge, badges),
@@ -950,7 +984,7 @@ class _UserMessageView extends StatelessWidget {
                 text: '${message.userName}: ',
                 style: TextStyle(
                   color: _parseColor(message.color),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
                 ),
               ),
             ],
@@ -968,6 +1002,7 @@ class _UserMessageView extends StatelessWidget {
 }
 
 InlineSpan _replyContextSpan(
+  BuildContext context,
   AppLocalizations l10n,
   ChatReply reply,
   StreamerMentionTarget? mentionTarget,
@@ -982,7 +1017,10 @@ InlineSpan _replyContextSpan(
   return TextSpan(
     children: [
       TextSpan(text: text.substring(0, start)),
-      TextSpan(text: reply.parentUserName, style: streamerMentionStyle),
+      TextSpan(
+        text: reply.parentUserName,
+        style: ChatFontWeight.mentionStyleOf(context),
+      ),
       TextSpan(text: text.substring(start + reply.parentUserName.length)),
     ],
   );
@@ -1014,7 +1052,10 @@ class _NoticeView extends StatelessWidget {
         children: [
           Text(
             notice.systemMessage,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
+            ),
           ),
           if (notice.fragments.isNotEmpty) ...[
             const Gap(3),
@@ -1027,7 +1068,10 @@ class _NoticeView extends StatelessWidget {
                     text: '$name: ',
                     style: TextStyle(
                       color: _parseColor(notice.color),
-                      fontWeight: FontWeight.w700,
+                      fontWeight: ChatFontWeight.resolve(
+                        context,
+                        FontWeight.w700,
+                      ),
                     ),
                   ),
               ],

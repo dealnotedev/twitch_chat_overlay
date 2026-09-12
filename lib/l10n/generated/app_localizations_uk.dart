@@ -16,6 +16,12 @@ class AppLocalizationsUk extends AppLocalizations {
   String get streamOffline => 'Поза ефіром';
 
   @override
+  String get chatFontWeight => 'Насиченість';
+
+  @override
+  String get chatFontSize => 'Розмір шрифту';
+
+  @override
   String get appTitle => 'Twitch Chat Overlay';
 
   @override

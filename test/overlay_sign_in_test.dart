@@ -64,7 +64,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(host.state.interactive, isTrue);
 
-    final transparencySlider = find.byType(Slider).last;
+    final transparencySlider = find.byType(Slider).at(1);
     final contentOpacity = find.byKey(const ValueKey('chat-content-opacity'));
     for (final transparency in [0.5, 1.0, 0.0]) {
       tester.widget<Slider>(transparencySlider).onChanged!(transparency);
@@ -78,6 +78,29 @@ void main() {
         findsNothing,
       );
     }
+
+    final fontSlider = find.byKey(const ValueKey('chat-font-size-slider'));
+    tester.widget<Slider>(fontSlider).onChanged!(18.75);
+    await tester.pump();
+    expect(
+      tester.widget<ChatPanel>(find.byType(ChatPanel)).chatFontSize,
+      18.75,
+    );
+    tester.widget<Slider>(fontSlider).onChangeEnd!(18.75);
+    expect(layoutStore.saved!.chatFontSize, 18.75);
+    expect(find.text('18.75'), findsOneWidget);
+
+    final weightSlider = find.byKey(const ValueKey('chat-font-weight-slider'));
+    tester.widget<Slider>(weightSlider).onChanged!(800);
+    await tester.pump();
+    expect(
+      tester.widget<ChatPanel>(find.byType(ChatPanel)).chatFontWeight,
+      800,
+    );
+    tester.widget<Slider>(weightSlider).onChangeEnd!(800);
+    expect(layoutStore.saved!.chatFontWeight, 800);
+    expect(layoutStore.saved!.chatFontSize, 18.75);
+    expect(find.text('800'), findsOneWidget);
 
     final gifControl = find.byType(GifPlaybackControl);
     expect(tester.widget<GifPlaybackControl>(gifControl).playCount, -1);
@@ -197,7 +220,7 @@ void main() {
       await host.setInteractive(true);
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);
-      expect(find.byType(Slider), findsNWidgets(2));
+      expect(find.byType(Slider), findsNWidgets(4));
       expect(find.byTooltip('Lock overlay'), findsOneWidget);
       expect(find.byType(ChatComposer), findsOneWidget);
       expect(find.bySemanticsLabel('Chat connected'), findsNothing);
@@ -266,7 +289,7 @@ void main() {
       await host.setInteractive(true);
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);
-      expect(find.byType(Slider), findsNWidgets(2));
+      expect(find.byType(Slider), findsNWidgets(4));
       expect(find.text('Sign in with Twitch'), findsOneWidget);
       expect(tester.takeException(), isNull);
       semantics.dispose();

@@ -16,6 +16,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streamOffline => 'Offline';
 
   @override
+  String get chatFontWeight => 'Font weight';
+
+  @override
+  String get chatFontSize => 'Chat font size';
+
+  @override
   String get appTitle => 'Twitch Chat Overlay';
 
   @override

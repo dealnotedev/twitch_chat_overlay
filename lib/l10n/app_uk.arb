@@ -3,6 +3,8 @@
   "streamOffline": "Поза ефіром",
 
   "@@locale": "uk",
+  "chatFontWeight": "Насиченість",
+  "chatFontSize": "Розмір шрифту",
   "appTitle": "Twitch Chat Overlay",
   "trayConfigure": "Налаштувати оверлей",
   "trayUpdate": "Перевірити оновлення…",

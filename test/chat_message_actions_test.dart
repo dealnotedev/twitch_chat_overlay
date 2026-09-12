@@ -229,6 +229,8 @@ ChatUserMessage message(
 Widget app(
   List<ChatItem> messages, {
   bool interactive = true,
+  double fontSize = 13.5,
+  int fontWeight = 500,
   Future<SendChatResult> Function(String, {String? replyTo})? send,
   Future<void> Function(String)? delete,
 }) => MaterialApp(
@@ -242,6 +244,8 @@ Widget app(
         width: 320,
         height: 460,
         child: ChatPanel(
+          chatFontSize: fontSize,
+          chatFontWeight: fontWeight,
           authState: TwitchAuthState(
             status: TwitchAuthStatus.signedIn,
             token: fixtures.makeToken(),

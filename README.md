@@ -30,7 +30,10 @@ WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 - Flutter `gen_l10n` localization for English and Ukrainian. In setup mode,
   click the small UK/EN button to cycle the app language; the selection is saved
   in SharedPreferences and restored on startup, including the tray menu.
-- Bundled Inter 4.1 fonts for all app text (400–700, upright and italic),
+- Saved chat typography controls: font size 12–24 in 0.25 increments and weight
+  300–900 in 100 increments, with live values. Text within the message list scales
+  proportionally; controls, the composer and status indicators are unchanged.
+- Bundled Inter 4.1 fonts for all app text (300–900, upright),
   available offline without installing fonts in Windows.
 
 The native renderer supports text, mentions, Twitch emotes (static and
@@ -258,6 +261,6 @@ is intentionally not used by the desktop callback server.
 
 - Select any channel by login instead of only the signed-in channel.
 - Official cheermote images and native rendering of special messages/events.
-- UI for replies, moderation actions, opacity, and font settings.
+- Additional moderation actions and channel controls.
 - Device Code OAuth and production packaging/signing.
 - Integration tests for EventSub reconnect and the OAuth callback.

@@ -110,6 +110,18 @@ abstract class AppLocalizations {
   /// **'Offline'**
   String get streamOffline;
 
+  /// No description provided for @chatFontWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Font weight'**
+  String get chatFontWeight;
+
+  /// No description provided for @chatFontSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat font size'**
+  String get chatFontSize;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:

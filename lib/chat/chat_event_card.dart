@@ -1,11 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
-import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 
@@ -39,15 +40,15 @@ class RewardRedemptionCard extends StatelessWidget {
               text: redemption.userName,
               style: TextStyle(
                 color: userColor ?? Colors.white,
-                fontWeight: FontWeight.w700,
+                fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
               ),
             ),
             TextSpan(text: ' ${l10n.rewardRedemptionAction} '),
             TextSpan(
               text: redemption.rewardTitle,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.w700,
+                fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
               ),
             ),
             TextSpan(text: ' ${l10n.rewardRedemptionFor} '),
@@ -66,7 +67,7 @@ class RewardRedemptionCard extends StatelessWidget {
             ),
           ],
         ),
-        style: chatReadableStyle.merge(
+        style: ChatFontWeight.readableStyleOf(context).merge(
           const TextStyle(fontSize: 13.5, height: 1.32, color: foreground),
         ),
       ),
@@ -123,7 +124,7 @@ class RaidCard extends StatelessWidget {
       imageUrl: raid.profileImageUrl,
       imageLabel: raid.userName,
       children: [
-        Text(l10n.raidFrom(raid.userName), style: _titleStyle),
+        Text(l10n.raidFrom(raid.userName), style: _titleStyle(context)),
         const Gap(3),
         Text(l10n.raidViewers(raid.viewerCount), style: _captionStyle),
         if (raid.sourceChannel case final channel?) ...[
@@ -135,7 +136,10 @@ class RaidCard extends StatelessWidget {
   }
 }
 
-const _titleStyle = TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700);
+TextStyle _titleStyle(BuildContext context) => TextStyle(
+  fontSize: 13.5,
+  fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
+);
 const _captionStyle = TextStyle(fontSize: 11.5, color: Color(0xFFCECED6));
 
 class _EventCard extends StatelessWidget {
@@ -237,7 +241,7 @@ class PowerUpLabel extends StatelessWidget {
               text: '$name · ',
               style: TextStyle(
                 color: userColor ?? Colors.white,
-                fontWeight: FontWeight.w700,
+                fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
               ),
             ),
           TextSpan(text: '$title · '),
@@ -256,11 +260,11 @@ class PowerUpLabel extends StatelessWidget {
           ),
         ],
       ),
-      style: chatReadableStyle.merge(
-        const TextStyle(
+      style: ChatFontWeight.readableStyleOf(context).merge(
+        TextStyle(
           fontSize: 11,
           height: 1.32,
-          fontWeight: FontWeight.w600,
+          fontWeight: ChatFontWeight.resolve(context, FontWeight.w600),
           color: Color(0xFFBF94FF),
         ),
       ),

@@ -1,5 +1,9 @@
 import 'dart:async';
 
+import 'package:twitch_chat_overlay/overlay/chat_font_weight_control.dart';
+
+import 'package:twitch_chat_overlay/overlay/chat_font_size_control.dart';
+
 import 'package:twitch_chat_overlay/chat/gif_playback.dart';
 import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
 
@@ -128,6 +132,12 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       signedIn: _authState.status == TwitchAuthStatus.signedIn,
                       backgroundOpacity: _layout.backgroundOpacity,
                       contentOpacity: _layout.contentOpacity,
+                      chatFontSize: _layout.chatFontSize,
+                      chatFontWeight: _layout.chatFontWeight,
+                      onChatFontWeightChanged: (value) =>
+                          _updateLayout(_layout.withChatFontWeight(value)),
+                      onChatFontSizeChanged: (value) =>
+                          _updateLayout(_layout.withChatFontSize(value)),
                       onContentOpacityChanged: (value) =>
                           _updateLayout(_layout.withContentOpacity(value)),
                       messageLifetimeMinutes: _layout.messageLifetimeMinutes,
@@ -154,6 +164,8 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                           unawaited(widget.overlayHost.setInteractive(false)),
                       connectionStatus: _chatState.status,
                       child: ChatPanel(
+                        chatFontSize: _layout.chatFontSize,
+                        chatFontWeight: _layout.chatFontWeight,
                         messageFooter: UpdateNotice(
                           interactive: _hostState.interactive,
                           onUpdate: widget.overlayHost.openUpdater,
@@ -250,6 +262,10 @@ class _VirtualChatWindow extends StatelessWidget {
     required this.backgroundOpacity,
     required this.contentOpacity,
     required this.onContentOpacityChanged,
+    required this.chatFontSize,
+    required this.onChatFontSizeChanged,
+    required this.chatFontWeight,
+    required this.onChatFontWeightChanged,
     required this.messageLifetimeMinutes,
     required this.onMessageLifetimeChanged,
     required this.gifPlayCount,
@@ -269,6 +285,10 @@ class _VirtualChatWindow extends StatelessWidget {
   final double backgroundOpacity;
   final double contentOpacity;
   final ValueChanged<double> onContentOpacityChanged;
+  final double chatFontSize;
+  final ValueChanged<double> onChatFontSizeChanged;
+  final int chatFontWeight;
+  final ValueChanged<int> onChatFontWeightChanged;
   final int messageLifetimeMinutes;
   final int gifPlayCount;
   final ValueChanged<int> onGifPlayCountChanged;
@@ -353,6 +373,18 @@ class _VirtualChatWindow extends StatelessWidget {
                               .contentTransparency,
                           opacity: contentOpacity,
                           onChanged: onContentOpacityChanged,
+                          onChangeEnd: onGestureEnd,
+                        ),
+                      if (editing)
+                        ChatFontSizeControl(
+                          value: chatFontSize,
+                          onChanged: onChatFontSizeChanged,
+                          onChangeEnd: onGestureEnd,
+                        ),
+                      if (editing)
+                        ChatFontWeightControl(
+                          value: chatFontWeight,
+                          onChanged: onChatFontWeightChanged,
                           onChangeEnd: onGestureEnd,
                         ),
                       if (editing)
