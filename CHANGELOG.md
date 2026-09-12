@@ -1,3 +1,22 @@
+# Twitch Chat Overlay 1.3.1
+
+## Changes
+
+- Replaced gray secondary text with white across chat status, replies, event cards, settings and the updater.
+- Added the same layered soft shadows used in chat to text and icons on transparent overlay backgrounds, including toolbar and message-action buttons.
+- Moved the Send button shadow from its icon to its solid background.
+- Gave settings one continuous background to remove seams between rows.
+- Made update-notification icons white with shadows and increased the notification text size from 10 to 12.
+- Improved contrast in the updater's version labels, status details and release notes.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+Use **Release.zip** to get the updater appearance changes as well. In-app updates preserve the existing updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.3.0
 
 ## Changes
