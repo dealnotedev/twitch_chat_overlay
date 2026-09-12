@@ -39,13 +39,9 @@ class ReleaseNotes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const text = TextStyle(
-      color: Color(0xffb0acbf),
-      fontSize: 13,
-      height: 1.65,
-    );
+    const text = TextStyle(color: Colors.white, fontSize: 13, height: 1.65);
     const heading = TextStyle(
-      color: Color(0xfff2f1f7),
+      color: Colors.white,
       fontWeight: FontWeight.w600,
       height: 1.35,
     );
@@ -80,7 +76,7 @@ class ReleaseNotes extends StatelessWidget {
           decoration: TextDecoration.underline,
         ),
         strong: const TextStyle(
-          color: Color(0xffe8e3f2),
+          color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
         listBullet: text.copyWith(color: const Color(0xffbc93ff)),
@@ -109,7 +105,7 @@ class ReleaseNotes extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         tableHead: text.copyWith(
-          color: const Color(0xffe8e3f2),
+          color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
         tableBody: text,

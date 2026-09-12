@@ -7,6 +7,11 @@ import 'l10n/generated/updater_localizations.dart';
 ThemeData updaterTheme() => ThemeData(
   brightness: Brightness.dark,
   fontFamily: 'Inter',
+  textTheme: ThemeData.dark().textTheme.apply(
+    fontFamily: 'Inter',
+    bodyColor: Colors.white,
+    displayColor: Colors.white,
+  ),
   scaffoldBackgroundColor: Color(0xff101014),
   colorScheme: ColorScheme.fromSeed(
     seedColor: Color(0xff9146ff),
@@ -61,7 +66,7 @@ class UpdaterView extends StatelessWidget {
   });
   final UpdatePresentation state;
   final VoidCallback onAction, onCancel;
-  static const muted = Color(0xff9b98ac);
+  static const textColor = Colors.white;
   static const accent = Color(0xffbc93ff);
 
   @override
@@ -104,7 +109,7 @@ class UpdaterView extends StatelessWidget {
                     const Text(
                       'TWITCH CHAT OVERLAY',
                       style: TextStyle(
-                        color: muted,
+                        color: textColor,
                         fontSize: 9,
                         letterSpacing: 1,
                       ),
@@ -155,13 +160,17 @@ class UpdaterView extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.shield_outlined, size: 16, color: muted),
+                    const Icon(
+                      Icons.shield_outlined,
+                      size: 16,
+                      color: textColor,
+                    ),
                     const SizedBox(width: 7),
                     Expanded(
                       child: Text(
                         strings.settingsDetail,
                         style: const TextStyle(
-                          color: muted,
+                          color: textColor,
                           fontSize: 11,
                           height: 1.35,
                         ),
@@ -176,7 +185,7 @@ class UpdaterView extends StatelessWidget {
                         backgroundColor: const Color(0xff9146ff),
                         foregroundColor: Colors.white,
                         disabledBackgroundColor: const Color(0xff38234f),
-                        disabledForegroundColor: const Color(0xff9e85bd),
+                        disabledForegroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
@@ -262,7 +271,7 @@ class _NotesPanelState extends State<_NotesPanel> {
                 Text(
                   strings.stableRelease,
                   style: const TextStyle(
-                    color: Color(0xffb6a6cf),
+                    color: Colors.white,
                     fontSize: 9,
                     letterSpacing: .4,
                   ),
@@ -285,7 +294,7 @@ class _NotesPanelState extends State<_NotesPanel> {
                             ? strings.loadingNotes
                             : strings.noNotes,
                         style: const TextStyle(
-                          color: Color(0xffb0acbf),
+                          color: Colors.white,
                           fontSize: 13,
                           height: 1.65,
                         ),
@@ -304,7 +313,7 @@ class _Version extends StatelessWidget {
   const _Version({
     required this.label,
     required this.value,
-    this.color = const Color(0xfff2f1f7),
+    this.color = Colors.white,
   });
   final String label, value;
   final Color color;
@@ -318,7 +327,7 @@ class _Version extends StatelessWidget {
       Text(
         label,
         style: const TextStyle(
-          color: UpdaterView.muted,
+          color: UpdaterView.textColor,
           fontSize: 9,
           fontWeight: FontWeight.w500,
           letterSpacing: .4,
@@ -412,7 +421,7 @@ class _Status extends StatelessWidget {
           Text(
             state.detail,
             style: const TextStyle(
-              color: UpdaterView.muted,
+              color: UpdaterView.textColor,
               fontSize: 11,
               height: 1.4,
             ),

@@ -1,3 +1,4 @@
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
@@ -118,6 +119,7 @@ class _ChatComposerState extends State<ChatComposer> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
+                                  shadows: chatTextShadows,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFFBF94FF),
@@ -128,8 +130,9 @@ class _ChatComposerState extends State<ChatComposer> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
+                                  shadows: chatTextShadows,
                                   fontSize: 10.5,
-                                  color: Color(0xFFADADB8),
+                                  color: Colors.white,
                                 ),
                               ),
                             ],
@@ -155,6 +158,7 @@ class _ChatComposerState extends State<ChatComposer> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
+                      shadows: chatTextShadows,
                       fontSize: 11,
                       color: Color(0xFFFF7676),
                     ),
@@ -229,8 +233,9 @@ class _ChatComposerState extends State<ChatComposer> {
                                     textInputAction: TextInputAction.newline,
                                     cursorColor: const Color(0xFFBF94FF),
                                     style: const TextStyle(
+                                      shadows: chatTextShadows,
                                       fontSize: 13,
-                                      color: Color(0xFFEFEFF1),
+                                      color: Colors.white,
                                     ),
                                     decoration: InputDecoration(
                                       isCollapsed: true,
@@ -240,7 +245,8 @@ class _ChatComposerState extends State<ChatComposer> {
                                       focusedBorder: InputBorder.none,
                                       hintText: l10n.sendMessageHint,
                                       hintStyle: const TextStyle(
-                                        color: Color(0xFFADADB8),
+                                        shadows: chatTextShadows,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
@@ -313,6 +319,10 @@ class ChatIconButton extends StatelessWidget {
       tooltip: showTooltip ? label : null,
       onPressed: onPressed,
       style: ButtonStyle(
+        elevation: accent ? const WidgetStatePropertyAll(3) : null,
+        shadowColor: accent
+            ? const WidgetStatePropertyAll(Colors.black54)
+            : null,
         padding: const WidgetStatePropertyAll(EdgeInsets.zero),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
@@ -323,7 +333,7 @@ class ChatIconButton extends StatelessWidget {
               ? const Color(0xFF85858F)
               : destructive && states.contains(WidgetState.hovered)
               ? const Color(0xFFFF7676)
-              : const Color(0xFFEFEFF1),
+              : Colors.white,
         ),
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
@@ -350,6 +360,7 @@ class ChatIconButton extends StatelessWidget {
             )
           : Icon(
               icon,
+              shadows: accent ? const [] : chatTextShadows,
               size: iconSize,
               semanticLabel: showTooltip ? null : label,
             ),

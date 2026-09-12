@@ -1,3 +1,4 @@
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
@@ -42,15 +43,23 @@ class CountSettingControl extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      color: const Color(0xF21F1F23),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Color(0xFFBF94FF)),
+          Icon(
+            icon,
+            shadows: chatTextShadows,
+            size: 16,
+            color: Color(0xFFBF94FF),
+          ),
           const Gap(8),
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+              style: const TextStyle(
+                shadows: chatTextShadows,
+                fontSize: 11,
+                color: Colors.white,
+              ),
             ),
           ),
           const Gap(8),
@@ -90,9 +99,10 @@ class CountSettingControl extends StatelessWidget {
                           displayValue,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
+                            shadows: chatTextShadows,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFFEFEFF1),
+                            color: Colors.white,
                             fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -124,7 +134,7 @@ class _StepButton extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: label,
     onPressed: onPressed,
-    icon: Icon(icon, size: 16),
+    icon: Icon(icon, shadows: chatTextShadows, size: 16),
     padding: EdgeInsets.zero,
     constraints: const BoxConstraints.tightFor(width: 26, height: 26),
     style: IconButton.styleFrom(

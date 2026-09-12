@@ -85,6 +85,11 @@ class TwitchChatOverlayApp extends StatelessWidget {
           brightness: Brightness.dark,
           scaffoldBackgroundColor: Colors.transparent,
           fontFamily: 'Inter',
+          textTheme: ThemeData.dark().textTheme.apply(
+            fontFamily: 'Inter',
+            bodyColor: Colors.white,
+            displayColor: Colors.white,
+          ),
         ),
         home: OverlaySurface(
           onCycleLocale: () => unawaited(

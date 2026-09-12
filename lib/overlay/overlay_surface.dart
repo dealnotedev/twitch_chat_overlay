@@ -1,3 +1,5 @@
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
+
 import 'dart:async';
 
 import 'package:twitch_chat_overlay/overlay/chat_font_weight_control.dart';
@@ -247,7 +249,11 @@ class _EditModeBanner extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           child: Text(
             AppLocalizations.of(context).layoutModeBanner,
-            style: const TextStyle(fontSize: 12, color: Colors.white),
+            style: const TextStyle(
+              shadows: chatTextShadows,
+              fontSize: 12,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
@@ -360,42 +366,46 @@ class _VirtualChatWindow extends StatelessWidget {
                           ),
                         ),
                       if (editing)
-                        _TransparencySlider(
-                          label: AppLocalizations.of(context)
-                              .backgroundTransparency,
-                          opacity: backgroundOpacity,
-                          onChanged: onOpacityChanged,
-                          onChangeEnd: onGestureEnd,
-                        ),
-                      if (editing)
-                        _TransparencySlider(
-                          label: AppLocalizations.of(context)
-                              .contentTransparency,
-                          opacity: contentOpacity,
-                          onChanged: onContentOpacityChanged,
-                          onChangeEnd: onGestureEnd,
-                        ),
-                      if (editing)
-                        ChatFontSizeControl(
-                          value: chatFontSize,
-                          onChanged: onChatFontSizeChanged,
-                          onChangeEnd: onGestureEnd,
-                        ),
-                      if (editing)
-                        ChatFontWeightControl(
-                          value: chatFontWeight,
-                          onChanged: onChatFontWeightChanged,
-                          onChangeEnd: onGestureEnd,
-                        ),
-                      if (editing)
-                        MessageLifetimeControl(
-                          minutes: messageLifetimeMinutes,
-                          onChanged: onMessageLifetimeChanged,
-                        ),
-                      if (editing)
-                        GifPlaybackControl(
-                          playCount: gifPlayCount,
-                          onChanged: onGifPlayCountChanged,
+                        ColoredBox(
+                          color: const Color(0xF21F1F23),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _TransparencySlider(
+                                label: AppLocalizations.of(context)
+                                    .backgroundTransparency,
+                                opacity: backgroundOpacity,
+                                onChanged: onOpacityChanged,
+                                onChangeEnd: onGestureEnd,
+                              ),
+                              _TransparencySlider(
+                                label: AppLocalizations.of(context)
+                                    .contentTransparency,
+                                opacity: contentOpacity,
+                                onChanged: onContentOpacityChanged,
+                                onChangeEnd: onGestureEnd,
+                              ),
+                              ChatFontSizeControl(
+                                value: chatFontSize,
+                                onChanged: onChatFontSizeChanged,
+                                onChangeEnd: onGestureEnd,
+                              ),
+                              ChatFontWeightControl(
+                                value: chatFontWeight,
+                                onChanged: onChatFontWeightChanged,
+                                onChangeEnd: onGestureEnd,
+                              ),
+                              MessageLifetimeControl(
+                                minutes: messageLifetimeMinutes,
+                                onChanged: onMessageLifetimeChanged,
+                              ),
+                              GifPlaybackControl(
+                                playCount: gifPlayCount,
+                                onChanged: onGifPlayCountChanged,
+                              ),
+                            ],
+                          ),
                         ),
                       Expanded(
                         child: Opacity(
@@ -446,12 +456,15 @@ class _TransparencySlider extends StatelessWidget {
     return Container(
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      color: const Color(0xF21F1F23),
       child: Row(
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+            style: const TextStyle(
+              shadows: chatTextShadows,
+              fontSize: 11,
+              color: Colors.white,
+            ),
           ),
           Expanded(
             child: Semantics(
@@ -485,7 +498,11 @@ class _TransparencySlider extends StatelessWidget {
             child: Text(
               percent,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+              style: const TextStyle(
+                shadows: chatTextShadows,
+                fontSize: 11,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -526,12 +543,17 @@ class _ChatHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.chat_bubble_rounded, size: 17),
+            const Icon(
+              Icons.chat_bubble_rounded,
+              shadows: chatTextShadows,
+              size: 17,
+            ),
             const Gap(8),
             Expanded(
               child: Text(
                 l10n.twitchChatTitle,
                 style: const TextStyle(
+                  shadows: chatTextShadows,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.7,
@@ -550,7 +572,11 @@ class _ChatHeader extends StatelessWidget {
               const Gap(10),
               const Text(
                 'Ctrl+Shift+O',
-                style: TextStyle(fontSize: 10, color: Color(0xFFADADB8)),
+                style: TextStyle(
+                  shadows: chatTextShadows,
+                  fontSize: 10,
+                  color: Colors.white,
+                ),
               ),
             ],
             if (editing) ...[
@@ -568,6 +594,7 @@ class _ChatHeader extends StatelessWidget {
                       vertical: 6,
                     ),
                     textStyle: const TextStyle(
+                      shadows: chatTextShadows,
                       fontFamily: 'Inter',
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -585,7 +612,11 @@ class _ChatHeader extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 tooltip: l10n.lockOverlay,
                 onPressed: onLock,
-                icon: const Icon(Icons.lock_outline_rounded, size: 17),
+                icon: const Icon(
+                  Icons.lock_outline_rounded,
+                  shadows: chatTextShadows,
+                  size: 17,
+                ),
               ),
             ],
           ],

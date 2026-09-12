@@ -1,3 +1,4 @@
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:flutter/material.dart';
 
 import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
@@ -24,12 +25,15 @@ class ChatFontWeightControl extends StatelessWidget {
     return Container(
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      color: const Color(0xF21F1F23),
       child: Row(
         children: [
           Text(
             l10n.chatFontWeight,
-            style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+            style: const TextStyle(
+              shadows: chatTextShadows,
+              fontSize: 11,
+              color: Colors.white,
+            ),
           ),
           Expanded(
             child: Semantics(
@@ -67,7 +71,11 @@ class ChatFontWeightControl extends StatelessWidget {
             child: Text(
               label,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+              style: const TextStyle(
+                shadows: chatTextShadows,
+                fontSize: 11,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

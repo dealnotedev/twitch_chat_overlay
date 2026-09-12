@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 
+/// Shared by chat and controls over transparent backgrounds.
+const chatTextShadows = [
+  // Repeated blurred layers deepen the shadow without a sharp contour.
+  Shadow(color: Colors.black, blurRadius: 1.5),
+  Shadow(color: Colors.black, blurRadius: 2, offset: Offset(0, 1)),
+  Shadow(color: Colors.black, blurRadius: 2, offset: Offset(0, 1)),
+  Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 2)),
+];
+
 /// Layered soft shadows keep chat legible without a hard glyph outline.
 const chatReadableStyle = TextStyle(
   color: Colors.white,
   fontWeight: FontWeight.w500,
-  shadows: [
-    // Repeated blurred layers deepen the shadow without a sharp contour.
-    Shadow(color: Colors.black, blurRadius: 1.5),
-    Shadow(color: Colors.black, blurRadius: 2, offset: Offset(0, 1)),
-    Shadow(color: Colors.black, blurRadius: 2, offset: Offset(0, 1)),
-    Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 2)),
-  ],
+  shadows: chatTextShadows,
 );
 
 /// Keep Twitch hues with at least 4.5:1 contrast against black.

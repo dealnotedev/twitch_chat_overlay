@@ -200,7 +200,7 @@ class _ChatGifImageState extends State<ChatGifImage>
                               l10n.gifLoading,
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFFADADB8),
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -215,7 +215,7 @@ class _ChatGifImageState extends State<ChatGifImage>
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 11,
-                          color: Color(0xFFADADB8),
+                          color: Colors.white,
                         ),
                       ),
                     ),

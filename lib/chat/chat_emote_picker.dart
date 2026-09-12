@@ -57,7 +57,7 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 12,
-              color: Color(0xFFEFEFF1),
+              color: Colors.white,
             ),
             child: FutureBuilder<List<TwitchEmote>>(
               future: widget.emotes,
@@ -126,7 +126,10 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
                               padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
                               child: TextField(
                                 groupId: widget.tapGroup,
-                                style: const TextStyle(fontSize: 12),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                ),
                                 onChanged: (query) {
                                   setState(
                                     () => _query = query.trim().toLowerCase(),
@@ -135,6 +138,9 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
                                 },
                                 decoration: InputDecoration(
                                   hintText: l10n.searchEmotes,
+                                  hintStyle: const TextStyle(
+                                    color: Colors.white,
+                                  ),
                                   isDense: true,
                                   prefixIcon: const Icon(
                                     Icons.search_rounded,

@@ -1,3 +1,4 @@
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
@@ -94,6 +95,7 @@ class _UpdateNoticeState extends State<UpdateNotice> {
           children: [
             const Icon(
               Icons.system_update_alt_rounded,
+              shadows: chatTextShadows,
               size: 12,
               color: Color(0xFFBC93FF),
             ),
@@ -108,9 +110,10 @@ class _UpdateNoticeState extends State<UpdateNotice> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
+                    shadows: chatTextShadows,
                     fontSize: 10,
                     height: 1.2,
-                    color: Color(0xFFD5C4EE),
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -120,7 +123,7 @@ class _UpdateNoticeState extends State<UpdateNotice> {
               onPressed: enabled ? _open : null,
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFFBC93FF),
-                disabledForegroundColor: const Color(0xFFAC8ACE),
+                disabledForegroundColor: Colors.white,
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 padding: const EdgeInsets.symmetric(
@@ -128,6 +131,7 @@ class _UpdateNoticeState extends State<UpdateNotice> {
                   vertical: 8,
                 ),
                 textStyle: const TextStyle(
+                  shadows: chatTextShadows,
                   fontFamily: 'Inter',
                   fontSize: 11,
                   fontWeight: FontWeight.w600,

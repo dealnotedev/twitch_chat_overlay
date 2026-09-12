@@ -19,7 +19,7 @@ class ViewerCount extends StatelessWidget {
         : count == null
         ? '—'
         : NumberFormat.decimalPattern(l10n.localeName).format(count);
-    const color = Color(0xFFADADB8);
+    const color = Colors.white;
     return Semantics(
       label: '${l10n.viewerCountLabel}: $value',
       excludeSemantics: true,

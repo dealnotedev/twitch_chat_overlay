@@ -184,7 +184,11 @@ class _ChatPanelState extends State<ChatPanel> {
             padding: const EdgeInsets.all(8),
             child: Text(
               l10n.rewardSubscriptionFailed,
-              style: const TextStyle(fontSize: 11, color: Color(0xFFFFB31A)),
+              style: const TextStyle(
+                shadows: chatTextShadows,
+                fontSize: 11,
+                color: Color(0xFFFFB31A),
+              ),
             ),
           ),
         Expanded(
@@ -232,6 +236,7 @@ class _ChatPanelState extends State<ChatPanel> {
                       child: Text(
                         _deleteError!,
                         style: const TextStyle(
+                          shadows: chatTextShadows,
                           fontSize: 11,
                           color: Color(0xFFFF7676),
                         ),
@@ -322,7 +327,10 @@ class _ChatPanelState extends State<ChatPanel> {
             value: widget.chatFontWeight,
             child: Builder(
               builder: (context) => DefaultTextStyle.merge(
-                style: TextStyle(fontWeight: ChatFontWeight.resolve(context)),
+                style: TextStyle(
+                  shadows: chatTextShadows,
+                  fontWeight: ChatFontWeight.resolve(context),
+                ),
                 child: ListView.builder(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                   itemCount: items.length,
@@ -594,6 +602,7 @@ class _SignedOutPanel extends StatelessWidget {
           children: [
             const Icon(
               Icons.account_circle_outlined,
+              shadows: chatTextShadows,
               size: 32,
               color: Color(0xFFBF94FF),
             ),
@@ -601,7 +610,11 @@ class _SignedOutPanel extends StatelessWidget {
             Text(
               error ?? l10n.connectTwitchDescription,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFFD7D7DC)),
+              style: const TextStyle(
+                shadows: chatTextShadows,
+                fontSize: 12.5,
+                color: Colors.white,
+              ),
             ),
             const Gap(12),
             if (interactive)
@@ -612,7 +625,11 @@ class _SignedOutPanel extends StatelessWidget {
             else
               Text(
                 l10n.openControlsShortcut,
-                style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+                style: const TextStyle(
+                  shadows: chatTextShadows,
+                  fontSize: 11,
+                  color: Colors.white,
+                ),
               ),
           ],
         ),
@@ -658,11 +675,15 @@ class _TwitchSignInButton extends StatelessWidget {
           }
           return const Color(0xF21F1F23);
         }),
-        foregroundColor: const WidgetStatePropertyAll(Color(0xFFEFEFF1)),
+        foregroundColor: const WidgetStatePropertyAll(Colors.white),
         iconColor: const WidgetStatePropertyAll(Color(0xFFBF94FF)),
         iconSize: const WidgetStatePropertyAll(17),
         textStyle: const WidgetStatePropertyAll(
-          TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          TextStyle(
+            shadows: chatTextShadows,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         splashFactory: NoSplash.splashFactory,
@@ -699,14 +720,22 @@ class _CenteredStatus extends StatelessWidget {
             Text(
               text,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: Color(0xFFADADB8)),
+              style: const TextStyle(
+                shadows: chatTextShadows,
+                fontSize: 12,
+                color: Colors.white,
+              ),
             ),
             if (hint != null) ...[
               const Gap(12),
               Text(
                 hint!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11, color: Color(0xFFADADB8)),
+                style: const TextStyle(
+                  shadows: chatTextShadows,
+                  fontSize: 11,
+                  color: Colors.white,
+                ),
               ),
             ],
           ],
@@ -749,7 +778,7 @@ class _ChatConnectionIndicator extends StatelessWidget {
               text: text,
               color: switch (status) {
                 ChatConnectionStatus.failure => const Color(0xFFFF7676),
-                ChatConnectionStatus.idle => const Color(0xFFADADB8),
+                ChatConnectionStatus.idle => Colors.white,
                 _ => const Color(0xFFFFB31A),
               },
             ),
@@ -775,7 +804,10 @@ class _ConnectionPill extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(text, style: TextStyle(fontSize: 9, color: color)),
+        child: Text(
+          text,
+          style: TextStyle(shadows: chatTextShadows, fontSize: 9, color: color),
+        ),
       ),
     );
   }
@@ -925,6 +957,7 @@ class _UserMessageView extends StatelessWidget {
                 children: [
                   const Icon(
                     Icons.highlight_alt_rounded,
+                    shadows: chatTextShadows,
                     size: 14,
                     color: Color(0xFFBF94FF),
                   ),
@@ -936,6 +969,7 @@ class _UserMessageView extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: ChatFontWeight.readableStyleOf(context).merge(
                         TextStyle(
+                          shadows: chatTextShadows,
                           fontSize: 11,
                           fontWeight: ChatFontWeight.resolve(
                             context,
@@ -957,8 +991,9 @@ class _UserMessageView extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
+                  shadows: chatTextShadows,
                   fontSize: 10.5,
-                  color: Color(0xFFADADB8),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -972,6 +1007,7 @@ class _UserMessageView extends StatelessWidget {
                 TextSpan(
                   text: '@ ',
                   style: TextStyle(
+                    shadows: chatTextShadows,
                     color: Color(0xFFBF94FF),
                     fontWeight: ChatFontWeight.resolve(
                       context,
@@ -983,17 +1019,26 @@ class _UserMessageView extends StatelessWidget {
               TextSpan(
                 text: '${message.userName}: ',
                 style: TextStyle(
+                  shadows: chatTextShadows,
                   color: _parseColor(message.color),
                   fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
                 ),
               ),
             ],
-            style: const TextStyle(fontSize: 13.5, height: 1.32),
+            style: const TextStyle(
+              shadows: chatTextShadows,
+              fontSize: 13.5,
+              height: 1.32,
+            ),
           ),
           if (message.sourceChannel case final source?)
             Text(
               l10n.sharedChatOrigin(source),
-              style: const TextStyle(fontSize: 9, color: Color(0xFFADADB8)),
+              style: const TextStyle(
+                shadows: chatTextShadows,
+                fontSize: 9,
+                color: Colors.white,
+              ),
             ),
         ],
       ),
@@ -1053,6 +1098,7 @@ class _NoticeView extends StatelessWidget {
           Text(
             notice.systemMessage,
             style: TextStyle(
+              shadows: chatTextShadows,
               fontSize: 12,
               fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
             ),
@@ -1067,6 +1113,7 @@ class _NoticeView extends StatelessWidget {
                   TextSpan(
                     text: '$name: ',
                     style: TextStyle(
+                      shadows: chatTextShadows,
                       color: _parseColor(notice.color),
                       fontWeight: ChatFontWeight.resolve(
                         context,
@@ -1075,7 +1122,7 @@ class _NoticeView extends StatelessWidget {
                     ),
                   ),
               ],
-              style: const TextStyle(fontSize: 12.5),
+              style: const TextStyle(shadows: chatTextShadows, fontSize: 12.5),
             ),
           ],
         ],
@@ -1097,7 +1144,11 @@ class _SubscriptionRevokedView extends StatelessWidget {
         AppLocalizations.of(context)
             .subscriptionRevoked(revoked.subscriptionType, revoked.status),
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 10.5, color: Color(0xFFFF7676)),
+        style: const TextStyle(
+          shadows: chatTextShadows,
+          fontSize: 10.5,
+          color: Color(0xFFFF7676),
+        ),
       ),
     );
   }

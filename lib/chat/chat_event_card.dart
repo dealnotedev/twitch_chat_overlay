@@ -1,3 +1,5 @@
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
+
 import 'dart:math' as math;
 
 import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
@@ -23,7 +25,7 @@ class RewardRedemptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    const foreground = Color(0xFFCECED6);
+    const foreground = Colors.white;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -87,10 +89,11 @@ class _ChannelPointsPainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    void draw(Color color, double strokeWidth) {
+    void draw(Color color, double strokeWidth, {MaskFilter? maskFilter}) {
       paint
         ..color = color
-        ..strokeWidth = strokeWidth;
+        ..strokeWidth = strokeWidth
+        ..maskFilter = maskFilter;
       canvas.drawCircle(center, unit * 0.42, paint);
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: unit * 0.27),
@@ -101,6 +104,12 @@ class _ChannelPointsPainter extends CustomPainter {
       );
     }
 
+    for (final shadow in chatTextShadows) {
+      canvas.save();
+      canvas.translate(shadow.offset.dx, shadow.offset.dy);
+      draw(shadow.color, unit * 0.085, maskFilter: shadow.toPaint().maskFilter);
+      canvas.restore();
+    }
     // Match the text contour so the icon stays legible over a game.
     draw(Colors.black, unit * 0.085 + 1.5);
     draw(color, unit * 0.085);
@@ -140,7 +149,7 @@ TextStyle _titleStyle(BuildContext context) => TextStyle(
   fontSize: 13.5,
   fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),
 );
-const _captionStyle = TextStyle(fontSize: 11.5, color: Color(0xFFCECED6));
+const _captionStyle = TextStyle(fontSize: 11.5, color: Colors.white);
 
 class _EventCard extends StatelessWidget {
   const _EventCard({
@@ -250,6 +259,7 @@ class PowerUpLabel extends StatelessWidget {
             child: ExcludeSemantics(
               child: Icon(
                 Icons.diamond_outlined,
+                shadows: chatTextShadows,
                 size: MediaQuery.textScalerOf(context).scale(13),
                 color: const Color(0xFFBF94FF),
               ),
