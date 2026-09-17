@@ -1,3 +1,20 @@
+# Twitch Chat Overlay 1.3.2
+
+## Changes
+
+- Added saved visibility settings for the viewer count and connection indicator in click-through mode.
+- Made the empty-chat startup hint fade out after 20 seconds in click-through mode. The first message dismisses it immediately; reconnecting or clearing chat does not restart it.
+- Fixed animated giant emotes ignoring the GIF playback limit. Playback progress is preserved across scrolling and setting changes.
+- Removed hover tooltips from the message-lifetime and GIF-playback step buttons.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.3.1
 
 ## Changes
