@@ -1,4 +1,7 @@
 {
+  "nonInteractiveComponents": "Components in non-interactive mode",
+  "viewerCountComponent": "Viewer count",
+  "connectionIndicatorComponent": "Connection indicator",
   "viewerCountLabel": "Viewers",
   "streamOffline": "Offline",
 

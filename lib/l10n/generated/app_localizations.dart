@@ -98,6 +98,24 @@ abstract class AppLocalizations {
     Locale('uk'),
   ];
 
+  /// No description provided for @nonInteractiveComponents.
+  ///
+  /// In en, this message translates to:
+  /// **'Components in non-interactive mode'**
+  String get nonInteractiveComponents;
+
+  /// No description provided for @viewerCountComponent.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewer count'**
+  String get viewerCountComponent;
+
+  /// No description provided for @connectionIndicatorComponent.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection indicator'**
+  String get connectionIndicatorComponent;
+
   /// No description provided for @viewerCountLabel.
   ///
   /// In en, this message translates to:

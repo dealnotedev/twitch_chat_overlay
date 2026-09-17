@@ -1,4 +1,7 @@
 {
+  "nonInteractiveComponents": "Компоненти в неінтерактивному режимі",
+  "viewerCountComponent": "Лічильник глядачів",
+  "connectionIndicatorComponent": "Індикатор підключення",
   "viewerCountLabel": "Глядачі",
   "streamOffline": "Поза ефіром",
 

@@ -17,10 +17,16 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   static const String _fontWeightKey = 'overlay.messages.fontWeight';
   static const String _fontSizeKey = 'overlay.messages.fontSize';
   static const String _lifetimeKey = 'overlay.messages.lifetimeMinutes';
+  static const String _viewerCountKey = 'overlay.components.viewerCount';
+  static const String _connectionIndicatorKey =
+      'overlay.components.connectionIndicator';
 
   @override
   Future<OverlayLayout> load() async {
     final preferences = await SharedPreferences.getInstance();
+    final showViewerCount = preferences.getBool(_viewerCountKey) ?? true;
+    final showConnectionIndicator =
+        preferences.getBool(_connectionIndicatorKey) ?? true;
     final fontWeight =
         preferences.getInt(_fontWeightKey) ??
         const OverlayLayout.defaults().chatFontWeight;
@@ -47,6 +53,10 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
 
     if (left == null || top == null || width == null || height == null) {
       return const OverlayLayout.defaults()
+          .withVisibleComponents(
+            showViewerCount: showViewerCount,
+            showConnectionIndicator: showConnectionIndicator,
+          )
           .withChatFontWeight(fontWeight)
           .withChatFontSize(fontSize)
           .withContentOpacity(contentOpacity)
@@ -61,6 +71,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
           width: width,
           height: height,
           backgroundOpacity: opacity,
+          showViewerCount: showViewerCount,
+          showConnectionIndicator: showConnectionIndicator,
         )
         .withChatFontWeight(fontWeight)
         .withChatFontSize(fontSize)
@@ -73,6 +85,11 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   Future<void> save(OverlayLayout layout) async {
     final preferences = await SharedPreferences.getInstance();
     await Future.wait<void>([
+      preferences.setBool(_viewerCountKey, layout.showViewerCount),
+      preferences.setBool(
+        _connectionIndicatorKey,
+        layout.showConnectionIndicator,
+      ),
       preferences.setDouble(_leftKey, layout.left),
       preferences.setDouble(_topKey, layout.top),
       preferences.setDouble(_widthKey, layout.width),

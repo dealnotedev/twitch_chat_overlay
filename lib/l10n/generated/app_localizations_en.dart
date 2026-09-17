@@ -10,6 +10,15 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get nonInteractiveComponents => 'Components in non-interactive mode';
+
+  @override
+  String get viewerCountComponent => 'Viewer count';
+
+  @override
+  String get connectionIndicatorComponent => 'Connection indicator';
+
+  @override
   String get viewerCountLabel => 'Viewers';
 
   @override

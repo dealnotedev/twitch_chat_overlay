@@ -39,6 +39,8 @@ class ChatPanel extends StatefulWidget {
     required this.onLoadEmotes,
     this.onDeleteMessage,
     this.messageFooter,
+    this.showViewerCount = true,
+    this.showConnectionIndicator = true,
     this.chatFontSize = ChatFontSize.defaultSize,
     this.chatFontWeight = ChatFontWeight.defaultWeight,
     this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
@@ -51,6 +53,8 @@ class ChatPanel extends StatefulWidget {
   final TwitchAuthState authState;
   final ChatState chatState;
   final int messageLifetimeMinutes;
+  final bool showViewerCount;
+  final bool showConnectionIndicator;
   final bool interactive;
   final Future<void> Function() onSignIn;
   final Future<void> Function() onSignOut;
@@ -392,7 +396,8 @@ class _ChatPanelState extends State<ChatPanel> {
               hint: widget.interactive ? null : l10n.openControlsShortcut,
             ),
           ),
-        if (!widget.interactive)
+        if (!widget.interactive &&
+            (widget.showViewerCount || widget.showConnectionIndicator))
           Positioned(
             top: 8,
             left: 12,
@@ -404,24 +409,29 @@ class _ChatPanelState extends State<ChatPanel> {
                   key: const ValueKey('chat-status-row'),
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(
-                      child: ViewerCount(
-                        count: widget.chatState.viewerCount,
-                        offline: widget.chatState.streamOffline,
+                    if (widget.showViewerCount)
+                      Flexible(
+                        child: ViewerCount(
+                          count: widget.chatState.viewerCount,
+                          offline: widget.chatState.streamOffline,
+                        ),
                       ),
-                    ),
-                    const Gap(8),
-                    Flexible(
-                      child: _ChatConnectionIndicator(
-                        status: widget.chatState.status,
+                    if (widget.showViewerCount &&
+                        widget.showConnectionIndicator)
+                      const Gap(8),
+                    if (widget.showConnectionIndicator)
+                      Flexible(
+                        child: _ChatConnectionIndicator(
+                          status: widget.chatState.status,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
             ),
           )
-        else if (widget.chatState.status == ChatConnectionStatus.reconnecting)
+        else if (widget.interactive &&
+            widget.chatState.status == ChatConnectionStatus.reconnecting)
           Positioned(
             top: 5,
             right: 8,

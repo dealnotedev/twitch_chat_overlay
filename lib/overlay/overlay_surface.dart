@@ -2,6 +2,8 @@ import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 
 import 'dart:async';
 
+import 'package:twitch_chat_overlay/overlay/component_visibility_control.dart';
+
 import 'package:twitch_chat_overlay/overlay/chat_font_weight_control.dart';
 
 import 'package:twitch_chat_overlay/overlay/chat_font_size_control.dart';
@@ -134,6 +136,22 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       signedIn: _authState.status == TwitchAuthStatus.signedIn,
                       backgroundOpacity: _layout.backgroundOpacity,
                       contentOpacity: _layout.contentOpacity,
+                      showViewerCount: _layout.showViewerCount,
+                      showConnectionIndicator: _layout.showConnectionIndicator,
+                      onShowViewerCountChanged: (value) {
+                        _updateLayout(
+                          _layout.withVisibleComponents(showViewerCount: value),
+                        );
+                        _saveLayout();
+                      },
+                      onShowConnectionIndicatorChanged: (value) {
+                        _updateLayout(
+                          _layout.withVisibleComponents(
+                            showConnectionIndicator: value,
+                          ),
+                        );
+                        _saveLayout();
+                      },
                       chatFontSize: _layout.chatFontSize,
                       chatFontWeight: _layout.chatFontWeight,
                       onChatFontWeightChanged: (value) =>
@@ -166,6 +184,9 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                           unawaited(widget.overlayHost.setInteractive(false)),
                       connectionStatus: _chatState.status,
                       child: ChatPanel(
+                        showViewerCount: _layout.showViewerCount,
+                        showConnectionIndicator:
+                            _layout.showConnectionIndicator,
                         chatFontSize: _layout.chatFontSize,
                         chatFontWeight: _layout.chatFontWeight,
                         messageFooter: UpdateNotice(
@@ -267,6 +288,10 @@ class _VirtualChatWindow extends StatelessWidget {
     required this.signedIn,
     required this.backgroundOpacity,
     required this.contentOpacity,
+    required this.showViewerCount,
+    required this.showConnectionIndicator,
+    required this.onShowViewerCountChanged,
+    required this.onShowConnectionIndicatorChanged,
     required this.onContentOpacityChanged,
     required this.chatFontSize,
     required this.onChatFontSizeChanged,
@@ -290,6 +315,10 @@ class _VirtualChatWindow extends StatelessWidget {
   final bool signedIn;
   final double backgroundOpacity;
   final double contentOpacity;
+  final bool showViewerCount;
+  final bool showConnectionIndicator;
+  final ValueChanged<bool> onShowViewerCountChanged;
+  final ValueChanged<bool> onShowConnectionIndicatorChanged;
   final ValueChanged<double> onContentOpacityChanged;
   final double chatFontSize;
   final ValueChanged<double> onChatFontSizeChanged;
@@ -351,73 +380,94 @@ class _VirtualChatWindow extends StatelessWidget {
                 padding: EdgeInsets.all(editing ? 2 : 1),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(editing ? 10 : 11),
-                  child: Column(
-                    children: [
-                      if (editing || !signedIn)
-                        Opacity(
-                          opacity: editing ? 1 : contentOpacity,
-                          child: _ChatHeader(
-                            editing: editing,
-                            onMove: onMove,
-                            onGestureEnd: onGestureEnd,
-                            onLock: onLock,
-                            onCycleLocale: onCycleLocale,
-                            connectionStatus: connectionStatus,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => Column(
+                      children: [
+                        if (editing || !signedIn)
+                          Opacity(
+                            opacity: editing ? 1 : contentOpacity,
+                            child: _ChatHeader(
+                              editing: editing,
+                              showConnectionIndicator:
+                                  editing || showConnectionIndicator,
+                              onMove: onMove,
+                              onGestureEnd: onGestureEnd,
+                              onLock: onLock,
+                              onCycleLocale: onCycleLocale,
+                              connectionStatus: connectionStatus,
+                            ),
+                          ),
+                        if (editing)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: constraints.maxHeight / 2,
+                            ),
+                            child: SingleChildScrollView(
+                              child: ColoredBox(
+                                color: const Color(0xF21F1F23),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _TransparencySlider(
+                                      label: AppLocalizations.of(context)
+                                          .backgroundTransparency,
+                                      opacity: backgroundOpacity,
+                                      onChanged: onOpacityChanged,
+                                      onChangeEnd: onGestureEnd,
+                                    ),
+                                    _TransparencySlider(
+                                      label: AppLocalizations.of(context)
+                                          .contentTransparency,
+                                      opacity: contentOpacity,
+                                      onChanged: onContentOpacityChanged,
+                                      onChangeEnd: onGestureEnd,
+                                    ),
+                                    ChatFontSizeControl(
+                                      value: chatFontSize,
+                                      onChanged: onChatFontSizeChanged,
+                                      onChangeEnd: onGestureEnd,
+                                    ),
+                                    ChatFontWeightControl(
+                                      value: chatFontWeight,
+                                      onChanged: onChatFontWeightChanged,
+                                      onChangeEnd: onGestureEnd,
+                                    ),
+                                    MessageLifetimeControl(
+                                      minutes: messageLifetimeMinutes,
+                                      onChanged: onMessageLifetimeChanged,
+                                    ),
+                                    GifPlaybackControl(
+                                      playCount: gifPlayCount,
+                                      onChanged: onGifPlayCountChanged,
+                                    ),
+                                    ComponentVisibilityControl(
+                                      showViewerCount: showViewerCount,
+                                      showConnectionIndicator:
+                                          showConnectionIndicator,
+                                      onShowViewerCountChanged:
+                                          onShowViewerCountChanged,
+                                      onShowConnectionIndicatorChanged:
+                                          onShowConnectionIndicatorChanged,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: Opacity(
+                            key: const ValueKey('chat-content-opacity'),
+                            opacity: contentOpacity,
+                            child: GifPlayback(
+                              playCount: gifPlayCount,
+                              child: child,
+                            ),
                           ),
                         ),
-                      if (editing)
-                        ColoredBox(
-                          color: const Color(0xF21F1F23),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _TransparencySlider(
-                                label: AppLocalizations.of(context)
-                                    .backgroundTransparency,
-                                opacity: backgroundOpacity,
-                                onChanged: onOpacityChanged,
-                                onChangeEnd: onGestureEnd,
-                              ),
-                              _TransparencySlider(
-                                label: AppLocalizations.of(context)
-                                    .contentTransparency,
-                                opacity: contentOpacity,
-                                onChanged: onContentOpacityChanged,
-                                onChangeEnd: onGestureEnd,
-                              ),
-                              ChatFontSizeControl(
-                                value: chatFontSize,
-                                onChanged: onChatFontSizeChanged,
-                                onChangeEnd: onGestureEnd,
-                              ),
-                              ChatFontWeightControl(
-                                value: chatFontWeight,
-                                onChanged: onChatFontWeightChanged,
-                                onChangeEnd: onGestureEnd,
-                              ),
-                              MessageLifetimeControl(
-                                minutes: messageLifetimeMinutes,
-                                onChanged: onMessageLifetimeChanged,
-                              ),
-                              GifPlaybackControl(
-                                playCount: gifPlayCount,
-                                onChanged: onGifPlayCountChanged,
-                              ),
-                            ],
-                          ),
-                        ),
-                      Expanded(
-                        child: Opacity(
-                          key: const ValueKey('chat-content-opacity'),
-                          opacity: contentOpacity,
-                          child: GifPlayback(
-                            playCount: gifPlayCount,
-                            child: child,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -513,6 +563,7 @@ class _TransparencySlider extends StatelessWidget {
 
 class _ChatHeader extends StatelessWidget {
   const _ChatHeader({
+    required this.showConnectionIndicator,
     required this.editing,
     required this.onMove,
     required this.onGestureEnd,
@@ -522,6 +573,7 @@ class _ChatHeader extends StatelessWidget {
   });
 
   final bool editing;
+  final bool showConnectionIndicator;
   final ValueChanged<Offset> onMove;
   final VoidCallback onGestureEnd;
   final VoidCallback onLock;
@@ -560,14 +612,16 @@ class _ChatHeader extends StatelessWidget {
                 ),
               ),
             ),
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: _connectionColor(connectionStatus),
-                shape: BoxShape.circle,
+            if (showConnectionIndicator)
+              Container(
+                key: const ValueKey('chat-header-connection-indicator'),
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: _connectionColor(connectionStatus),
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
             if (!editing) ...[
               const Gap(10),
               const Text(

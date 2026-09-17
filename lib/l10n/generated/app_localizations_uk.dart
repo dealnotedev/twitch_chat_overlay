@@ -10,6 +10,15 @@ class AppLocalizationsUk extends AppLocalizations {
   AppLocalizationsUk([String locale = 'uk']) : super(locale);
 
   @override
+  String get nonInteractiveComponents => 'Компоненти в неінтерактивному режимі';
+
+  @override
+  String get viewerCountComponent => 'Лічильник глядачів';
+
+  @override
+  String get connectionIndicatorComponent => 'Індикатор підключення';
+
+  @override
   String get viewerCountLabel => 'Глядачі';
 
   @override

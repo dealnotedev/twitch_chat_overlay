@@ -11,6 +11,56 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
+    'component visibility loads defaults and survives edits and reloads',
+    () async {
+      final store = SharedPreferencesOverlayLayoutStore();
+      SharedPreferences.setMockInitialValues({});
+      expect((await store.load()).showViewerCount, isTrue);
+      expect((await store.load()).showConnectionIndicator, isTrue);
+      for (final viewers in [false, true]) {
+        for (final connection in [false, true]) {
+          SharedPreferences.setMockInitialValues({
+            'overlay.components.viewerCount': viewers,
+            'overlay.components.connectionIndicator': connection,
+          });
+          final initial = await store.load();
+          expect(initial.showViewerCount, viewers);
+          expect(initial.showConnectionIndicator, connection);
+          final layout = initial
+              .withChatFontWeight(800)
+              .withChatFontSize(18)
+              .withContentOpacity(0.35)
+              .withBackgroundOpacity(0.2)
+              .withMessageLifetimeMinutes(5)
+              .withGifPlayCount(3)
+              .moveBy(const Offset(20, 20), viewport)
+              .resizeBy(
+                ResizeHandle.bottomRight,
+                const Offset(20, 20),
+                viewport,
+              );
+          await store.save(layout);
+          final loaded = await store.load();
+          expect(loaded.showViewerCount, viewers);
+          expect(loaded.showConnectionIndicator, connection);
+          expect(
+            loaded
+                .withVisibleComponents(showViewerCount: !viewers)
+                .showConnectionIndicator,
+            connection,
+          );
+          expect(
+            loaded
+                .withVisibleComponents(showConnectionIndicator: !connection)
+                .showViewerCount,
+            viewers,
+          );
+        }
+      }
+    },
+  );
+
+  test(
     'content opacity persists through other settings and geometry',
     () async {
       SharedPreferences.setMockInitialValues({});

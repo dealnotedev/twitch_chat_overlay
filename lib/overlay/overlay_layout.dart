@@ -32,6 +32,8 @@ final class OverlayLayout {
     this.gifPlayCount = GifPlayback.defaultCount,
     this.chatFontSize = ChatFontSize.defaultSize,
     this.chatFontWeight = ChatFontWeight.defaultWeight,
+    this.showViewerCount = true,
+    this.showConnectionIndicator = true,
   });
 
   const OverlayLayout.defaults()
@@ -44,7 +46,9 @@ final class OverlayLayout {
       messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
       gifPlayCount = GifPlayback.defaultCount,
       chatFontSize = ChatFontSize.defaultSize,
-      chatFontWeight = ChatFontWeight.defaultWeight;
+      chatFontWeight = ChatFontWeight.defaultWeight,
+      showViewerCount = true,
+      showConnectionIndicator = true;
 
   static const double defaultContentOpacity = 1.0;
   static const double defaultBackgroundOpacity = 0.85;
@@ -61,6 +65,27 @@ final class OverlayLayout {
   final int gifPlayCount;
   final double chatFontSize;
   final int chatFontWeight;
+  final bool showViewerCount;
+  final bool showConnectionIndicator;
+
+  OverlayLayout withVisibleComponents({
+    bool? showViewerCount,
+    bool? showConnectionIndicator,
+  }) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+    gifPlayCount: gifPlayCount,
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
+    showViewerCount: showViewerCount ?? this.showViewerCount,
+    showConnectionIndicator:
+        showConnectionIndicator ?? this.showConnectionIndicator,
+  );
 
   OverlayLayout withChatFontWeight(int value) => OverlayLayout(
     left: left,
@@ -73,6 +98,8 @@ final class OverlayLayout {
     gifPlayCount: gifPlayCount,
     chatFontSize: chatFontSize,
     chatFontWeight: ChatFontWeight.normalize(value),
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
   );
 
   OverlayLayout withChatFontSize(double value) => OverlayLayout(
@@ -85,10 +112,14 @@ final class OverlayLayout {
     messageLifetimeMinutes: messageLifetimeMinutes,
     gifPlayCount: gifPlayCount,
     chatFontSize: ChatFontSize.normalize(value),
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
     chatFontWeight: chatFontWeight,
   );
 
   OverlayLayout withMessageLifetimeMinutes(int value) => OverlayLayout(
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -105,6 +136,8 @@ final class OverlayLayout {
   );
 
   OverlayLayout withBackgroundOpacity(double value) => OverlayLayout(
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -118,6 +151,8 @@ final class OverlayLayout {
   );
 
   OverlayLayout withContentOpacity(double value) => OverlayLayout(
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -133,6 +168,8 @@ final class OverlayLayout {
   );
 
   OverlayLayout withGifPlayCount(int value) => OverlayLayout(
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -225,6 +262,8 @@ final class OverlayLayout {
     if (viewport.isEmpty) return this;
     final clamped = _clamp(rect, viewport);
     return OverlayLayout(
+      showViewerCount: showViewerCount,
+      showConnectionIndicator: showConnectionIndicator,
       chatFontSize: chatFontSize,
       chatFontWeight: chatFontWeight,
       left: clamped.left / viewport.width,

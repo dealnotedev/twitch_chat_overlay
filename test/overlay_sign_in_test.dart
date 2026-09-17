@@ -163,6 +163,7 @@ void main() {
       addTearDown(authUpdates.close);
       addTearDown(chatUpdates.close);
       final host = MethodChannelOverlayHost();
+      final layoutStore = _LayoutStore();
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en'),
@@ -170,7 +171,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: OverlaySurface(
             initialLayout: layout,
-            layoutStore: _LayoutStore(),
+            layoutStore: layoutStore,
             overlayHost: host,
             twitchAuth: _Auth(
               status: TwitchAuthStatus.signedIn,
@@ -223,6 +224,24 @@ void main() {
       expect(find.byType(Slider), findsNWidgets(4));
       expect(find.byTooltip('Lock overlay'), findsOneWidget);
       expect(find.byType(ChatComposer), findsOneWidget);
+      for (final size in [
+        viewport,
+        const Size(1280, 720),
+        const Size(2560, 1440),
+        viewport,
+      ]) {
+        await tester.binding.setSurfaceSize(size);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(find.byType(ChatComposer)).bottom,
+          closeTo(layout.resolve(size).deflate(2).bottom, 0.001),
+          reason:
+              'The composer must stay at the bottom of the overlay at $size.',
+        );
+        await tester.ensureVisible(find.text('Connection indicator'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      }
       expect(find.bySemanticsLabel('Chat connected'), findsNothing);
       await tester.tap(find.byTooltip('Lock overlay'));
       await tester.pumpAndSettle();
@@ -239,6 +258,63 @@ void main() {
         badges: const [],
         fragments: const [],
       );
+      // Toggle each component through settings, then check the locked overlay.
+      for (final flags in [
+        (false, true),
+        (true, false),
+        (false, false),
+        (true, true),
+      ]) {
+        await host.setInteractive(true);
+        await tester.pumpAndSettle();
+        final labels = ['Viewer count', 'Connection indicator'];
+        final values = [flags.$1, flags.$2];
+        for (var index = 0; index < labels.length; index++) {
+          final checkbox = find.byType(Checkbox).at(index);
+          if (tester.widget<Checkbox>(checkbox).value != values[index]) {
+            await tester.ensureVisible(find.text(labels[index]));
+            await tester.tap(find.text(labels[index]));
+            await tester.pumpAndSettle();
+          }
+        }
+        expect(layoutStore.saved!.showViewerCount, flags.$1);
+        expect(layoutStore.saved!.showConnectionIndicator, flags.$2);
+        expect(
+          find.byKey(const ValueKey('chat-header-connection-indicator')),
+          findsOneWidget,
+        );
+        await host.setInteractive(false);
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(ViewerCount),
+          flags.$1 ? findsOneWidget : findsNothing,
+        );
+        expect(dot, flags.$2 ? findsOneWidget : findsNothing);
+        expect(statusRow, flags.$1 || flags.$2 ? findsOneWidget : findsNothing);
+        expect(tester.getRect(find.byType(ListView)), frame);
+        if (flags == (false, false)) {
+          chatUpdates.add(
+            ChatState(
+              status: ChatConnectionStatus.reconnecting,
+              items: [notice],
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.bySemanticsLabel('reconnecting'), findsNothing);
+          await host.setInteractive(true);
+          await tester.pumpAndSettle();
+          expect(find.text('reconnecting'), findsOneWidget);
+          await host.setInteractive(false);
+          chatUpdates.add(
+            const ChatState(
+              status: ChatConnectionStatus.connected,
+              viewerCount: 1234,
+              items: [],
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+      }
       for (final entry in {
         ChatConnectionStatus.connecting: 'Connecting to EventSub…',
         ChatConnectionStatus.reconnecting: 'reconnecting',
