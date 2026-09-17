@@ -131,17 +131,19 @@ class _StepButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: label,
-    onPressed: onPressed,
-    icon: Icon(icon, shadows: chatTextShadows, size: 16),
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-    style: IconButton.styleFrom(
-      foregroundColor: const Color(0xFFBF94FF),
-      disabledForegroundColor: const Color(0xFF605668),
-      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+  Widget build(BuildContext context) => Semantics(
+    label: label,
+    child: IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, shadows: chatTextShadows, size: 16),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+      style: IconButton.styleFrom(
+        foregroundColor: const Color(0xFFBF94FF),
+        disabledForegroundColor: const Color(0xFF605668),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
     ),
   );
 }

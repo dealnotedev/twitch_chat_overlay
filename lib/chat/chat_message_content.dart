@@ -89,82 +89,45 @@ class ChatGiantEmoteImage extends StatelessWidget {
           image: true,
           child: SizedBox.square(
             dimension: size,
-            child: CachedNetworkImage(
-              imageUrl: fragment.giantImageUrl,
-              fit: BoxFit.contain,
-              fadeInDuration: Duration.zero,
-              placeholder: (_, _) => const SizedBox.expand(),
-              errorWidget: (_, _, _) => Center(
-                child: Text(
-                  fragment.text,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: ChatFontWeight.readableStyleOf(context)
-                      .merge(const TextStyle(fontSize: 13.5)),
-                ),
-              ),
-            ),
+            child: fragment.animated
+                ? _ChatPlaybackImage(
+                    url: fragment.giantImageUrl,
+                    frameBuilder: (_, child, frame, _) =>
+                        frame == null ? const SizedBox.expand() : child,
+                    errorBuilder: (_, _, _) => _fallback(context),
+                  )
+                : CachedNetworkImage(
+                    imageUrl: fragment.giantImageUrl,
+                    fit: BoxFit.contain,
+                    fadeInDuration: Duration.zero,
+                    placeholder: (_, _) => const SizedBox.expand(),
+                    errorWidget: (_, _, _) => _fallback(context),
+                  ),
           ),
         ),
       );
     },
   );
+
+  Widget _fallback(BuildContext context) => Center(
+    child: Text(
+      fragment.text,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: ChatFontWeight.readableStyleOf(context)
+          .merge(const TextStyle(fontSize: 13.5)),
+    ),
+  );
 }
 
-class ChatGifImage extends StatefulWidget {
+class ChatGifImage extends StatelessWidget {
   const ChatGifImage({required this.fragment, super.key});
 
   final ChatGifFragment fragment;
 
   @override
-  State<ChatGifImage> createState() => _ChatGifImageState();
-}
-
-class _ChatGifImageState extends State<ChatGifImage>
-    with AutomaticKeepAliveClientMixin {
-  late ChatGifProvider _image;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final count = GifPlayback.countOf(context);
-    if (_initialized && _image.playCount == count) return;
-    if (_initialized) _image.evict();
-    _image = ChatGifProvider(widget.fragment.url, playCount: count);
-    _initialized = true;
-    updateKeepAlive();
-  }
-
-  bool _initialized = false;
-
-  // Preserve finite playback when ListView moves this message offscreen. Removing
-  // the message from the list still disposes its row and last frame.
-  @override
-  bool get wantKeepAlive => _initialized && _image.playCount > 0;
-
-  @override
-  void didUpdateWidget(ChatGifImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.fragment.url != widget.fragment.url) {
-      _image.evict();
-      _image = ChatGifProvider(
-        widget.fragment.url,
-        playCount: _image.playCount,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _image.evict();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    super.build(context);
-    final fragment = widget.fragment;
     final l10n = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -180,9 +143,8 @@ class _ChatGifImageState extends State<ChatGifImage>
               child: SizedBox(
                 width: width,
                 height: width * 2 / 3,
-                child: Image(
-                  image: _image,
-                  fit: BoxFit.contain,
+                child: _ChatPlaybackImage(
+                  url: fragment.url,
                   frameBuilder: (_, child, frame, _) => frame != null
                       ? Center(
                           child: ClipRRect(
@@ -226,6 +188,70 @@ class _ChatGifImageState extends State<ChatGifImage>
           ),
         );
       },
+    );
+  }
+}
+
+class _ChatPlaybackImage extends StatefulWidget {
+  const _ChatPlaybackImage({
+    required this.url,
+    this.frameBuilder,
+    required this.errorBuilder,
+  });
+
+  final String url;
+  final ImageFrameBuilder? frameBuilder;
+  final ImageErrorWidgetBuilder errorBuilder;
+
+  @override
+  State<_ChatPlaybackImage> createState() => _ChatPlaybackImageState();
+}
+
+class _ChatPlaybackImageState extends State<_ChatPlaybackImage>
+    with AutomaticKeepAliveClientMixin {
+  late ChatGifProvider _image;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final count = GifPlayback.countOf(context);
+    if (_initialized && _image.playCount == count) return;
+    if (_initialized) _image.evict();
+    _image = ChatGifProvider(widget.url, playCount: count);
+    _initialized = true;
+    updateKeepAlive();
+  }
+
+  bool _initialized = false;
+
+  // Preserve finite playback when ListView moves this message offscreen. Removing
+  // the message from the list still disposes its row and last frame.
+  @override
+  bool get wantKeepAlive => _initialized && _image.playCount > 0;
+
+  @override
+  void didUpdateWidget(_ChatPlaybackImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _image.evict();
+      _image = ChatGifProvider(widget.url, playCount: _image.playCount);
+    }
+  }
+
+  @override
+  void dispose() {
+    _image.evict();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return Image(
+      image: _image,
+      fit: BoxFit.contain,
+      frameBuilder: widget.frameBuilder,
+      errorBuilder: widget.errorBuilder,
     );
   }
 }

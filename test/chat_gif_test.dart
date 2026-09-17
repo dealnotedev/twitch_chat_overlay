@@ -73,6 +73,41 @@ void main() {
     }
   });
 
+  for (final count in [0, 1, 2, 60, -1]) {
+    testWidgets('animated giant emote respects $count plays', (tester) async {
+      await tester.pumpWidget(
+        _host(
+          const ChatMessageContent(
+            style: TextStyle(fontSize: 13),
+            gigantifyEmote: true,
+            fragments: [_giantEmote],
+          ),
+          playCount: count,
+        ),
+      );
+      await _loaded(tester, binding, 1);
+      for (var i = 0; i < (count > 0 ? count * 2 + 5 : 10); i++) {
+        await tester.pump(const Duration(milliseconds: 120));
+      }
+      final codec = binding.codecs.single;
+      if (count < 0) {
+        expect(codec.next, greaterThan(4));
+        expect(codec.disposed, isFalse);
+      } else {
+        expect(codec.next, count == 0 ? 1 : count * 2);
+        expect(codec.disposed, isTrue);
+        expect(
+          _shownImage(tester).isCloneOf(
+            count == 0 ? binding.frames.first.image : binding.frames.last.image,
+          ),
+          isTrue,
+        );
+      }
+      expect(tester.getSize(find.byType(Image)), const Size(112, 112));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   testWidgets(
     'GIF plays one cycle, holds its last frame and preserves layout',
     (tester) async {
@@ -118,61 +153,70 @@ void main() {
     },
   );
 
-  testWidgets(
-    'scroll and rebuild preserve playback; new messages play separately',
-    (tester) async {
-      final scroll = ScrollController();
-      addTearDown(scroll.dispose);
-      final ids = ['first', for (var i = 0; i < 30; i++) 'text-$i'];
-      await tester.pumpWidget(_listHost(ids, scroll));
-      await _loaded(tester, binding, 1);
-      final firstState = tester.state(find.byType(ChatGifImage));
-      final firstProvider = tester.widget<Image>(find.byType(Image)).image;
-      // Scroll away during the first cycle, then return after it finishes.
-      scroll.jumpTo(scroll.position.maxScrollExtent);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-      scroll.jumpTo(0);
-      await tester.pump();
-      expect(tester.state(find.byType(ChatGifImage)), same(firstState));
-      expect(_shownImage(tester).isCloneOf(binding.frames.last.image), isTrue);
-      expect(binding.codecs, hasLength(1));
+  for (final giant in [false, true]) {
+    testWidgets(
+      'scroll and rebuild preserve playback; new messages play separately (giant: $giant)',
+      (tester) async {
+        final scroll = ScrollController();
+        addTearDown(scroll.dispose);
+        final ids = ['first', for (var i = 0; i < 30; i++) 'text-$i'];
+        await tester.pumpWidget(_listHost(ids, scroll, giant: giant));
+        await _loaded(tester, binding, 1);
+        final firstState = tester.state(find.byType(Image));
+        final firstProvider = tester.widget<Image>(find.byType(Image)).image;
+        // Scroll away during the first cycle, then return after it finishes.
+        scroll.jumpTo(scroll.position.maxScrollExtent);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        scroll.jumpTo(0);
+        await tester.pump();
+        expect(tester.state(find.byType(Image)), same(firstState));
+        expect(
+          _shownImage(tester).isCloneOf(binding.frames.last.image),
+          isTrue,
+        );
+        expect(binding.codecs, hasLength(1));
 
-      await tester.pumpWidget(_listHost(['second', ...ids], scroll));
-      await _loaded(tester, binding, 2);
-      final secondImage = find.descendant(
-        of: find.byKey(const ValueKey('second')),
-        matching: find.byType(RawImage),
-      );
-      expect(
-        tester
-            .widget<RawImage>(secondImage)
-            .image!
-            .isCloneOf(binding.frames.first.image),
-        isTrue,
-      );
-      final providers = tester
-          .widgetList<Image>(find.byType(Image))
-          .map((image) => image.image)
-          .toList();
-      expect(providers, contains(firstProvider));
-      expect(providers.toSet(), hasLength(2));
-      await tester.pump(const Duration(milliseconds: 120));
-      await tester.pump(const Duration(seconds: 3));
-      expect(binding.codecs.map((codec) => codec.next), everyElement(2));
-      expect(binding.codecs.every((codec) => codec.disposed), isTrue);
+        await tester.pumpWidget(
+          _listHost(['second', ...ids], scroll, giant: giant),
+        );
+        await _loaded(tester, binding, 2);
+        final secondImage = find.descendant(
+          of: find.byKey(const ValueKey('second')),
+          matching: find.byType(RawImage),
+        );
+        expect(
+          tester
+              .widget<RawImage>(secondImage)
+              .image!
+              .isCloneOf(binding.frames.first.image),
+          isTrue,
+        );
+        final providers = tester
+            .widgetList<Image>(find.byType(Image))
+            .map((image) => image.image)
+            .toList();
+        expect(providers, contains(firstProvider));
+        expect(providers.toSet(), hasLength(2));
+        await tester.pump(const Duration(milliseconds: 120));
+        await tester.pump(const Duration(seconds: 3));
+        expect(binding.codecs.map((codec) => codec.next), everyElement(2));
+        expect(binding.codecs.every((codec) => codec.disposed), isTrue);
 
-      // Removing a kept-alive message must release it and its image cache entry.
-      scroll.jumpTo(scroll.position.maxScrollExtent);
-      await tester.pump();
-      await tester.pumpWidget(_listHost(ids.skip(1).toList(), scroll));
-      await tester.pump();
-      expect(firstState.mounted, isFalse);
-      expect(binding.imageCache.containsKey(firstProvider), isFalse);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-  );
+        // Removing a kept-alive message must release it and its image cache entry.
+        scroll.jumpTo(scroll.position.maxScrollExtent);
+        await tester.pump();
+        await tester.pumpWidget(
+          _listHost(ids.skip(1).toList(), scroll, giant: giant),
+        );
+        await tester.pump();
+        expect(firstState.mounted, isFalse);
+        expect(binding.imageCache.containsKey(firstProvider), isFalse);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
 
   for (final count in [2, 60]) {
     testWidgets('GIF stops after exactly $count complete plays', (
@@ -192,83 +236,86 @@ void main() {
     });
   }
 
-  testWidgets(
-    'default is unlimited and changing the setting applies to existing GIFs',
-    (tester) async {
-      expect(GifPlayback.defaultCount, -1);
-      await tester.pumpWidget(
-        _host(
-          const ChatGifImage(fragment: _fragment),
-          playCount: GifPlayback.defaultCount,
-        ),
-      );
-      await _loaded(tester, binding, 1);
-      for (var i = 0; i < 8; i++) {
+  for (final giant in [false, true]) {
+    final media = giant
+        ? const ChatGiantEmoteImage(fragment: _giantEmote)
+        : const ChatGifImage(fragment: _fragment);
+    testWidgets(
+      'default is unlimited and changing the setting applies to existing GIFs (giant: $giant)',
+      (tester) async {
+        expect(GifPlayback.defaultCount, -1);
+        await tester.pumpWidget(
+          _host(media, playCount: GifPlayback.defaultCount),
+        );
+        await _loaded(tester, binding, 1);
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 120));
+        }
+        expect(binding.codecs.single.next, greaterThan(4));
+        expect(binding.codecs.single.disposed, isFalse);
+        await tester.pumpWidget(_host(media, playCount: 2));
+        await _loaded(tester, binding, 2);
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 120));
+        }
+        expect(binding.codecs.first.disposed, isTrue);
+        expect(binding.codecs.last.next, 4);
+        expect(binding.codecs.last.disposed, isTrue);
+        await tester.pumpWidget(_host(media, playCount: 2));
+        await tester.pump(const Duration(seconds: 2));
+        expect(binding.codecs, hasLength(2));
+        expect(
+          _shownImage(tester).isCloneOf(binding.frames.last.image),
+          isTrue,
+        );
+        await tester.pumpWidget(_host(media, playCount: -1));
+        await _loaded(tester, binding, 3);
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 120));
+        }
+        expect(binding.codecs.last.next, greaterThan(4));
+        expect(binding.codecs.last.disposed, isFalse);
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(binding.codecs.last.disposed, isTrue);
+      },
+    );
+    testWidgets(
+      'zero displays only the first frame and can switch to animation (giant: $giant)',
+      (tester) async {
+        await tester.pumpWidget(_host(media, playCount: 0));
+        await _loaded(tester, binding, 1);
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 120));
+        }
+        expect(binding.codecs.single.next, 1);
+        expect(
+          _shownImage(tester).isCloneOf(binding.frames.first.image),
+          isTrue,
+        );
+        await tester.pumpWidget(_host(media, playCount: 1));
+        await _loaded(tester, binding, 2);
         await tester.pump(const Duration(milliseconds: 120));
-      }
-      expect(binding.codecs.single.next, greaterThan(4));
-      expect(binding.codecs.single.disposed, isFalse);
-      await tester.pumpWidget(
-        _host(const ChatGifImage(fragment: _fragment), playCount: 2),
-      );
-      await _loaded(tester, binding, 2);
-      for (var i = 0; i < 8; i++) {
-        await tester.pump(const Duration(milliseconds: 120));
-      }
-      expect(binding.codecs.first.disposed, isTrue);
-      expect(binding.codecs.last.next, 4);
-      expect(binding.codecs.last.disposed, isTrue);
-      await tester.pumpWidget(
-        _host(const ChatGifImage(fragment: _fragment), playCount: 2),
-      );
-      await tester.pump(const Duration(seconds: 2));
-      expect(binding.codecs, hasLength(2));
-      expect(_shownImage(tester).isCloneOf(binding.frames.last.image), isTrue);
-      await tester.pumpWidget(
-        _host(const ChatGifImage(fragment: _fragment), playCount: -1),
-      );
-      await _loaded(tester, binding, 3);
-      for (var i = 0; i < 8; i++) {
-        await tester.pump(const Duration(milliseconds: 120));
-      }
-      expect(binding.codecs.last.next, greaterThan(4));
-      expect(binding.codecs.last.disposed, isFalse);
-      await tester.pumpWidget(const SizedBox.shrink());
-      expect(binding.codecs.last.disposed, isTrue);
-    },
-  );
-  testWidgets(
-    'zero displays only the first frame and can switch to animation',
-    (tester) async {
-      await tester.pumpWidget(
-        _host(const ChatGifImage(fragment: _fragment), playCount: 0),
-      );
-      await _loaded(tester, binding, 1);
-      for (var i = 0; i < 8; i++) {
-        await tester.pump(const Duration(milliseconds: 120));
-      }
-      expect(binding.codecs.single.next, 1);
-      expect(_shownImage(tester).isCloneOf(binding.frames.first.image), isTrue);
-      await tester.pumpWidget(
-        _host(const ChatGifImage(fragment: _fragment), playCount: 1),
-      );
-      await _loaded(tester, binding, 2);
-      await tester.pump(const Duration(milliseconds: 120));
-      await tester.pump();
-      expect(binding.codecs.first.disposed, isTrue);
-      expect(binding.codecs.last.next, 2);
-      expect(_shownImage(tester).isCloneOf(binding.frames.last.image), isTrue);
-      await tester.pumpWidget(
-        _host(const ChatGifImage(fragment: _fragment), playCount: 0),
-      );
-      await _loaded(tester, binding, 3);
-      await tester.pump(const Duration(seconds: 10));
-      expect(binding.codecs.last.next, 1);
-      expect(_shownImage(tester).isCloneOf(binding.frames.first.image), isTrue);
-      await tester.pumpWidget(const SizedBox.shrink());
-      expect(binding.codecs.last.disposed, isTrue);
-    },
-  );
+        await tester.pump();
+        expect(binding.codecs.first.disposed, isTrue);
+        expect(binding.codecs.last.next, 2);
+        expect(
+          _shownImage(tester).isCloneOf(binding.frames.last.image),
+          isTrue,
+        );
+        await tester.pumpWidget(_host(media, playCount: 0));
+        await _loaded(tester, binding, 3);
+        await tester.pump(const Duration(seconds: 10));
+        expect(binding.codecs.last.next, 1);
+        expect(
+          _shownImage(tester).isCloneOf(binding.frames.first.image),
+          isTrue,
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(binding.codecs.last.disposed, isTrue);
+      },
+    );
+  }
+
   testWidgets('failed GIF keeps its reserved size and fallback text', (
     tester,
   ) async {
@@ -303,6 +350,8 @@ const _fragment = ChatGifFragment(
   url: _url,
 );
 
+const _giantEmote = ChatEmoteFragment(text: 'Kappa', id: '25', animated: true);
+
 Widget _host(Widget child, {int playCount = 1}) => MaterialApp(
   locale: const Locale('uk'),
   localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -315,7 +364,11 @@ Widget _host(Widget child, {int playCount = 1}) => MaterialApp(
   ),
 );
 
-Widget _listHost(List<String> ids, ScrollController scroll) => _host(
+Widget _listHost(
+  List<String> ids,
+  ScrollController scroll, {
+  bool giant = false,
+}) => _host(
   SizedBox(
     height: 360,
     width: 180,
@@ -332,6 +385,8 @@ Widget _listHost(List<String> ids, ScrollController scroll) => _host(
         key: ValueKey(ids[index]),
         child: ids[index].startsWith('text-')
             ? Text(ids[index])
+            : giant
+            ? const ChatGiantEmoteImage(fragment: _giantEmote)
             : const ChatGifImage(fragment: _fragment),
       ),
     ),
@@ -366,8 +421,25 @@ class _GifCache extends Fake implements BaseCacheManager {
     String? key,
     Map<String, String>? headers,
   }) async {
-    if (url != _url) throw StateError('Image unavailable');
+    if (url != _url && url != _giantEmote.giantImageUrl) {
+      throw StateError('Image unavailable');
+    }
     return file;
+  }
+
+  @override
+  Stream<FileResponse> getFileStream(
+    String url, {
+    String? key,
+    Map<String, String>? headers,
+    bool withProgress = false,
+  }) async* {
+    yield FileInfo(
+      await getSingleFile(url),
+      FileSource.Cache,
+      DateTime.now().add(const Duration(days: 1)),
+      url,
+    );
   }
 }
 

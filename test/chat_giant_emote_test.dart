@@ -2,6 +2,10 @@ import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:file/file.dart';
+import 'package:file/memory.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:twitch_chat_overlay/chat/chat_gif_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_content.dart';
@@ -44,13 +48,21 @@ void main() {
         await _primeImages(tester, message);
         await tester.pumpWidget(_app(message));
         await tester.pumpAndSettle();
-        final images = find.byType(CachedNetworkImage);
+        final images = find.byType(Image);
         expect(images, findsNWidgets(2));
-        final normal = tester.widget<CachedNetworkImage>(images.at(0));
-        final giant = tester.widget<CachedNetworkImage>(images.at(1));
+        final normal = tester.widget<Image>(images.at(0));
+        final giant = tester.widget<Image>(images.at(1));
         final format = animated ? 'animated' : 'static';
-        expect(normal.imageUrl, endsWith('/$format/dark/2.0'));
-        expect(giant.imageUrl, endsWith('/$format/dark/3.0'));
+        expect(
+          (normal.image as CachedNetworkImageProvider).url,
+          endsWith('/$format/dark/2.0'),
+        );
+        expect(
+          animated
+              ? (giant.image as ChatGifProvider).url
+              : (giant.image as CachedNetworkImageProvider).url,
+          endsWith('/$format/dark/3.0'),
+        );
         expect(tester.getSize(images.at(0)), const Size(28, 28));
         expect(tester.getSize(images.at(1)), const Size(112, 112));
         expect(giant.fit, BoxFit.contain);
@@ -193,6 +205,8 @@ Future<void> _primeImages(WidgetTester tester, ChatUserMessage message) async {
     ],
   };
   final keepAlives = <ImageStreamCompleterHandle>[];
+  final cache = _EmoteCache();
+  CachedNetworkImageProvider.defaultCacheManager = cache;
   for (final url in urls) {
     final image = await tester.runAsync(() async {
       final recorder = ui.PictureRecorder();
@@ -204,6 +218,9 @@ Future<void> _primeImages(WidgetTester tester, ChatUserMessage message) async {
       final picture = recorder.endRecording();
       final image = await picture.toImage(28, 28);
       picture.dispose();
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      cache.files[url] = cache.fs.file('image-${cache.files.length}.png')
+        ..writeAsBytesSync(bytes!.buffer.asUint8List());
       return image;
     });
     final completer = OneFrameImageStreamCompleter(
@@ -222,4 +239,16 @@ Future<void> _primeImages(WidgetTester tester, ChatUserMessage message) async {
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
   });
+}
+
+class _EmoteCache extends Fake implements BaseCacheManager {
+  final fs = MemoryFileSystem();
+  final files = <String, File>{};
+
+  @override
+  Future<File> getSingleFile(
+    String url, {
+    String? key,
+    Map<String, String>? headers,
+  }) async => files[url]!;
 }
