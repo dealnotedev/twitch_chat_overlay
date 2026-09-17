@@ -227,8 +227,14 @@ flutter run -d windows
 
 Once signed in, click-through mode hides the header so chat fills the frame.
 A green dot in the top-right corner shows the active connection; connection
-problems show a compact status label. Connected chats without messages show a
-state explaining that there are no recent messages. Setup mode keeps its header and controls.
+problems show a compact status label. During the first 20 seconds after launch,
+connected chats without messages show an empty-chat hint in click-through mode,
+which then fades out over 0.5 seconds. The first message dismisses it immediately;
+message expiration, clearing the chat, reconnecting, or toggling setup mode never
+restarts this countdown. Setup mode always shows the hint when connected chat is
+empty, along with its header and controls. Returning to click-through mode hides
+the hint again if its startup countdown has ended or a message has dismissed it.
+`Ctrl+Shift+O` remains available after the hint disappears.
 
 The current milestone connects to the signed-in user's channel. The composer
 and Twitch sign-out action are available in setup mode. `Alt+F4` or the tray

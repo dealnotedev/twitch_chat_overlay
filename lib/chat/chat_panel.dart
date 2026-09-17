@@ -82,12 +82,31 @@ class _ChatPanelState extends State<ChatPanel> {
   final Stopwatch _arrivalClock = Stopwatch()..start();
   final Map<String, Duration> _messageArrivals = {};
   final ChatMessageRetention _recent = ChatMessageRetention();
+  static const _startupHintDuration = Duration(seconds: 20);
+  static const _startupHintFadeDuration = Duration(milliseconds: 500);
+  Timer? _startupHintTimer;
+  bool _startupHintVisible = true;
+  bool _startupHintFading = false;
 
   @override
   void initState() {
     super.initState();
     _recent.update(widget.chatState.items, widget.messageLifetimeMinutes);
     _recent.addListener(_onRecentChanged);
+    _startupHintVisible = _recent.items.isEmpty;
+    if (_startupHintVisible) {
+      _startupHintTimer = Timer(_startupHintDuration, () {
+        setState(() => _startupHintFading = true);
+        _startupHintTimer = Timer(_startupHintFadeDuration, () {
+          setState(() => _startupHintVisible = false);
+        });
+      });
+    }
+  }
+
+  void _dismissStartupHint() {
+    _startupHintTimer?.cancel();
+    _startupHintVisible = false;
   }
 
   void _onRecentChanged() {
@@ -121,6 +140,12 @@ class _ChatPanelState extends State<ChatPanel> {
       _sending = false;
     }
     _recent.update(widget.chatState.items, widget.messageLifetimeMinutes);
+    // Messages and reconnects must never bring the startup hint back.
+    if (_recent.items.isNotEmpty ||
+        (oldWidget.chatState.status == ChatConnectionStatus.connected &&
+            widget.chatState.status != ChatConnectionStatus.connected)) {
+      _dismissStartupHint();
+    }
     if (!widget.interactive) _emotesOpen = false;
     final now = _arrivalClock.elapsed;
     final previousIds = oldWidget.chatState.items
@@ -153,6 +178,7 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   void dispose() {
+    _startupHintTimer?.cancel();
     _recent.dispose();
     _arrivalClock.stop();
     _messageController.dispose();
@@ -389,11 +415,20 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           ),
         ),
-        if (items.isEmpty)
+        if (items.isEmpty && (widget.interactive || _startupHintVisible))
           Positioned.fill(
-            child: _CenteredStatus(
-              text: l10n.noChatMessages,
-              hint: widget.interactive ? null : l10n.openControlsShortcut,
+            child: AnimatedOpacity(
+              key: const ValueKey('startup-chat-hint'),
+              opacity: !widget.interactive && _startupHintFading ? 0 : 1,
+              duration:
+                  widget.interactive || MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : _startupHintFadeDuration,
+              curve: Curves.easeInOut,
+              child: _CenteredStatus(
+                text: l10n.noChatMessages,
+                hint: widget.interactive ? null : l10n.openControlsShortcut,
+              ),
             ),
           ),
         if (!widget.interactive &&

@@ -340,7 +340,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text('No recent messages.\nNew messages will appear here.'),
-        findsOneWidget,
+        findsNothing,
       );
       chatUpdates.add(
         const ChatState(status: ChatConnectionStatus.failure, items: []),

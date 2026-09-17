@@ -11,7 +11,7 @@ import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 void main() {
   for (final interactive in [false, true]) {
     testWidgets(
-      'idle rows dissolve then show recent empty state (interactive: $interactive)',
+      'idle rows dissolve with empty hint only in controls (interactive: $interactive)',
       (tester) async {
         var deletes = 0;
         final item = ChatNotice(
@@ -80,7 +80,7 @@ void main() {
         expect(find.text('Expiring message'), findsNothing);
         expect(
           find.text('No recent messages.\nNew messages will appear here.'),
-          findsOneWidget,
+          interactive ? findsOneWidget : findsNothing,
         );
         expect(deletes, 0);
         expect(tester.takeException(), isNull);
