@@ -3,6 +3,13 @@
 Native Flutter Twitch chat rendered over Windows games. It does not use a
 WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 
+The Windows runner explicitly uses Skia. On the tested integrated AMD GPU,
+Impeller used substantially more shared GPU memory (system RAM): switching a
+Release build to Skia reduced the process working set from about 829 MiB to
+210 MiB. See [memory investigation](docs/memory-investigation.md) for the
+measurements and their limitations. Use `flutter build windows --release` for
+normal use; Debug builds also retain the development runtime and tooling.
+
 ## Implemented
 
 - Transparent fullscreen Win32 host spanning the virtual desktop.

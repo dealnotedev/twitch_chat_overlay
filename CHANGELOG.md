@@ -1,3 +1,18 @@
+# Twitch Chat Overlay 1.3.3
+
+## Changes
+
+- Reduced Windows memory usage by switching the overlay renderer from Impeller to hardware-accelerated Skia. On the tested integrated AMD GPU, the Release working set dropped from approximately 829 MiB to 211 MiB; actual usage depends on hardware and chat content.
+- Documented the memory investigation and measurements.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.3.2
 
 ## Changes
