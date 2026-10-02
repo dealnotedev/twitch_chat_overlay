@@ -98,6 +98,54 @@ abstract class AppLocalizations {
     Locale('uk'),
   ];
 
+  /// No description provided for @overlaySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat settings'**
+  String get overlaySettings;
+
+  /// No description provided for @closeSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Close settings'**
+  String get closeSettings;
+
+  /// No description provided for @settingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tune your overlay'**
+  String get settingsSubtitle;
+
+  /// No description provided for @settingsAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearance;
+
+  /// No description provided for @settingsMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get settingsMessages;
+
+  /// No description provided for @settingsIndicators.
+  ///
+  /// In en, this message translates to:
+  /// **'Indicators'**
+  String get settingsIndicators;
+
+  /// No description provided for @settingsAutosave.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes save automatically'**
+  String get settingsAutosave;
+
+  /// No description provided for @settingsReadMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible in read mode'**
+  String get settingsReadMode;
+
   /// No description provided for @nonInteractiveComponents.
   ///
   /// In en, this message translates to:

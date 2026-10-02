@@ -9,6 +9,7 @@ import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_surface.dart';
 import 'package:twitch_chat_overlay/platform/overlay_host.dart';
+import 'package:twitch_chat_overlay/platform/overlay_tray.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
@@ -57,6 +58,7 @@ class TwitchChatOverlayApp extends StatelessWidget {
     required this.overlayHost,
     required this.twitchAuth,
     required this.twitchChat,
+    this.trayFactory = const TrayFactory(),
     super.key,
   });
 
@@ -66,6 +68,7 @@ class TwitchChatOverlayApp extends StatelessWidget {
   final OverlayHost overlayHost;
   final TwitchAuth twitchAuth;
   final TwitchChatSession twitchChat;
+  final TrayFactory trayFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +95,7 @@ class TwitchChatOverlayApp extends StatelessWidget {
           ),
         ),
         home: OverlaySurface(
+          trayFactory: trayFactory,
           onCycleLocale: () => unawaited(
             localePreferences.cycle().catchError((
               Object error,

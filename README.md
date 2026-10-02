@@ -17,13 +17,19 @@ normal use; Debug builds also retain the development runtime and tooling.
 - Topmost protection through `WM_WINDOWPOSCHANGING`.
 - Non-activating click-through mode.
 - Global `Ctrl+Shift+O` shortcut to show the overlay and toggle controls.
-- System tray and native context menu through `tray_manager` / `menu_base`:
+- System tray and native context menu through the native `tray_manager` 0.7 API:
   click to show the overlay without changing interaction mode. Right-click for
   a single Show/Hide action based on current visibility, configuration, or **Вийти**
   to save the layout and exit. Hiding keeps chat connected; configuring or using
   the global shortcut shows the overlay again.
   The package restores the icon after Explorer restarts and removes it on exit.
 - Movable and resizable virtual chat window with eight resize handles.
+- A gear button in the interactive chat header opens a separate settings panel
+  beside the chat. The tray's Configure action opens the same panel. Appearance,
+  message behavior and read-mode indicators update live and save automatically.
+  Close with the gear, the close button or Escape; locking also closes the panel.
+  The hotkey toggles interaction without opening settings. The panel scrolls on
+  small screens and never changes the saved chat dimensions.
 - Normalized layout persisted across restarts and display resolutions.
 - Localhost OAuth flow opened with `open_url`.
 - Twitch credentials stored as `twitch_auth` JSON in `SharedPreferences`.
@@ -225,8 +231,9 @@ flutter run -d windows
 
 1. Press `Ctrl+Shift+O` to make the overlay interactive.
 2. Select **Sign in with Twitch** and finish OAuth in the browser.
-3. Drag the header or resize the window from any edge or corner.
-   The background transparency slider below the header adjusts backgrounds from 0% to 100%
+3. Drag the header or resize the window from any edge or corner. Open the gear
+   button in the header to adjust settings in the panel beside the chat.
+   The background transparency slider adjusts backgrounds from 0% to 100%
    without fading text or Twitch images. The content transparency slider fades
    chat and window decoration while keeping setup controls visible.
    Both values are saved when you release their sliders.

@@ -2,6 +2,7 @@ import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:twitch_chat_overlay/widgets/overlay_action_button.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
@@ -91,8 +92,8 @@ class _ChatComposerState extends State<ChatComposer> {
               if (widget.replyTo case final reply?)
                 Padding(
                   padding: const EdgeInsets.only(
-                    left: 40,
-                    right: 42,
+                    left: OverlayActionButton.size + 4,
+                    right: OverlayActionButton.size + 6,
                     bottom: 6,
                   ),
                   child: Container(
@@ -167,10 +168,14 @@ class _ChatComposerState extends State<ChatComposer> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  ChatIconButton(
-                    label: l10n.signOutOfTwitch,
-                    icon: Icons.logout_rounded,
+                  OverlayActionButton(
+                    tooltip: l10n.signOutOfTwitch,
                     onPressed: widget.onSignOut,
+                    child: const Icon(
+                      Icons.logout_rounded,
+                      shadows: chatTextShadows,
+                      size: 17,
+                    ),
                   ),
                   const Gap(4),
                   Expanded(
@@ -265,15 +270,17 @@ class _ChatComposerState extends State<ChatComposer> {
                     ),
                   ),
                   const Gap(6),
-                  ChatIconButton(
-                    label: l10n.send,
-                    icon: Icons.send_rounded,
-                    accent: true,
+                  OverlayActionButton(
+                    tooltip: l10n.send,
                     busy: widget.sending,
-                    onPressed:
-                        widget.sending || widget.controller.text.trim().isEmpty
+                    onPressed: widget.controller.text.trim().isEmpty
                         ? null
                         : _submit,
+                    child: const Icon(
+                      Icons.send_rounded,
+                      shadows: chatTextShadows,
+                      size: 17,
+                    ),
                   ),
                 ],
               ),

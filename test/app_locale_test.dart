@@ -16,6 +16,8 @@ import 'package:twitch_chat_overlay/platform/overlay_host.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 
+import 'support/fake_tray_factory.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -30,9 +32,7 @@ void main() {
   });
   test('restores supported locales and defaults to Ukrainian', () async {
     for (final stored in [null, 'uk', 'en', 'de']) {
-      SharedPreferences.setMockInitialValues({
-        LocalePreferences.key: ?stored,
-      });
+      SharedPreferences.setMockInitialValues({LocalePreferences.key: ?stored});
       final settings = await LocalePreferences.load();
       expect(settings.value.languageCode, stored == 'en' ? 'en' : 'uk');
       settings.dispose();
@@ -55,8 +55,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       const channel = MethodChannel('overlay/window');
-      const trayChannel = MethodChannel('tray_manager');
-      final calls = <MethodCall>[];
+      final trayFactory = FakeTrayFactory();
       final messenger = tester.binding.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(
         channel,
@@ -66,13 +65,8 @@ void main() {
             ? true
             : null,
       );
-      messenger.setMockMethodCallHandler(trayChannel, (call) async {
-        calls.add(call);
-        return true;
-      });
       addTearDown(() {
         messenger.setMockMethodCallHandler(channel, null);
-        messenger.setMockMethodCallHandler(trayChannel, null);
       });
       final settings = await LocalePreferences.load();
       final host = MethodChannelOverlayHost();
@@ -82,6 +76,7 @@ void main() {
         RepaintBoundary(
           key: boundary,
           child: TwitchChatOverlayApp(
+            trayFactory: trayFactory,
             localePreferences: settings,
             initialLayout: const OverlayLayout.defaults(),
             layoutStore: _LayoutStore(),
@@ -112,14 +107,10 @@ void main() {
         ),
         'en',
       );
-      final items =
-          (calls.lastWhere((call) => call.method == 'setContextMenu').arguments
-                  as Map)['menu']['items']
-              as List;
-      expect(items.first['label'], 'Hide overlay');
+      expect(trayFactory.items.first.label, 'Hide overlay');
       expect(tester.state(find.byType(OverlaySurface)), same(originalSurface));
       expect(auth.initializations, 1);
-      expect(calls.where((call) => call.method == 'setIcon').length, 1);
+      expect(trayFactory.creations, 1);
       expect(tester.takeException(), null);
       await tester.runAsync(() async {
         final image =

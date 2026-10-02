@@ -8,60 +8,44 @@ import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/platform/overlay_host.dart';
 import 'package:twitch_chat_overlay/platform/overlay_tray.dart';
 
+import 'support/fake_tray_factory.dart';
+
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
-  const trayChannel = MethodChannel('tray_manager');
   const hostChannel = MethodChannel('overlay/window');
-  const codec = StandardMethodCodec();
   late OverlayTray controller;
   late MethodChannelOverlayHost host;
+  late FakeTrayFactory factory;
   late AppLocalizations ukrainian;
-  late List<MethodCall> trayCalls;
   late List<MethodCall> hostCalls;
   late bool visible;
   late List<String> actions;
   late Completer<void> closed;
 
-  Future<void> sendEvent(String method, [Object? arguments]) async {
-    final reply = Completer<void>();
-    binding.channelBuffers.push(
-      'tray_manager',
-      codec.encodeMethodCall(MethodCall(method, arguments)),
-      (_) => reply.complete(),
-    );
-    await reply.future;
+  Future<void> click(int item) async {
+    factory.items[item].click();
     await pumpEventQueue();
   }
 
-  List<dynamic> menuItems() =>
-      (trayCalls.lastWhere((call) => call.method == 'setContextMenu').arguments
-              as Map)['menu']['items']
-          as List<dynamic>;
-
-  Future<void> clickMenu(String key) {
-    final item = menuItems().firstWhere((item) => item['key'] == key);
-    return sendEvent('onTrayMenuItemClick', {'id': item['id']});
+  Future<void> openMenu() async {
+    factory.icon.rightClick();
+    await pumpEventQueue();
   }
 
   setUp(() async {
-    trayCalls = [];
-    hostCalls = [];
     visible = true;
     actions = [];
+    hostCalls = [];
     closed = Completer<void>();
+    factory = FakeTrayFactory();
+    factory.icon.onDispose = () => actions.add('destroy');
     ukrainian = await AppLocalizations.delegate.load(const Locale('uk'));
     host = MethodChannelOverlayHost();
     controller = OverlayTray(
       host: host,
+      factory: factory,
       beforeExit: () async => actions.add('save'),
     );
-    binding.defaultBinaryMessenger.setMockMethodCallHandler(trayChannel, (
-      call,
-    ) async {
-      trayCalls.add(call);
-      if (call.method == 'destroy') actions.add('destroy');
-      return true;
-    });
     binding.defaultBinaryMessenger.setMockMethodCallHandler(hostChannel, (
       call,
     ) async {
@@ -80,229 +64,191 @@ void main() {
     await host.initialize();
     hostCalls.clear();
   });
-
   tearDown(() async {
     await controller.dispose();
-    expect(tray.trayManager.hasListeners, isFalse);
-    binding.defaultBinaryMessenger.setMockMethodCallHandler(trayChannel, null);
+    expect(factory.icon.listener, isNull);
+    expect(factory.items.every((item) => item.listener == null), isTrue);
     binding.defaultBinaryMessenger.setMockMethodCallHandler(hostChannel, null);
   });
 
-  test(
-    'bundles the icon and routes localized native menu and clicks',
-    () async {
-      await controller.initialize(ukrainian);
-      expect(
-        ((trayCalls.first.arguments as Map)['iconPath'] as String).replaceAll(
-          r'\',
-          '/',
-        ),
-        endsWith('/data/flutter_assets/${OverlayTray.iconAsset}'),
-      );
-      expect(menuItems().map((item) => item['label']), [
-        'Приховати оверлей',
-        'Налаштувати оверлей',
-        'Перевірити оновлення…',
-        '',
-        'Вийти',
-      ]);
-      expect(menuItems()[3]['type'], 'separator');
-
-      await sendEvent('onTrayIconRightMouseDown');
-      expect(trayCalls.last.method, 'popUpContextMenu');
-      expect(trayCalls.last.arguments, {'bringAppToFront': true});
-      expect(host.state.interactive, isFalse);
-
-      await clickMenu('hide');
-      expect(visible, isFalse);
-      await sendEvent('onTrayIconRightMouseDown');
-      expect(menuItems().map((item) => item['key']), [
-        'show',
-        'configure',
-        'update',
-        null,
-        'exit',
-      ]);
-      expect(menuItems().first['label'], 'Показати оверлей');
-      await clickMenu('show');
-      expect(visible, isTrue);
-      await sendEvent('onTrayIconRightMouseDown');
-      expect(menuItems().map((item) => item['key']), [
-        'hide',
-        'configure',
-        'update',
-        null,
-        'exit',
-      ]);
-      expect(
-        hostCalls
-            .where((call) => call.method == 'setVisible')
-            .map((call) => call.arguments),
-        [false, true],
-      );
-      expect(host.state.interactive, isFalse);
-
-      await clickMenu('configure');
-      expect(host.state.interactive, isTrue);
-      await host.setInteractive(false);
-      await host.setVisible(false);
-      hostCalls.clear();
-      await sendEvent('onTrayIconMouseDown');
-      expect(visible, isTrue);
-      expect(host.state.interactive, isFalse);
-      expect(hostCalls.single.method, 'setVisible');
-      expect(hostCalls.single.arguments, isTrue);
-
-      // A second click keeps the visible overlay locked.
-      await sendEvent('onTrayIconMouseDown');
-      expect(visible, isTrue);
-      expect(host.state.interactive, isFalse);
-    },
-  );
-
-  test(
-    'menu reads native visibility after a hotkey shows the overlay',
-    () async {
-      await controller.initialize(ukrainian);
-      await clickMenu('hide');
-      await sendEvent('onTrayIconRightMouseDown');
-      expect(menuItems().first['key'], 'show');
-
-      // Native hotkey changes visibility outside the Dart tray controller.
-      visible = true;
-      await sendEvent('onTrayIconRightMouseDown');
-      expect(menuItems().first['key'], 'hide');
-      expect(menuItems().length, 5);
-    },
-  );
-
-  test('passes English from the active overlay localization', () async {
-    await controller.initialize(
-      await AppLocalizations.delegate.load(const Locale('en')),
-    );
-    hostCalls.clear();
-    await clickMenu('update');
-    expect(hostCalls.map((call) => call.method), [
-      'setInteractive',
-      'openUpdater',
-    ]);
-    expect(hostCalls.first.arguments, false);
-    expect(hostCalls.last.arguments, 'en');
-    expect(actions, isEmpty);
-  });
-
-  test('changing locale updates the menu and updater arguments without recreating the icon', () async {
+  test('native icon routes localized menu and clicks', () async {
     await controller.initialize(ukrainian);
-    final english = await AppLocalizations.delegate.load(const Locale('en'));
-    await controller.updateLocalizations(english);
-    expect(menuItems().first['label'], english.trayHide);
-    expect(trayCalls.where((call) => call.method == 'setIcon').length, 1);
-    expect(trayCalls.where((call) => call.method == 'destroy'), isEmpty);
-    hostCalls.clear();
-    await clickMenu('update');
-    expect(hostCalls.map((call) => call.method), [
-      'setInteractive',
-      'openUpdater',
+    expect(factory.imageAsset, OverlayTray.iconAsset);
+    expect(factory.icon.icon, same(factory.image));
+    expect(factory.icon.visible, isTrue);
+    expect(factory.icon.trigger, tray.ContextMenuTrigger.none);
+    expect(factory.icon.tooltip, ukrainian.appTitle);
+    expect(factory.items.map((item) => item.label), [
+      'Приховати оверлей',
+      'Налаштувати оверлей',
+      'Перевірити оновлення…',
+      'Вийти',
     ]);
-    expect(hostCalls.first.arguments, false);
-    expect(hostCalls.last.arguments, 'en');
+    expect(factory.menu.entries, [
+      factory.items[0],
+      factory.items[1],
+      factory.items[2],
+      null,
+      factory.items[3],
+    ]);
+    await openMenu();
+    expect(factory.icon.opens, 1);
+    expect(host.state.interactive, isFalse);
+    await click(0);
+    expect(visible, isFalse);
+    await openMenu();
+    expect(factory.items.first.label, 'Показати оверлей');
+    await click(0);
+    expect(visible, isTrue);
+    await openMenu();
+    expect(factory.items.first.label, 'Приховати оверлей');
+    expect(host.state.interactive, isFalse);
+    await click(1);
+    expect(host.state.interactive, isTrue);
+    await host.setInteractive(false);
+    await host.setVisible(false);
+    hostCalls.clear();
+    factory.icon.click();
+    await pumpEventQueue();
+    expect(visible, isTrue);
+    expect(host.state.interactive, isFalse);
+    expect(hostCalls.single.method, 'setVisible');
+    factory.icon.click();
+    await pumpEventQueue();
+    expect(host.state.interactive, isFalse);
+  });
+
+  test('configure routes to the settings callback', () async {
+    var configured = 0;
+    controller = OverlayTray(
+      host: host,
+      factory: factory,
+      beforeExit: () async {},
+      onConfigure: () async {
+        configured++;
+        await host.setInteractive(true);
+      },
+    );
+    await controller.initialize(ukrainian);
+    await click(1);
+    expect(configured, 1);
+    expect(host.state.interactive, isTrue);
+    expect(
+      hostCalls.where((call) => call.method == 'setInteractive').length,
+      1,
+    );
   });
 
   test(
-    'opening the updater exits interactive mode and keeps the overlay running',
+    'refreshes visibility and locale without recreating native handles',
     () async {
       await controller.initialize(ukrainian);
-      await host.setInteractive(true);
+      for (var index = 0; index < 20; index++) {
+        visible = index.isEven; // includes changes made by the global hotkey
+        await openMenu();
+        expect(
+          factory.items.first.label,
+          visible ? ukrainian.trayHide : ukrainian.trayShow,
+        );
+      }
+      final english = await AppLocalizations.delegate.load(const Locale('en'));
+      await controller.updateLocalizations(english);
+      expect(factory.items.first.label, english.trayShow);
+      expect(factory.items[1].label, english.trayConfigure);
+      expect(factory.creations, 1);
+      expect(factory.items.length, 4);
+      expect(factory.menu.entries.length, 5);
+      expect(factory.icon.disposals, 0);
       hostCalls.clear();
-      await clickMenu('update');
+      await click(2);
       expect(hostCalls.map((call) => call.method), [
         'setInteractive',
         'openUpdater',
       ]);
       expect(hostCalls.first.arguments, false);
-      expect(hostCalls.last.arguments, 'uk');
-      expect(host.state.interactive, false);
-      expect(actions, isEmpty);
+      expect(hostCalls.last.arguments, 'en');
     },
   );
 
-  test(
-    'updater shutdown request saves layout and removes the tray icon',
-    () async {
-      await controller.initialize(ukrainian);
-      binding.channelBuffers.push(
-        'overlay/window',
-        codec.encodeMethodCall(const MethodCall('closeRequested')),
-        (_) {},
-      );
-      await closed.future;
-      expect(actions, ['save', 'destroy', 'close']);
-    },
-  );
+  test('updater exits interaction while leaving overlay running', () async {
+    await controller.initialize(ukrainian);
+    await host.setInteractive(true);
+    hostCalls.clear();
+    await click(2);
+    expect(hostCalls.map((call) => call.method), [
+      'setInteractive',
+      'openUpdater',
+    ]);
+    expect(hostCalls.first.arguments, false);
+    expect(hostCalls.last.arguments, 'uk');
+    expect(host.state.interactive, isFalse);
+    expect(actions, isEmpty);
+  });
 
-  test(
-    'exit waits for saving, removes the icon, then closes only once',
-    () async {
-      final saved = Completer<void>();
-      controller = OverlayTray(
-        host: host,
-        beforeExit: () {
-          actions.add('save');
-          return saved.future;
-        },
-      );
-      await controller.initialize(ukrainian);
-      await clickMenu('exit');
-      await clickMenu('exit');
-      expect(actions, ['save']);
-      saved.complete();
-      await closed.future;
-      expect(actions, ['save', 'destroy', 'close']);
-      await controller.dispose();
-      expect(actions, ['save', 'destroy', 'close']);
-    },
-  );
+  test('updater shutdown saves, releases handles, then closes', () async {
+    await controller.initialize(ukrainian);
+    binding.channelBuffers.push(
+      'overlay/window',
+      const StandardMethodCodec().encodeMethodCall(
+        const MethodCall('closeRequested'),
+      ),
+      (_) {},
+    );
+    await closed.future;
+    expect(actions, ['save', 'destroy', 'close']);
+    expect(factory.icon.menu, isNull);
+    expect(factory.image.disposals, 1);
+    expect(factory.menu.disposals, 1);
+    expect(factory.items.every((item) => item.disposals == 1), isTrue);
+  });
 
-  test(
-    'disposing during startup removes the pending icon and listener',
-    () async {
-      final iconReady = Completer<void>();
-      binding.defaultBinaryMessenger.setMockMethodCallHandler(trayChannel, (
-        call,
-      ) async {
-        trayCalls.add(call);
-        if (call.method == 'setIcon') await iconReady.future;
-        return true;
-      });
-      final initialization = controller.initialize(ukrainian);
-      final disposal = controller.dispose();
-      iconReady.complete();
-      await initialization;
-      await disposal;
-      expect(trayCalls.last.method, 'destroy');
-      await sendEvent('onTrayIconMouseDown');
-      expect(host.state.interactive, isFalse);
-    },
-  );
+  test('exit waits for saving and closes only once', () async {
+    final saved = Completer<void>();
+    controller = OverlayTray(
+      host: host,
+      factory: factory,
+      beforeExit: () {
+        actions.add('save');
+        return saved.future;
+      },
+    );
+    await controller.initialize(ukrainian);
+    await click(3);
+    await click(3);
+    expect(actions, ['save']);
+    saved.complete();
+    await closed.future;
+    expect(actions, ['save', 'destroy', 'close']);
+    await controller.dispose();
+    expect(factory.icon.disposals, 1);
+  });
 
-  test(
-    'failed menu creation removes the icon and leaves no listener',
-    () async {
-      binding.defaultBinaryMessenger.setMockMethodCallHandler(trayChannel, (
-        call,
-      ) async {
-        trayCalls.add(call);
-        if (call.method == 'setContextMenu') {
-          throw PlatformException(code: 'menu_failed');
-        }
-        return true;
-      });
-      await expectLater(
-        controller.initialize(ukrainian),
-        throwsA(isA<PlatformException>()),
-      );
-      expect(trayCalls.last.method, 'destroy');
-      expect(tray.trayManager.hasListeners, isFalse);
-    },
-  );
+  test('dispose during initialization releases every resource', () async {
+    final ready = Completer<bool>();
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      hostChannel,
+      (call) async => call.method == 'isVisible' ? ready.future : null,
+    );
+    final initialization = controller.initialize(ukrainian);
+    final disposal = controller.dispose();
+    ready.complete(true);
+    await initialization;
+    await disposal;
+    expect(factory.icon.visible, isFalse);
+    expect(factory.icon.disposals, 1);
+    expect(factory.image.disposals, 1);
+    expect(factory.menu.disposals, 1);
+    factory.icon.click();
+    await pumpEventQueue();
+    expect(host.state.interactive, isFalse);
+  });
+
+  test('failed menu creation cleans up partially created resources', () async {
+    factory.failMenu = true;
+    await expectLater(controller.initialize(ukrainian), throwsStateError);
+    await controller.dispose();
+    expect(factory.icon.disposals, 1);
+    expect(factory.image.disposals, 1);
+    expect(factory.menu.disposals, 0);
+  });
 }

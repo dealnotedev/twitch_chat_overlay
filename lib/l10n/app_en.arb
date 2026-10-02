@@ -1,4 +1,12 @@
 {
+  "overlaySettings": "Chat settings",
+  "closeSettings": "Close settings",
+  "settingsSubtitle": "Tune your overlay",
+  "settingsAppearance": "Appearance",
+  "settingsMessages": "Messages",
+  "settingsIndicators": "Indicators",
+  "settingsAutosave": "Changes save automatically",
+  "settingsReadMode": "Visible in read mode",
   "nonInteractiveComponents": "Components in non-interactive mode",
   "viewerCountComponent": "Viewer count",
   "connectionIndicatorComponent": "Connection indicator",

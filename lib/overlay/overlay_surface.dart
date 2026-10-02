@@ -1,30 +1,23 @@
-import 'package:twitch_chat_overlay/chat/chat_readability.dart';
-
 import 'dart:async';
 
-import 'package:twitch_chat_overlay/overlay/component_visibility_control.dart';
-
-import 'package:twitch_chat_overlay/overlay/chat_font_weight_control.dart';
-
-import 'package:twitch_chat_overlay/overlay/chat_font_size_control.dart';
-
-import 'package:twitch_chat_overlay/chat/gif_playback.dart';
-import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
-
-import 'package:twitch_chat_overlay/updates/update_notice.dart';
-
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:twitch_chat_overlay/widgets/overlay_action_button.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
+import 'package:twitch_chat_overlay/chat/chat_readability.dart';
+import 'package:twitch_chat_overlay/chat/gif_playback.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
-import 'package:twitch_chat_overlay/overlay/message_lifetime_control.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
+import 'package:twitch_chat_overlay/overlay/overlay_settings_panel.dart';
 import 'package:twitch_chat_overlay/platform/overlay_host.dart';
 import 'package:twitch_chat_overlay/platform/overlay_tray.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
+import 'package:twitch_chat_overlay/updates/update_notice.dart';
 
 class OverlaySurface extends StatefulWidget {
   const OverlaySurface({
@@ -33,6 +26,7 @@ class OverlaySurface extends StatefulWidget {
     required this.overlayHost,
     required this.twitchAuth,
     required this.twitchChat,
+    this.trayFactory = const TrayFactory(),
     this.onCycleLocale,
     this.beforeExit,
     super.key,
@@ -43,6 +37,7 @@ class OverlaySurface extends StatefulWidget {
   final OverlayHost overlayHost;
   final TwitchAuth twitchAuth;
   final TwitchChatSession twitchChat;
+  final TrayFactory trayFactory;
   final VoidCallback? onCycleLocale;
   final Future<void> Function()? beforeExit;
 
@@ -59,16 +54,23 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
   StreamSubscription<TwitchAuthState>? _authSubscription;
   StreamSubscription<ChatState>? _chatSubscription;
   OverlayTray? _tray;
+  bool _settingsOpen = false;
 
   @override
   void initState() {
     super.initState();
+    FocusManager.instance.addEarlyKeyEventHandler(_handleSettingsKey);
     _layout = widget.initialLayout;
     _hostState = widget.overlayHost.state;
     _authState = widget.twitchAuth.state;
     _chatState = widget.twitchChat.state;
     _hostSubscription = widget.overlayHost.states.listen((state) {
-      if (mounted) setState(() => _hostState = state);
+      if (!mounted) return;
+      if (!state.interactive && _settingsOpen) _saveLayout();
+      setState(() {
+        _hostState = state;
+        if (!state.interactive) _settingsOpen = false;
+      });
     });
     _authSubscription = widget.twitchAuth.states.listen(_onAuthState);
     _chatSubscription = widget.twitchChat.states.listen((state) {
@@ -90,7 +92,9 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
       return;
     }
     final tray = OverlayTray(
+      factory: widget.trayFactory,
       host: widget.overlayHost,
+      onConfigure: _openSettingsFromTray,
       beforeExit: () async {
         await widget.layoutStore.save(_layout);
         await widget.beforeExit?.call();
@@ -106,6 +110,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeEarlyKeyEventHandler(_handleSettingsKey);
     unawaited(_tray?.dispose());
     _hostSubscription?.cancel();
     _authSubscription?.cancel();
@@ -134,46 +139,11 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       editing: _hostState.interactive,
                       onCycleLocale: widget.onCycleLocale,
                       signedIn: _authState.status == TwitchAuthStatus.signedIn,
-                      backgroundOpacity: _layout.backgroundOpacity,
                       contentOpacity: _layout.contentOpacity,
-                      showViewerCount: _layout.showViewerCount,
                       showConnectionIndicator: _layout.showConnectionIndicator,
-                      onShowViewerCountChanged: (value) {
-                        _updateLayout(
-                          _layout.withVisibleComponents(showViewerCount: value),
-                        );
-                        _saveLayout();
-                      },
-                      onShowConnectionIndicatorChanged: (value) {
-                        _updateLayout(
-                          _layout.withVisibleComponents(
-                            showConnectionIndicator: value,
-                          ),
-                        );
-                        _saveLayout();
-                      },
-                      chatFontSize: _layout.chatFontSize,
-                      chatFontWeight: _layout.chatFontWeight,
-                      onChatFontWeightChanged: (value) =>
-                          _updateLayout(_layout.withChatFontWeight(value)),
-                      onChatFontSizeChanged: (value) =>
-                          _updateLayout(_layout.withChatFontSize(value)),
-                      onContentOpacityChanged: (value) =>
-                          _updateLayout(_layout.withContentOpacity(value)),
-                      messageLifetimeMinutes: _layout.messageLifetimeMinutes,
                       gifPlayCount: _layout.gifPlayCount,
-                      onGifPlayCountChanged: (value) {
-                        _updateLayout(_layout.withGifPlayCount(value));
-                        _saveLayout();
-                      },
-                      onMessageLifetimeChanged: (value) {
-                        _updateLayout(
-                          _layout.withMessageLifetimeMinutes(value),
-                        );
-                        _saveLayout();
-                      },
-                      onOpacityChanged: (value) =>
-                          _updateLayout(_layout.withBackgroundOpacity(value)),
+                      settingsOpen: _settingsOpen,
+                      onSettings: _toggleSettings,
                       onMove: (delta) =>
                           _updateLayout(_layout.moveBy(delta, viewport)),
                       onResize: (handle, delta) => _updateLayout(
@@ -216,12 +186,52 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                     top: 18,
                     child: IgnorePointer(child: _EditModeBanner()),
                   ),
+                if (_settingsOpen && _hostState.interactive)
+                  Positioned.fromRect(
+                    rect: OverlaySettingsPanel.placeBeside(rect, viewport),
+                    child: OverlaySettingsPanel(
+                      key: const ValueKey('overlay-settings-panel'),
+                      layout: _layout,
+                      onChanged: _updateLayout,
+                      onChangeEnd: _saveLayout,
+                      onClose: _closeSettings,
+                    ),
+                  ),
               ],
             );
           },
         ),
       ),
     );
+  }
+
+  Future<void> _openSettingsFromTray() async {
+    await widget.overlayHost.setInteractive(true);
+    if (mounted && widget.overlayHost.state.interactive) {
+      setState(() => _settingsOpen = true);
+    }
+  }
+
+  void _toggleSettings() {
+    if (_settingsOpen) {
+      _closeSettings();
+    } else {
+      setState(() => _settingsOpen = true);
+    }
+  }
+
+  void _closeSettings() {
+    if (!_settingsOpen) return;
+    _saveLayout();
+    setState(() => _settingsOpen = false);
+  }
+
+  KeyEventResult _handleSettingsKey(KeyEvent event) {
+    if (_settingsOpen && event.logicalKey == LogicalKeyboardKey.escape) {
+      if (event is KeyDownEvent) _closeSettings();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   static void _reportTrayError(Object error, StackTrace stack) {
@@ -286,22 +296,11 @@ class _VirtualChatWindow extends StatelessWidget {
   const _VirtualChatWindow({
     required this.editing,
     required this.signedIn,
-    required this.backgroundOpacity,
     required this.contentOpacity,
-    required this.showViewerCount,
     required this.showConnectionIndicator,
-    required this.onShowViewerCountChanged,
-    required this.onShowConnectionIndicatorChanged,
-    required this.onContentOpacityChanged,
-    required this.chatFontSize,
-    required this.onChatFontSizeChanged,
-    required this.chatFontWeight,
-    required this.onChatFontWeightChanged,
-    required this.messageLifetimeMinutes,
-    required this.onMessageLifetimeChanged,
     required this.gifPlayCount,
-    required this.onGifPlayCountChanged,
-    required this.onOpacityChanged,
+    required this.settingsOpen,
+    required this.onSettings,
     required this.onMove,
     required this.onResize,
     required this.onGestureEnd,
@@ -313,22 +312,11 @@ class _VirtualChatWindow extends StatelessWidget {
 
   final bool editing;
   final bool signedIn;
-  final double backgroundOpacity;
   final double contentOpacity;
-  final bool showViewerCount;
   final bool showConnectionIndicator;
-  final ValueChanged<bool> onShowViewerCountChanged;
-  final ValueChanged<bool> onShowConnectionIndicatorChanged;
-  final ValueChanged<double> onContentOpacityChanged;
-  final double chatFontSize;
-  final ValueChanged<double> onChatFontSizeChanged;
-  final int chatFontWeight;
-  final ValueChanged<int> onChatFontWeightChanged;
-  final int messageLifetimeMinutes;
   final int gifPlayCount;
-  final ValueChanged<int> onGifPlayCountChanged;
-  final ValueChanged<int> onMessageLifetimeChanged;
-  final ValueChanged<double> onOpacityChanged;
+  final bool settingsOpen;
+  final VoidCallback onSettings;
   final ValueChanged<Offset> onMove;
   final void Function(ResizeHandle handle, Offset delta) onResize;
   final VoidCallback onGestureEnd;
@@ -338,233 +326,99 @@ class _VirtualChatWindow extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Opacity(
-                opacity: contentOpacity,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: BackgroundOpacity.colorOf(
-                      context,
-                      const Color(0xFF111114),
+  Widget build(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Positioned.fill(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Opacity(
+              opacity: contentOpacity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: BackgroundOpacity.colorOf(
+                    context,
+                    const Color(0xFF111114),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: editing
+                        ? const Color(0xFF9146FF)
+                        : BackgroundOpacity.colorOf(
+                            context,
+                            const Color(0x339146FF),
+                          ),
+                    width: editing ? 2 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 18,
+                      color: BackgroundOpacity.colorOf(
+                        context,
+                        const Color(0x66000000),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: editing
-                          ? const Color(0xFF9146FF)
-                          : BackgroundOpacity.colorOf(
-                              context,
-                              const Color(0x339146FF),
-                            ),
-                      width: editing ? 2 : 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        blurRadius: 18,
-                        color: BackgroundOpacity.colorOf(
-                          context,
-                          const Color(0x66000000),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(editing ? 2 : 1),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(editing ? 10 : 11),
+                child: Column(
+                  children: [
+                    if (editing || !signedIn)
+                      Opacity(
+                        opacity: editing ? 1 : contentOpacity,
+                        child: _ChatHeader(
+                          editing: editing,
+                          showConnectionIndicator:
+                              editing || showConnectionIndicator,
+                          settingsOpen: settingsOpen,
+                          onSettings: onSettings,
+                          onMove: onMove,
+                          onGestureEnd: onGestureEnd,
+                          onLock: onLock,
+                          onCycleLocale: onCycleLocale,
+                          connectionStatus: connectionStatus,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(editing ? 2 : 1),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(editing ? 10 : 11),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => Column(
-                      children: [
-                        if (editing || !signedIn)
-                          Opacity(
-                            opacity: editing ? 1 : contentOpacity,
-                            child: _ChatHeader(
-                              editing: editing,
-                              showConnectionIndicator:
-                                  editing || showConnectionIndicator,
-                              onMove: onMove,
-                              onGestureEnd: onGestureEnd,
-                              onLock: onLock,
-                              onCycleLocale: onCycleLocale,
-                              connectionStatus: connectionStatus,
-                            ),
-                          ),
-                        if (editing)
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: constraints.maxHeight / 2,
-                            ),
-                            child: SingleChildScrollView(
-                              child: ColoredBox(
-                                color: const Color(0xF21F1F23),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    _TransparencySlider(
-                                      label: AppLocalizations.of(context)
-                                          .backgroundTransparency,
-                                      opacity: backgroundOpacity,
-                                      onChanged: onOpacityChanged,
-                                      onChangeEnd: onGestureEnd,
-                                    ),
-                                    _TransparencySlider(
-                                      label: AppLocalizations.of(context)
-                                          .contentTransparency,
-                                      opacity: contentOpacity,
-                                      onChanged: onContentOpacityChanged,
-                                      onChangeEnd: onGestureEnd,
-                                    ),
-                                    ChatFontSizeControl(
-                                      value: chatFontSize,
-                                      onChanged: onChatFontSizeChanged,
-                                      onChangeEnd: onGestureEnd,
-                                    ),
-                                    ChatFontWeightControl(
-                                      value: chatFontWeight,
-                                      onChanged: onChatFontWeightChanged,
-                                      onChangeEnd: onGestureEnd,
-                                    ),
-                                    MessageLifetimeControl(
-                                      minutes: messageLifetimeMinutes,
-                                      onChanged: onMessageLifetimeChanged,
-                                    ),
-                                    GifPlaybackControl(
-                                      playCount: gifPlayCount,
-                                      onChanged: onGifPlayCountChanged,
-                                    ),
-                                    ComponentVisibilityControl(
-                                      showViewerCount: showViewerCount,
-                                      showConnectionIndicator:
-                                          showConnectionIndicator,
-                                      onShowViewerCountChanged:
-                                          onShowViewerCountChanged,
-                                      onShowConnectionIndicatorChanged:
-                                          onShowConnectionIndicatorChanged,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        Expanded(
-                          child: Opacity(
-                            key: const ValueKey('chat-content-opacity'),
-                            opacity: contentOpacity,
-                            child: GifPlayback(
-                              playCount: gifPlayCount,
-                              child: child,
-                            ),
-                          ),
+                    Expanded(
+                      child: Opacity(
+                        key: const ValueKey('chat-content-opacity'),
+                        opacity: contentOpacity,
+                        child: GifPlayback(
+                          playCount: gifPlayCount,
+                          child: child,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        if (editing)
-          for (final handle in ResizeHandle.values)
-            _ResizeHandle(
-              handle: handle,
-              onResize: (delta) => onResize(handle, delta),
-              onGestureEnd: onGestureEnd,
-            ),
-      ],
-    );
-  }
-}
-
-class _TransparencySlider extends StatelessWidget {
-  const _TransparencySlider({
-    required this.label,
-    required this.opacity,
-    required this.onChanged,
-    required this.onChangeEnd,
-  });
-
-  final String label;
-  final double opacity;
-  final ValueChanged<double> onChanged;
-  final VoidCallback onChangeEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final transparency = 1 - opacity;
-    final percent = '${(transparency * 100).round()}%';
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              shadows: chatTextShadows,
-              fontSize: 11,
-              color: Colors.white,
-            ),
-          ),
-          Expanded(
-            child: Semantics(
-              label: label,
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 2,
-                  activeTrackColor: const Color(0xFFBF94FF),
-                  thumbColor: const Color(0xFFBF94FF),
-                  thumbShape: const RoundSliderThumbShape(
-                    enabledThumbRadius: 6,
-                  ),
-                  overlayShape: const RoundSliderOverlayShape(
-                    overlayRadius: 12,
-                  ),
-                ),
-                child: Slider(
-                  value: transparency,
-                  divisions: 100,
-                  label: percent,
-                  semanticFormatterCallback: (value) =>
-                      '${(value * 100).round()}%',
-                  onChanged: (value) => onChanged(1 - value),
-                  onChangeEnd: (_) => onChangeEnd(),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 34,
-            child: Text(
-              percent,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                shadows: chatTextShadows,
-                fontSize: 11,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
       ),
-    );
-  }
+      if (editing)
+        for (final handle in ResizeHandle.values)
+          _ResizeHandle(
+            handle: handle,
+            onResize: (delta) => onResize(handle, delta),
+            onGestureEnd: onGestureEnd,
+          ),
+    ],
+  );
 }
 
 class _ChatHeader extends StatelessWidget {
   const _ChatHeader({
     required this.showConnectionIndicator,
     required this.editing,
+    required this.settingsOpen,
+    required this.onSettings,
     required this.onMove,
     required this.onGestureEnd,
     required this.onLock,
@@ -573,6 +427,8 @@ class _ChatHeader extends StatelessWidget {
   });
 
   final bool editing;
+  final bool settingsOpen;
+  final VoidCallback onSettings;
   final bool showConnectionIndicator;
   final ValueChanged<Offset> onMove;
   final VoidCallback onGestureEnd;
@@ -635,38 +491,48 @@ class _ChatHeader extends StatelessWidget {
             ],
             if (editing) ...[
               const Gap(12),
-              if (onCycleLocale != null)
-                TextButton(
+              if (onCycleLocale != null) ...[
+                OverlayActionButton(
                   key: const ValueKey('locale-toggle'),
-                  onPressed: onCycleLocale,
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFBF94FF),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    textStyle: const TextStyle(
+                  onPressed: onCycleLocale!,
+                  child: AutoSizeText(
+                    l10n.localeName.toUpperCase(),
+                    maxLines: 1,
+                    minFontSize: 1,
+                    maxFontSize: 10,
+                    stepGranularity: 0.5,
+                    wrapWords: false,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
                       shadows: chatTextShadows,
                       fontFamily: 'Inter',
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
                   ),
-                  child: Text(l10n.localeName.toUpperCase()),
                 ),
+                const Gap(4),
+              ],
+              OverlayActionButton(
+                key: const ValueKey('settings-toggle'),
+                tooltip: l10n.overlaySettings,
+                selected: settingsOpen,
+                onPressed: onSettings,
+                child: Icon(
+                  settingsOpen
+                      ? Icons.settings_rounded
+                      : Icons.settings_outlined,
+                  shadows: chatTextShadows,
+                  size: 17,
+                ),
+              ),
               const Gap(4),
-              IconButton(
-                style: IconButton.styleFrom(
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(),
-                visualDensity: VisualDensity.compact,
+              OverlayActionButton(
+                key: const ValueKey('lock-overlay'),
                 tooltip: l10n.lockOverlay,
                 onPressed: onLock,
-                icon: const Icon(
+                child: const Icon(
                   Icons.lock_outline_rounded,
                   shadows: chatTextShadows,
                   size: 17,

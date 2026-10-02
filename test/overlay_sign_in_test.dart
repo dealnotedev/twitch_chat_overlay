@@ -17,6 +17,8 @@ import 'package:twitch_chat_overlay/platform/overlay_host.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 
+import 'support/fake_tray_factory.dart';
+
 void main() {
   testWidgets('sign in exits interactive mode before starting authorization', (
     tester,
@@ -24,7 +26,6 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1920, 1080));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     const hostChannel = MethodChannel('overlay/window');
-    const trayChannel = MethodChannel('tray_manager');
     final messenger = tester.binding.defaultBinaryMessenger;
     final locked = Completer<void>();
     final host = MethodChannelOverlayHost();
@@ -41,10 +42,8 @@ void main() {
       }
       return null;
     });
-    messenger.setMockMethodCallHandler(trayChannel, (_) async => true);
     addTearDown(() {
       messenger.setMockMethodCallHandler(hostChannel, null);
-      messenger.setMockMethodCallHandler(trayChannel, null);
     });
 
     await tester.pumpWidget(
@@ -53,6 +52,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: OverlaySurface(
+          trayFactory: FakeTrayFactory(),
           initialLayout: const OverlayLayout.defaults(),
           layoutStore: layoutStore,
           overlayHost: host,
@@ -64,7 +64,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(host.state.interactive, isTrue);
 
-    final transparencySlider = find.byType(Slider).at(1);
+    expect(find.byType(Slider), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('settings-toggle')));
+    await tester.pumpAndSettle();
+    final transparencySlider = find.byKey(
+      const ValueKey('content-transparency-slider'),
+    );
     final contentOpacity = find.byKey(const ValueKey('chat-content-opacity'));
     for (final transparency in [0.5, 1.0, 0.0]) {
       tester.widget<Slider>(transparencySlider).onChanged!(transparency);
@@ -104,6 +109,7 @@ void main() {
 
     final gifControl = find.byType(GifPlaybackControl);
     expect(tester.widget<GifPlaybackControl>(gifControl).playCount, -1);
+    await tester.ensureVisible(gifControl);
     await tester.tap(
       find.descendant(
         of: gifControl,
@@ -145,7 +151,6 @@ void main() {
       final semantics = tester.ensureSemantics();
 
       const hostChannel = MethodChannel('overlay/window');
-      const trayChannel = MethodChannel('tray_manager');
       final messenger = tester.binding.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(
         hostChannel,
@@ -153,10 +158,8 @@ void main() {
             ? {'topmost': true, 'interactive': false}
             : null,
       );
-      messenger.setMockMethodCallHandler(trayChannel, (_) async => true);
       addTearDown(() {
         messenger.setMockMethodCallHandler(hostChannel, null);
-        messenger.setMockMethodCallHandler(trayChannel, null);
       });
       final authUpdates = StreamController<TwitchAuthState>();
       final chatUpdates = StreamController<ChatState>();
@@ -170,6 +173,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: OverlaySurface(
+            trayFactory: FakeTrayFactory(),
             initialLayout: layout,
             layoutStore: layoutStore,
             overlayHost: host,
@@ -221,6 +225,9 @@ void main() {
       await host.setInteractive(true);
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);
+      expect(find.byType(Slider), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('settings-toggle')));
+      await tester.pumpAndSettle();
       expect(find.byType(Slider), findsNWidgets(4));
       expect(find.byTooltip('Lock overlay'), findsOneWidget);
       expect(find.byType(ChatComposer), findsOneWidget);
@@ -266,6 +273,8 @@ void main() {
         (true, true),
       ]) {
         await host.setInteractive(true);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('settings-toggle')));
         await tester.pumpAndSettle();
         final labels = ['Viewer count', 'Connection indicator'];
         final values = [flags.$1, flags.$2];
@@ -365,6 +374,9 @@ void main() {
       await host.setInteractive(true);
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsOneWidget);
+      expect(find.byType(Slider), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('settings-toggle')));
+      await tester.pumpAndSettle();
       expect(find.byType(Slider), findsNWidgets(4));
       expect(find.text('Sign in with Twitch'), findsOneWidget);
       expect(tester.takeException(), isNull);

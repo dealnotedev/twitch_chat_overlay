@@ -1,4 +1,3 @@
-import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
@@ -14,7 +13,6 @@ class CountSettingControl extends StatelessWidget {
     required this.decreaseLabel,
     required this.description,
     required this.displayValue,
-    required this.icon,
     super.key,
   });
 
@@ -27,7 +25,6 @@ class CountSettingControl extends StatelessWidget {
   final String decreaseLabel;
   final String Function(int) description;
   final String displayValue;
-  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -42,24 +39,32 @@ class CountSettingControl extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
-          Icon(
-            icon,
-            shadows: chatTextShadows,
-            size: 16,
-            color: Color(0xFFBF94FF),
-          ),
-          const Gap(8),
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                shadows: chatTextShadows,
-                fontSize: 11,
-                color: Colors.white,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFE6E3ED),
+                  ),
+                ),
+                if (value == minimum || value == 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    description(value),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      height: 1.35,
+                      color: Color(0xFFAAA2B6),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const Gap(8),
@@ -79,9 +84,9 @@ class CountSettingControl extends StatelessWidget {
               onDecrease: canDecrease ? decrease : null,
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF29232F),
+                  color: const Color(0xFF2B2435),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF514060)),
+                  border: Border.all(color: const Color(0xFF453653)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -91,20 +96,16 @@ class CountSettingControl extends StatelessWidget {
                       icon: Icons.remove_rounded,
                       onPressed: canDecrease ? decrease : null,
                     ),
-                    Tooltip(
-                      message: description(value),
-                      child: SizedBox(
-                        width: 46,
-                        child: Text(
-                          displayValue,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            shadows: chatTextShadows,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
+                    SizedBox(
+                      width: 46,
+                      child: Text(
+                        displayValue,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),
@@ -135,9 +136,9 @@ class _StepButton extends StatelessWidget {
     label: label,
     child: IconButton(
       onPressed: onPressed,
-      icon: Icon(icon, shadows: chatTextShadows, size: 16),
+      icon: Icon(icon, size: 16),
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+      constraints: const BoxConstraints.tightFor(width: 28, height: 32),
       style: IconButton.styleFrom(
         foregroundColor: const Color(0xFFBF94FF),
         disabledForegroundColor: const Color(0xFF605668),

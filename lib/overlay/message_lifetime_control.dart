@@ -27,7 +27,6 @@ class MessageLifetimeControl extends StatelessWidget {
           ? l10n.messageLifetimeUnlimited
           : l10n.messageLifetimeMinutes(value),
       displayValue: minutes == 0 ? '∞' : l10n.messageLifetimeMinutes(minutes),
-      icon: Icons.timer_outlined,
     );
   }
 }

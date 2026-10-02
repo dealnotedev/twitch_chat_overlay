@@ -1,4 +1,12 @@
 {
+  "overlaySettings": "Налаштування",
+  "closeSettings": "Закрити налаштування",
+  "settingsSubtitle": "Ваш чат, ваш стиль",
+  "settingsAppearance": "Вигляд",
+  "settingsMessages": "Повідомлення",
+  "settingsIndicators": "Індикатори",
+  "settingsAutosave": "Зміни зберігаються автоматично",
+  "settingsReadMode": "Видимі в режимі читання",
   "nonInteractiveComponents": "Компоненти в неінтерактивному режимі",
   "viewerCountComponent": "Лічильник глядачів",
   "connectionIndicatorComponent": "Індикатор підключення",

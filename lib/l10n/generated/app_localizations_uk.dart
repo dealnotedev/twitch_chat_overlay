@@ -10,6 +10,30 @@ class AppLocalizationsUk extends AppLocalizations {
   AppLocalizationsUk([String locale = 'uk']) : super(locale);
 
   @override
+  String get overlaySettings => 'Налаштування';
+
+  @override
+  String get closeSettings => 'Закрити налаштування';
+
+  @override
+  String get settingsSubtitle => 'Ваш чат, ваш стиль';
+
+  @override
+  String get settingsAppearance => 'Вигляд';
+
+  @override
+  String get settingsMessages => 'Повідомлення';
+
+  @override
+  String get settingsIndicators => 'Індикатори';
+
+  @override
+  String get settingsAutosave => 'Зміни зберігаються автоматично';
+
+  @override
+  String get settingsReadMode => 'Видимі в режимі читання';
+
+  @override
   String get nonInteractiveComponents => 'Компоненти в неінтерактивному режимі';
 
   @override

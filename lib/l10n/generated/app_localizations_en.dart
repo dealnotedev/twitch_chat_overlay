@@ -10,6 +10,30 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get overlaySettings => 'Chat settings';
+
+  @override
+  String get closeSettings => 'Close settings';
+
+  @override
+  String get settingsSubtitle => 'Tune your overlay';
+
+  @override
+  String get settingsAppearance => 'Appearance';
+
+  @override
+  String get settingsMessages => 'Messages';
+
+  @override
+  String get settingsIndicators => 'Indicators';
+
+  @override
+  String get settingsAutosave => 'Changes save automatically';
+
+  @override
+  String get settingsReadMode => 'Visible in read mode';
+
+  @override
   String get nonInteractiveComponents => 'Components in non-interactive mode';
 
   @override

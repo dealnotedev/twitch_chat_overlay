@@ -32,7 +32,6 @@ class GifPlaybackControl extends StatelessWidget {
       displayValue: playCount == GifPlayback.unlimitedCount
           ? '∞'
           : '$playCount',
-      icon: Icons.repeat_rounded,
     );
   }
 }

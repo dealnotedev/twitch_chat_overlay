@@ -1,3 +1,21 @@
+# Twitch Chat Overlay 1.4.0
+
+## Changes
+
+- Added a separate settings panel beside the chat, opened with the header's gear button or Configure in the tray. Settings apply live and save automatically; the panel follows the chat's height and scrolls on smaller screens.
+- Grouped typography, transparency, message lifetime, GIF playback and component visibility settings into compact sections. Refined slider alignment, spacing and value controls, and removed unnecessary icons, dividers and value tooltips.
+- Unified the language, settings, lock, sign-out and send buttons with consistent sizes, rounded hover feedback and ripple animations. The language label stays white and scales to fit.
+- Settings close with the gear button, close button, Escape or locking the overlay. Opening settings preserves the chat dimensions and message draft.
+- Updated the tray integration for tray_manager 0.7, preserving localized actions, Show/Hide, update checks and safe resource cleanup.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.3.3
 
 ## Changes
