@@ -5,6 +5,7 @@
   "settingsAppearance": "Appearance",
   "settingsMessages": "Messages",
   "settingsIndicators": "Indicators",
+  "settingsIntegrations": "Integrations",
   "settingsAutosave": "Changes save automatically",
   "settingsReadMode": "Visible in read mode",
   "nonInteractiveComponents": "Components in non-interactive mode",

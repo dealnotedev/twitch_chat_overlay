@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
+import 'package:twitch_chat_overlay/emotes/emote_options.dart';
 
 abstract interface class OverlayLayoutStore {
   Future<OverlayLayout> load();
@@ -7,6 +8,8 @@ abstract interface class OverlayLayoutStore {
 }
 
 final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
+  static const String _sevenTvKey = 'overlay.integrations.sevenTv';
+  static const String _betterTtvKey = 'overlay.integrations.betterTtv';
   static const String _leftKey = 'overlay.layout.left';
   static const String _topKey = 'overlay.layout.top';
   static const String _widthKey = 'overlay.layout.width';
@@ -24,6 +27,10 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   @override
   Future<OverlayLayout> load() async {
     final preferences = await SharedPreferences.getInstance();
+    final emoteOptions = ThirdPartyEmoteOptions(
+      sevenTv: preferences.getBool(_sevenTvKey) ?? false,
+      betterTtv: preferences.getBool(_betterTtvKey) ?? false,
+    );
     final showViewerCount = preferences.getBool(_viewerCountKey) ?? true;
     final showConnectionIndicator =
         preferences.getBool(_connectionIndicatorKey) ?? true;
@@ -53,6 +60,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
 
     if (left == null || top == null || width == null || height == null) {
       return const OverlayLayout.defaults()
+          .withEmoteOptions(emoteOptions)
           .withVisibleComponents(
             showViewerCount: showViewerCount,
             showConnectionIndicator: showConnectionIndicator,
@@ -66,6 +74,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     }
 
     return OverlayLayout(
+          emoteOptions: emoteOptions,
           left: left,
           top: top,
           width: width,
@@ -85,6 +94,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   Future<void> save(OverlayLayout layout) async {
     final preferences = await SharedPreferences.getInstance();
     await Future.wait<void>([
+      preferences.setBool(_sevenTvKey, layout.emoteOptions.sevenTv),
+      preferences.setBool(_betterTtvKey, layout.emoteOptions.betterTtv),
       preferences.setBool(_viewerCountKey, layout.showViewerCount),
       preferences.setBool(
         _connectionIndicatorKey,

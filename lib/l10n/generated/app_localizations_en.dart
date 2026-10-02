@@ -28,6 +28,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsIndicators => 'Indicators';
 
   @override
+  String get settingsIntegrations => 'Integrations';
+
+  @override
   String get settingsAutosave => 'Changes save automatically';
 
   @override

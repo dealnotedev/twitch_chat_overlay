@@ -28,6 +28,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get settingsIndicators => 'Індикатори';
 
   @override
+  String get settingsIntegrations => 'Інтеграції';
+
+  @override
   String get settingsAutosave => 'Зміни зберігаються автоматично';
 
   @override

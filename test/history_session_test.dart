@@ -5,13 +5,159 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
+import 'package:twitch_chat_overlay/emotes/third_party_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_recent_messages.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_token.dart';
 
+const _enabled = ThirdPartyEmoteOptions(sevenTv: true, betterTtv: true);
+
 void main() {
+  test('integrations start off and toggle independently without reconnecting', () async {
+    final requests = <RequestOptions>[];
+    final dio = Dio()
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (r, h) {
+            requests.add(r);
+            _replyEmotes(r, h);
+          },
+        ),
+      );
+    final harness = await _Harness.start(emotes: ThirdPartyEmotes(dio: dio));
+    addTearDown(harness.close);
+    await harness.ready;
+    expect(requests, isEmpty);
+    expect(harness.session.state.emoteOptions, const ThirdPartyEmoteOptions());
+    final loaded = harness.session.states.firstWhere(
+      (s) => s.emoteCatalog.emotes.isNotEmpty,
+    );
+    harness.session.setEmoteOptions(
+      const ThirdPartyEmoteOptions(betterTtv: true),
+    );
+    await loaded.timeout(const Duration(seconds: 5));
+    expect(requests, hasLength(2));
+    expect(requests.every((r) => r.uri.host == 'api.betterttv.net'), isTrue);
+    harness.session.setEmoteOptions(const ThirdPartyEmoteOptions());
+    expect(harness.session.state.emoteCatalog.emotes, isEmpty);
+    expect(harness.session.state.status, ChatConnectionStatus.connected);
+    harness.session.setEmoteOptions(
+      const ThirdPartyEmoteOptions(sevenTv: true),
+    );
+    // Both the 7TV fixture and the native test catalog have no usable entries.
+    await expectLater(harness.session.loadEmotes(), throwsFormatException);
+    expect(requests, hasLength(4));
+    expect(requests.skip(2).every((r) => r.uri.host == '7tv.io'), isTrue);
+    expect(harness.session.state.emoteCatalog.emotes, isEmpty);
+    expect(harness.session.state.status, ChatConnectionStatus.connected);
+    harness.session.setEmoteOptions(
+      const ThirdPartyEmoteOptions(betterTtv: true),
+    );
+    expect((await harness.session.loadEmotes()).single.name, 'OMEGALUL');
+    expect(requests, hasLength(4)); // Re-enabling can reuse the cached set.
+    expect(harness.historyRequests, 1);
+  });
+
+  test('switching off during loading rejects stale picker results and keeps chat connected', () async {
+    final pending = <(RequestOptions, RequestInterceptorHandler)>[];
+    final started = Completer<void>();
+    final dio = Dio()
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (r, h) {
+            pending.add((r, h));
+            if (pending.length == 4) started.complete();
+          },
+        ),
+      );
+    final harness = await _Harness.start(
+      emotes: ThirdPartyEmotes(dio: dio),
+      options: _enabled,
+    );
+    addTearDown(harness.close);
+    await harness.ready;
+    await started.future;
+    final rejected = expectLater(
+      harness.session.loadEmotes(),
+      throwsStateError,
+    );
+    harness.session.setEmoteOptions(const ThirdPartyEmoteOptions());
+    for (final (r, h) in pending) {
+      _replyEmotes(r, h);
+    }
+    await rejected;
+    expect(harness.session.state.emoteCatalog.emotes, isEmpty);
+    expect(harness.session.state.emoteOptions.enabled, isFalse);
+    expect(harness.session.state.status, ChatConnectionStatus.connected);
+    // A subsequent valid enable must still work after the old load completed.
+    harness.session.setEmoteOptions(
+      const ThirdPartyEmoteOptions(betterTtv: true),
+    );
+    expect((await harness.session.loadEmotes()).single.name, 'OMEGALUL');
+    expect(pending, hasLength(4));
+  });
+
+  test('preloads third-party emotes without opening the picker and resolves history', () async {
+    final service = ThirdPartyEmotes(dio: _emoteDio());
+    final harness = await _Harness.start(emotes: service, options: _enabled);
+    addTearDown(harness.close);
+    await harness.ready;
+    if (harness.session.state.emoteCatalog.emotes.isEmpty) {
+      await harness.session.states
+          .firstWhere((s) => s.emoteCatalog.emotes.isNotEmpty)
+          .timeout(const Duration(seconds: 5));
+    }
+    final loaded = harness.session.states.firstWhere((s) => s.items.isNotEmpty);
+    harness.completeHistory(['OMEGALUL']);
+    final state = await loaded.timeout(const Duration(seconds: 5));
+    final message = state.items.single as ChatUserMessage;
+    expect(message.isHistorical, isTrue);
+    expect(message.fragments.single, isA<ChatTextFragment>());
+    expect(
+      state.emoteCatalog.resolve(message.fragments).single,
+      isA<ChatThirdPartyEmoteFragment>(),
+    );
+    // This harness deliberately returns an invalid Helix emote response.
+    // Optional providers remain usable if the native catalog cannot be loaded.
+    expect((await harness.session.loadEmotes()).single.name, 'OMEGALUL');
+  });
+
+  test(
+    'late third-party requests cannot restore a catalog after leaving',
+    () async {
+      final pending = <(RequestOptions, RequestInterceptorHandler)>[];
+      final started = Completer<void>();
+      final dio = Dio()
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (r, h) {
+              pending.add((r, h));
+              if (pending.length == 4) started.complete();
+            },
+          ),
+        );
+      final harness = await _Harness.start(
+        emotes: ThirdPartyEmotes(dio: dio),
+        options: _enabled,
+      );
+      addTearDown(harness.close);
+      await harness.ready;
+      await started.future;
+      // A picker request shares the already pending public HTTP requests.
+      final picker = harness.session.loadEmotes();
+      final rejected = expectLater(picker, throwsStateError);
+      await harness.session.leave();
+      for (final (r, h) in pending) {
+        _replyEmotes(r, h);
+      }
+      await rejected;
+      expect(harness.session.state.emoteCatalog.emotes, isEmpty);
+      expect(harness.session.state.status, ChatConnectionStatus.idle);
+    },
+  );
+
   test(
     'live chat and unseen deletion are preserved during delayed history',
     () async {
@@ -105,7 +251,10 @@ class _Harness {
   Future<void> get ready =>
       historyRequest.future.timeout(const Duration(seconds: 5));
 
-  static Future<_Harness> start() async {
+  static Future<_Harness> start({
+    ThirdPartyEmotes? emotes,
+    ThirdPartyEmoteOptions options = const ThirdPartyEmoteOptions(),
+  }) async {
     final h = _Harness();
     h.server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     h.listener = h.server.listen((request) async {
@@ -157,6 +306,8 @@ class _Harness {
       TwitchHelixClient(auth, dio: h.dio),
       eventSubUrl: 'ws://127.0.0.1:${h.server.port}',
       history: TwitchRecentMessages(dio: h.historyDio),
+      thirdPartyEmotes: emotes,
+      emoteOptions: options,
     );
     await h.session.join(broadcasterId: 'owner');
     return h;
@@ -213,6 +364,26 @@ class _Harness {
     dio.close(force: true);
     historyDio.close(force: true);
   }
+}
+
+Dio _emoteDio() =>
+    Dio()..interceptors.add(InterceptorsWrapper(onRequest: _replyEmotes));
+
+void _replyEmotes(RequestOptions r, RequestInterceptorHandler h) {
+  final global = r.path.endsWith('/global');
+  h.resolve(
+    Response(
+      requestOptions: r,
+      statusCode: 200,
+      data: r.uri.host == '7tv.io'
+          ? (global ? {'emotes': []} : {'emote_set': null})
+          : (global
+                ? [
+                    {'id': '1', 'code': 'OMEGALUL', 'animated': false},
+                  ]
+                : {'channelEmotes': [], 'sharedEmotes': []}),
+    ),
+  );
 }
 
 class _Auth implements TwitchAuth {

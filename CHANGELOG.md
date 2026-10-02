@@ -1,3 +1,20 @@
+# Twitch Chat Overlay 1.5.0
+
+## Changes
+
+- Added optional 7TV and BetterTTV emotes in chat, message history and the emote picker, with global and joined-channel sets.
+- Added an Integrations section in settings with independent, saved switches for 7TV and BetterTTV. Both integrations are off by default; changes apply immediately without reconnecting.
+- Preserved native Twitch emotes, supported animated third-party emotes with the existing GIF playback setting, and added catalog caching and refresh. Unavailable images fall back to their text codes.
+- Made only the integration switches interactive, removing row-wide click and ripple effects. Matched the settings list's top and bottom padding to its side padding.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.4.0
 
 ## Changes

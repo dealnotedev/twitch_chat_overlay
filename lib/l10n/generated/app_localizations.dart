@@ -134,6 +134,12 @@ abstract class AppLocalizations {
   /// **'Indicators'**
   String get settingsIndicators;
 
+  /// No description provided for @settingsIntegrations.
+  ///
+  /// In en, this message translates to:
+  /// **'Integrations'**
+  String get settingsIntegrations;
+
   /// No description provided for @settingsAutosave.
   ///
   /// In en, this message translates to:

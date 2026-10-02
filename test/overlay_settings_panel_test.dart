@@ -74,6 +74,24 @@ void main() {
         await tester.tap(connection);
         await tester.pumpAndSettle();
         expect(layout.showConnectionIndicator, isFalse);
+        final sevenTv = find.byKey(const ValueKey('integration-7tv'));
+        final bttv = find.byKey(const ValueKey('integration-bttv'));
+        expect(layout.emoteOptions.enabled, isFalse);
+        await tester.ensureVisible(sevenTv);
+        await tester.pumpAndSettle();
+        await tester.tap(sevenTv);
+        await tester.pumpAndSettle();
+        expect(layout.emoteOptions.sevenTv, isTrue);
+        expect(layout.emoteOptions.betterTtv, isFalse);
+        await tester.ensureVisible(bttv);
+        await tester.pumpAndSettle();
+        await tester.tap(bttv);
+        await tester.pumpAndSettle();
+        expect(layout.emoteOptions.betterTtv, isTrue);
+        expect(
+          find.text(locale == 'en' ? 'Integrations' : 'Інтеграції'),
+          findsOneWidget,
+        );
         expect(
           find.byKey(const ValueKey('close-settings')).hitTestable(),
           findsOneWidget,

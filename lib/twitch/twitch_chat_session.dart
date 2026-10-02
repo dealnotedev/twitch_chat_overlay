@@ -11,7 +11,9 @@ import 'package:twitch_chat_overlay/twitch/chat_event_mapper.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
-import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
+import 'package:twitch_chat_overlay/chat/chat_emote.dart';
+import 'package:twitch_chat_overlay/chat/emote_catalog.dart';
+import 'package:twitch_chat_overlay/emotes/third_party_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_recent_messages.dart';
@@ -30,6 +32,8 @@ final class ChatState {
     this.badges = const TwitchBadges(),
     this.rewards = const {},
     this.rewardSubscriptionFailed = false,
+    this.emoteCatalog = const EmoteCatalog.empty(),
+    this.emoteOptions = const ThirdPartyEmoteOptions(),
   });
 
   const ChatState.idle()
@@ -38,6 +42,8 @@ final class ChatState {
       badges = const TwitchBadges(),
       rewards = const {},
       rewardSubscriptionFailed = false,
+      emoteCatalog = const EmoteCatalog.empty(),
+      emoteOptions = const ThirdPartyEmoteOptions(),
       broadcasterId = null,
       viewerCount = null,
       streamOffline = false,
@@ -52,6 +58,8 @@ final class ChatState {
   final TwitchBadges badges;
   final Map<String, TwitchRewardAppearance> rewards;
   final bool rewardSubscriptionFailed;
+  final EmoteCatalog emoteCatalog;
+  final ThirdPartyEmoteOptions emoteOptions;
 }
 
 abstract interface class TwitchChatSession {
@@ -60,7 +68,8 @@ abstract interface class TwitchChatSession {
 
   Future<void> join({required String broadcasterId});
   Future<void> leave();
-  Future<List<TwitchEmote>> loadEmotes({bool refresh = false});
+  Future<List<ChatEmote>> loadEmotes({bool refresh = false});
+  void setEmoteOptions(ThirdPartyEmoteOptions options);
   Future<SendChatResult> send(String message, {String? replyTo});
   Future<void> deleteMessage(String messageId);
 }
@@ -71,12 +80,18 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     this._helix, {
     this.eventSubUrl = _defaultEventSubUrl,
     this.history,
+    this.thirdPartyEmotes,
+    this._emoteOptions = const ThirdPartyEmoteOptions(),
   });
 
   static const String _defaultEventSubUrl =
       'wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30';
   final String eventSubUrl;
   final TwitchRecentMessages? history;
+  final ThirdPartyEmotes? thirdPartyEmotes;
+  ThirdPartyEmoteOptions _emoteOptions;
+  int _emoteOptionsRevision = 0;
+  EmoteCatalog _emoteCatalog = const EmoteCatalog.empty();
   bool _historyStarted = false;
   List<ChatMutation>? _historyJournal;
 
@@ -84,8 +99,9 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   final TwitchHelixClient _helix;
   final TwitchChatEventMapper _mapper = const TwitchChatEventMapper();
   final ChatTimeline _timeline = ChatTimeline();
+  // Listeners may change integration options in response to a catalog update.
   final StreamController<ChatState> _states =
-      StreamController<ChatState>.broadcast(sync: true);
+      StreamController<ChatState>.broadcast();
   final Queue<String> _messageIdOrder = Queue();
   final Set<String> _messageIds = {};
   final Random _random = Random();
@@ -95,6 +111,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   _EventSubSocket? _candidate;
   Timer? _retryTimer;
   Timer? _viewerTimer;
+  Timer? _emoteTimer;
   int? _viewerCount;
   bool _streamOffline = false;
   bool _viewerLoadInFlight = false;
@@ -138,12 +155,17 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     });
     unawaited(_loadBadges(''));
     unawaited(_loadBadges(broadcasterId));
+    unawaited(_loadThirdPartyEmotes());
+    _updateEmoteTimer();
     await _connect(eventSubUrl, inheritedSubscriptions: false);
   }
 
   @override
   Future<void> leave() async {
     _generation++;
+    _emoteCatalog = const EmoteCatalog.empty();
+    _emoteTimer?.cancel();
+    _emoteTimer = null;
     _historyStarted = false;
     _historyJournal = null;
     _viewerTimer?.cancel();
@@ -173,18 +195,88 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   }
 
   @override
-  Future<List<TwitchEmote>> loadEmotes({bool refresh = false}) async {
+  Future<List<ChatEmote>> loadEmotes({bool refresh = false}) async {
     final broadcasterId = _broadcasterId;
     final generation = _generation;
+    final optionsRevision = _emoteOptionsRevision;
     if (broadcasterId == null) throw StateError('Chat is not connected');
-    final emotes = await _helix.getUserEmotes(
-      broadcasterId: broadcasterId,
-      refresh: refresh,
-    );
-    if (generation != _generation || broadcasterId != _broadcasterId) {
+    Object? twitchError;
+    final results = await Future.wait<List<ChatEmote>>([
+      (() async {
+        try {
+          return await _helix.getUserEmotes(
+            broadcasterId: broadcasterId,
+            refresh: refresh,
+          );
+        } catch (error) {
+          twitchError = error;
+          return <ChatEmote>[];
+        }
+      })(),
+      _loadThirdPartyEmotes(refresh: refresh).then((catalog) => catalog.emotes),
+    ]);
+    if (generation != _generation ||
+        broadcasterId != _broadcasterId ||
+        optionsRevision != _emoteOptionsRevision) {
       throw StateError('Chat changed while loading emotes');
     }
-    return emotes;
+    if (results.every((list) => list.isEmpty) && twitchError != null) {
+      throw twitchError!;
+    }
+    // Native Twitch names retain precedence in the picker as in incoming chat.
+    final twitchNames = results.first.map((emote) => emote.name).toSet();
+    return List.unmodifiable([
+      ...results.first,
+      ...results.last.where((emote) => !twitchNames.contains(emote.name)),
+    ]);
+  }
+
+  Future<EmoteCatalog> _loadThirdPartyEmotes({bool refresh = false}) async {
+    final source = thirdPartyEmotes;
+    final broadcasterId = _broadcasterId;
+    final generation = _generation;
+    final optionsRevision = _emoteOptionsRevision;
+    if (source == null || broadcasterId == null || !_emoteOptions.enabled) {
+      return const EmoteCatalog.empty();
+    }
+    final catalog = await source.load(
+      broadcasterId,
+      options: _emoteOptions,
+      refresh: refresh,
+    );
+    if (generation == _generation &&
+        broadcasterId == _broadcasterId &&
+        optionsRevision == _emoteOptionsRevision) {
+      _emoteCatalog = catalog;
+      _emit(_state.status, error: _state.error);
+    }
+    return catalog;
+  }
+
+  @override
+  void setEmoteOptions(ThirdPartyEmoteOptions options) {
+    if (options == _emoteOptions) return;
+    _emoteOptions = options;
+    _emoteOptionsRevision++;
+    // Remove disabled providers immediately, before any pending HTTP reply.
+    _emoteCatalog = EmoteCatalog(
+      _emoteCatalog.emotes.where((emote) => options.allows(emote.provider)),
+    );
+    _updateEmoteTimer();
+    _emit(_state.status, error: _state.error);
+    unawaited(_loadThirdPartyEmotes());
+  }
+
+  void _updateEmoteTimer() {
+    _emoteTimer?.cancel();
+    _emoteTimer = null;
+    if (_broadcasterId != null &&
+        thirdPartyEmotes != null &&
+        _emoteOptions.enabled) {
+      _emoteTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+        unawaited(_loadThirdPartyEmotes());
+      });
+    }
   }
 
   @override
@@ -602,6 +694,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       badges: TwitchBadges(Map.unmodifiable(_badgeChannels)),
       rewards: _rewards,
       rewardSubscriptionFailed: _rewardSubscriptionFailed,
+      emoteCatalog: _emoteCatalog,
+      emoteOptions: _emoteOptions,
     );
     _state = next;
     _states.add(next);

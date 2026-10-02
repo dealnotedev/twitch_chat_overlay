@@ -1,3 +1,4 @@
+import 'package:twitch_chat_overlay/emotes/emote_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +34,7 @@ void main() {
       });
       final host = MethodChannelOverlayHost();
       final store = _LayoutStore();
+      final chat = _Chat();
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en'),
@@ -45,11 +47,12 @@ void main() {
               top: .08,
               width: .32,
               height: .8,
+              emoteOptions: ThirdPartyEmoteOptions(betterTtv: true),
             ),
             layoutStore: store,
             overlayHost: host,
             twitchAuth: _Auth(),
-            twitchChat: _Chat(),
+            twitchChat: chat,
           ),
         ),
       );
@@ -74,6 +77,24 @@ void main() {
       expect(panel, findsOneWidget);
       expect(tester.getRect(find.byType(ChatPanel)), chatRect);
       expect(tester.getRect(panel).right, lessThan(chatRect.left));
+      expect(chat.options, const ThirdPartyEmoteOptions(betterTtv: true));
+      final sevenTv = find.byKey(const ValueKey('integration-7tv'));
+      final bttv = find.byKey(const ValueKey('integration-bttv'));
+      await tester.ensureVisible(sevenTv);
+      await tester.pumpAndSettle();
+      await tester.tap(sevenTv);
+      await tester.pumpAndSettle();
+      expect(
+        chat.options,
+        const ThirdPartyEmoteOptions(sevenTv: true, betterTtv: true),
+      );
+      expect(store.saved!.emoteOptions, chat.options);
+      await tester.ensureVisible(bttv);
+      await tester.pumpAndSettle();
+      await tester.tap(bttv);
+      await tester.pumpAndSettle();
+      expect(chat.options, const ThirdPartyEmoteOptions(sevenTv: true));
+      expect(store.saved!.emoteOptions, chat.options);
       // Escape must close settings even when focus returns to the composer.
       await tester.tap(find.byType(TextField));
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -144,6 +165,10 @@ class _Auth extends Fake implements TwitchAuth {
 }
 
 class _Chat extends Fake implements TwitchChatSession {
+  ThirdPartyEmoteOptions? options;
+  @override
+  void setEmoteOptions(ThirdPartyEmoteOptions value) => options = value;
+
   @override
   ChatState get state => const ChatState.idle();
   @override

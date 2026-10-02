@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
-import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
+import 'package:twitch_chat_overlay/chat/chat_emote.dart';
 
 class ChatEmotePicker extends StatefulWidget {
   const ChatEmotePicker({
@@ -16,9 +16,9 @@ class ChatEmotePicker extends StatefulWidget {
     super.key,
   });
 
-  final Future<List<TwitchEmote>> emotes;
+  final Future<List<ChatEmote>> emotes;
   final Object tapGroup;
-  final ValueChanged<TwitchEmote> onSelected;
+  final ValueChanged<ChatEmote> onSelected;
   final VoidCallback onReload;
   final VoidCallback onClose;
 
@@ -59,14 +59,15 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
               fontSize: 12,
               color: Colors.white,
             ),
-            child: FutureBuilder<List<TwitchEmote>>(
+            child: FutureBuilder<List<ChatEmote>>(
               future: widget.emotes,
               builder: (context, snapshot) {
-                final emotes = (snapshot.data ?? const <TwitchEmote>[])
+                final emotes = (snapshot.data ?? const <ChatEmote>[])
                     .where(
                       (emote) =>
                           emote.name.toLowerCase().contains(_query) ||
-                          emote.ownerName.toLowerCase().contains(_query),
+                          emote.ownerName.toLowerCase().contains(_query) ||
+                          emote.provider.label.toLowerCase().contains(_query),
                     )
                     .toList();
                 return RawScrollbar(
@@ -240,14 +241,19 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
   }
 
   Iterable<Widget> _emoteSlivers(
-    List<TwitchEmote> emotes,
+    List<ChatEmote> emotes,
     AppLocalizations l10n,
   ) sync* {
-    final groups = <String, List<TwitchEmote>>{};
+    final groups = <String, List<ChatEmote>>{};
     for (final emote in emotes) {
-      groups.putIfAbsent(emote.ownerId, () => []).add(emote);
+      final group = emote.provider == EmoteProvider.twitch
+          ? 'twitch:${emote.ownerId}'
+          : emote.provider.name;
+      groups.putIfAbsent(group, () => []).add(emote);
     }
-    String ownerName(TwitchEmote emote) => emote.ownerId.isEmpty
+    String ownerName(ChatEmote emote) => emote.provider != EmoteProvider.twitch
+        ? emote.provider.label
+        : emote.ownerId.isEmpty
         ? 'Twitch'
         : emote.ownerName.isEmpty
         ? l10n.unknownEmoteOwner
@@ -256,6 +262,8 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
       ..sort((a, b) {
         final first = a.first;
         final second = b.first;
+        final provider = first.provider.index.compareTo(second.provider.index);
+        if (provider != 0) return provider;
         // Channel collections first, then Twitch's platform-wide emotes.
         if (first.ownerId.isEmpty != second.ownerId.isEmpty) {
           return first.ownerId.isEmpty ? 1 : -1;
@@ -291,7 +299,9 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
           itemBuilder: (context, index) {
             final emote = group[index];
             return Semantics(
-              key: ValueKey('emote-${emote.id}'),
+              key: ValueKey(
+                'emote-${emote.provider == EmoteProvider.twitch ? emote.id : emote.key}',
+              ),
               label: emote.name,
               button: true,
               child: InkWell(
@@ -302,7 +312,7 @@ class _ChatEmotePickerState extends State<ChatEmotePicker> {
                 child: Padding(
                   padding: const EdgeInsets.all(5),
                   child: CachedNetworkImage(
-                    imageUrl: emote.imageUrl,
+                    imageUrl: emote.thumbnailUrl ?? emote.imageUrl,
                     fit: BoxFit.contain,
                     fadeInDuration: Duration.zero,
                     placeholder: (_, _) => const Icon(

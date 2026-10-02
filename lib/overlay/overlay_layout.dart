@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:twitch_chat_overlay/emotes/emote_options.dart';
+
 import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
 
 import 'package:twitch_chat_overlay/chat/chat_font_size.dart';
@@ -34,6 +36,7 @@ final class OverlayLayout {
     this.chatFontWeight = ChatFontWeight.defaultWeight,
     this.showViewerCount = true,
     this.showConnectionIndicator = true,
+    this.emoteOptions = const ThirdPartyEmoteOptions(),
   });
 
   const OverlayLayout.defaults()
@@ -48,7 +51,8 @@ final class OverlayLayout {
       chatFontSize = ChatFontSize.defaultSize,
       chatFontWeight = ChatFontWeight.defaultWeight,
       showViewerCount = true,
-      showConnectionIndicator = true;
+      showConnectionIndicator = true,
+      emoteOptions = const ThirdPartyEmoteOptions();
 
   static const double defaultContentOpacity = 1.0;
   static const double defaultBackgroundOpacity = 0.85;
@@ -67,11 +71,29 @@ final class OverlayLayout {
   final int chatFontWeight;
   final bool showViewerCount;
   final bool showConnectionIndicator;
+  final ThirdPartyEmoteOptions emoteOptions;
+
+  OverlayLayout withEmoteOptions(ThirdPartyEmoteOptions value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+    gifPlayCount: gifPlayCount,
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
+    emoteOptions: value,
+  );
 
   OverlayLayout withVisibleComponents({
     bool? showViewerCount,
     bool? showConnectionIndicator,
   }) => OverlayLayout(
+    emoteOptions: emoteOptions,
     left: left,
     top: top,
     width: width,
@@ -88,6 +110,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withChatFontWeight(int value) => OverlayLayout(
+    emoteOptions: emoteOptions,
     left: left,
     top: top,
     width: width,
@@ -103,6 +126,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withChatFontSize(double value) => OverlayLayout(
+    emoteOptions: emoteOptions,
     left: left,
     top: top,
     width: width,
@@ -118,6 +142,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withMessageLifetimeMinutes(int value) => OverlayLayout(
+    emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
@@ -136,6 +161,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withBackgroundOpacity(double value) => OverlayLayout(
+    emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
@@ -151,6 +177,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withContentOpacity(double value) => OverlayLayout(
+    emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
@@ -168,6 +195,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withGifPlayCount(int value) => OverlayLayout(
+    emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
     chatFontSize: chatFontSize,
@@ -262,6 +290,7 @@ final class OverlayLayout {
     if (viewport.isEmpty) return this;
     final clamped = _clamp(rect, viewport);
     return OverlayLayout(
+      emoteOptions: emoteOptions,
       showViewerCount: showViewerCount,
       showConnectionIndicator: showConnectionIndicator,
       chatFontSize: chatFontSize,

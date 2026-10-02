@@ -1,3 +1,5 @@
+import 'package:twitch_chat_overlay/emotes/emote_options.dart';
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -155,6 +157,9 @@ class _Auth extends Fake implements TwitchAuth {
 }
 
 class _Chat extends Fake implements TwitchChatSession {
+  @override
+  void setEmoteOptions(ThirdPartyEmoteOptions options) {}
+
   @override
   ChatState get state => const ChatState.idle();
   @override

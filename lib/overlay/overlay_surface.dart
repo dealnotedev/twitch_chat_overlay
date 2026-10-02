@@ -61,6 +61,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
     super.initState();
     FocusManager.instance.addEarlyKeyEventHandler(_handleSettingsKey);
     _layout = widget.initialLayout;
+    widget.twitchChat.setEmoteOptions(_layout.emoteOptions);
     _hostState = widget.overlayHost.state;
     _authState = widget.twitchAuth.state;
     _chatState = widget.twitchChat.state;
@@ -246,6 +247,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
 
   void _updateLayout(OverlayLayout value) {
     setState(() => _layout = value);
+    widget.twitchChat.setEmoteOptions(value.emoteOptions);
   }
 
   void _saveLayout() {

@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
+import 'package:twitch_chat_overlay/chat/chat_emote.dart';
+import 'package:twitch_chat_overlay/emotes/emote_options.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
@@ -49,6 +51,53 @@ const sent = SendChatResult(sent: true, messageId: 'sent', dropReason: null);
 final messageInput = find.byKey(const ValueKey('chat-message-input'));
 
 void main() {
+  testWidgets(
+    'an open picker refreshes immediately when integration options change',
+    (tester) async {
+      await primeEmoteImages(tester);
+      var options = const ThirdPartyEmoteOptions(sevenTv: true);
+      var requests = 0;
+      final pending = Completer<List<ChatEmote>>();
+      Future<List<ChatEmote>> load({bool refresh = false}) {
+        requests++;
+        return options.sevenTv ? pending.future : Future.value(library);
+      }
+
+      Widget current() => app(
+        load: load,
+        chatState: ChatState(
+          status: ChatConnectionStatus.connected,
+          items: const [],
+          emoteOptions: options,
+        ),
+      );
+      await tester.pumpWidget(current());
+      await tester.tap(find.byTooltip('Emotes'));
+      await tester.pump();
+      expect(requests, 1);
+      options = const ThirdPartyEmoteOptions();
+      await tester.pumpWidget(current());
+      await tester.pumpAndSettle();
+      expect(requests, 2);
+      expect(find.byKey(const ValueKey('emote-25')), findsOneWidget);
+      pending.complete([
+        const ChatEmote(
+          id: 'third',
+          name: 'OMEGALUL',
+          provider: EmoteProvider.sevenTv,
+          imageUrl: 'https://example.com/disabled.webp',
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('emote-sevenTv:third:OMEGALUL')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('emote-25')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test('emote insertion replaces selection and separates adjacent tokens', () {
     final result = insertChatEmote(
       const TextEditingValue(
@@ -301,7 +350,11 @@ Widget app({
   double width = 400,
   double height = 440,
   bool interactive = true,
-  Future<List<TwitchEmote>> Function({bool refresh})? load,
+  Future<List<ChatEmote>> Function({bool refresh})? load,
+  ChatState chatState = const ChatState(
+    status: ChatConnectionStatus.connected,
+    items: [],
+  ),
   Future<SendChatResult> Function(String, {String? replyTo})? onSend,
 }) => MaterialApp(
   scrollBehavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
@@ -327,10 +380,7 @@ Widget app({
               expiresAt: DateTime.utc(2030),
             ),
           ),
-          chatState: const ChatState(
-            status: ChatConnectionStatus.connected,
-            items: [],
-          ),
+          chatState: chatState,
           interactive: interactive,
           onSignIn: () async {},
           onSignOut: () async {},

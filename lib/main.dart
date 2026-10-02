@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:twitch_chat_overlay/emotes/third_party_emotes.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:twitch_chat_overlay/l10n/locale_preferences.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +38,8 @@ Future<void> main() async {
     twitchAuth,
     twitchHelix,
     history: TwitchRecentMessages(),
+    thirdPartyEmotes: ThirdPartyEmotes(),
+    emoteOptions: initialLayout.emoteOptions,
   );
 
   runApp(

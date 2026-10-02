@@ -6,6 +6,7 @@ import 'package:twitch_chat_overlay/overlay/chat_font_size_control.dart';
 import 'package:twitch_chat_overlay/overlay/chat_font_weight_control.dart';
 import 'package:twitch_chat_overlay/overlay/component_visibility_control.dart';
 import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
+import 'package:twitch_chat_overlay/overlay/integrations_control.dart';
 import 'package:twitch_chat_overlay/overlay/message_lifetime_control.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/setting_slider.dart';
@@ -165,7 +166,7 @@ class _OverlaySettingsPanelState extends State<OverlaySettingsPanel> {
                         child: SingleChildScrollView(
                           key: const ValueKey('settings-scroll'),
                           controller: _scrollController,
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -245,6 +246,19 @@ class _OverlaySettingsPanelState extends State<OverlaySettingsPanel> {
                                             showConnectionIndicator: value,
                                           ),
                                         ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              _SettingsSection(
+                                title: l10n.settingsIntegrations,
+                                icon: Icons.extension_outlined,
+                                children: [
+                                  IntegrationsControl(
+                                    options: layout.emoteOptions,
+                                    onChanged: (value) => _changeAndSave(
+                                      layout.withEmoteOptions(value),
+                                    ),
                                   ),
                                 ],
                               ),

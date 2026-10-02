@@ -35,7 +35,8 @@ normal use; Debug builds also retain the development runtime and tooling.
 - Twitch credentials stored as `twitch_auth` JSON in `SharedPreferences`.
 - EventSub WebSocket with keepalive, deduplication, reconnect URL, and backoff.
 - Message sending through the Helix Chat API.
-- Compact Twitch-style composer with sender-specific emote search and cursor insertion.
+- Compact Twitch-style composer with sender-specific Twitch emotes, 7TV/BetterTTV
+  search and cursor insertion.
 - Session timeline without a message-count cap, with moderation mutations.
 - Optional message lifetime from 1 to 60 minutes with a smooth fade-out.
   The default is unlimited ("∞"), selected one step below 1 minute.
@@ -75,7 +76,8 @@ once per channel join. The service may have no history on a channel's first requ
 Only the public channel login is sent to Recent Messages, never OAuth credentials.
 IRC history preserves text, static Twitch emotes, badges, replies and supplied
 subscription notices; richer EventSub-only fragments and payment receipts cannot
-be reconstructed from it. Third-party emotes are not interpreted.
+be reconstructed from it. 7TV and BetterTTV codes are resolved for both history
+and live messages using the current channel's catalog.
 
 Global and channel badge catalogs are loaded through Helix using the existing
 OAuth token (no extra scopes). Channel images override global versions by
@@ -155,6 +157,49 @@ preferred where available; animated-only emotes are also supported.
 
 OAuth sign-in requests `user:read:emotes`. Loading errors have a retry action and do not prevent typing or sending ordinary messages.
 
+### Optional 7TV and BetterTTV emotes
+
+Both providers are off by default, including existing installations without
+saved integration preferences. Open chat settings and use the **Integrations**
+section to enable 7TV and BetterTTV independently. Changes save automatically
+and apply to visible messages and the open emote picker without reconnecting.
+Disabling a provider immediately restores its emote codes to text; delayed API
+responses cannot restore disabled entries. Re-enabling may reuse cached sets.
+
+Preferences are stored alongside the overlay settings in SharedPreferences.
+`main.dart` supplies the saved `ThirdPartyEmoteOptions` and a separate
+`ThirdPartyEmotes` HTTP client to the chat session; there are no integration
+build flags. Disabled providers issue no new catalog requests and contribute
+no images or picker entries. Twitch authentication headers are never used for
+third-party requests.
+
+Enabled global and channel sets load in parallel on joining or enabling an
+integration, without blocking EventSub.
+BTTV includes both owned and shared channel emotes; 7TV uses each set's alias and
+selects a supported image variant from the supplied CDN files. Channel names
+override globals, with 7TV taking precedence over BTTV within the same scope.
+Native Twitch fragments always retain their identity, including Giant Emotes.
+The picker groups entries under Twitch owners, 7TV and BetterTTV; selecting an
+entry inserts its code into the normal Twitch message composer.
+
+Matching is case-sensitive and only replaces whole whitespace-delimited tokens
+in plain text fragments. Original messages remain unchanged for replies and
+moderation. Loading or refreshing the catalog updates already visible messages,
+including history. Third-party images preserve their proportions at 28 pixels
+high, bounded by the message width and a 140-pixel maximum. Animations follow the
+existing GIF playback setting; image failures fall back to the original code.
+
+Catalog metadata is cached for 30 minutes and checked once per minute while
+connected. Failed requests preserve the last good set and back off for 30 seconds;
+a missing channel account is an empty set. The picker's refresh button forces
+catalog reloading. Responses from a departed session cannot replace the active
+catalog. Image files use the existing disk cache.
+
+This first version uses the joined channel's sets, including for Shared Chat
+messages. Source-channel sets, personal emotes, zero-width/modifier composition,
+cosmetics and provider event streams are not implemented. Modifier emotes remain
+text and are omitted from the picker until composition is supported.
+
 ### Reply and delete actions
 
 In setup mode, hover a message (or focus its actions with the keyboard) to reveal
@@ -198,7 +243,8 @@ rejected and require signing in again; no migration is performed.
 - AutoMod held-message queues, suspicious-user/moderator notices, chat mode
   updates and whispers are not subscribed to or rendered.
 - Reply context and a reply composer are supported; thread navigation is not implemented.
-- Previous chat history depends on Recent Messages availability; third-party emotes are not supported.
+- Previous chat history depends on Recent Messages availability; third-party
+  emote availability reflects the current catalog rather than historical sets.
 
 ## Updates
 

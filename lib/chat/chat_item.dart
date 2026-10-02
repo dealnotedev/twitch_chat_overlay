@@ -1,3 +1,5 @@
+import 'package:twitch_chat_overlay/chat/chat_emote.dart';
+
 sealed class ChatItem {
   const ChatItem({
     required this.id,
@@ -230,6 +232,12 @@ final class ChatEmoteFragment extends ChatFragment {
   String _imageUrl(String scale) =>
       'https://static-cdn.jtvnw.net/emoticons/v2/$id/'
       '${animated ? 'animated' : 'static'}/dark/$scale';
+}
+
+/// Kept separate so Twitch Power-ups only select native Twitch emotes.
+final class ChatThirdPartyEmoteFragment extends ChatFragment {
+  ChatThirdPartyEmoteFragment({required this.emote}) : super(text: emote.name);
+  final ChatEmote emote;
 }
 
 final class ChatCheermoteFragment extends ChatFragment {

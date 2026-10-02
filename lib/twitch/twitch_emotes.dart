@@ -1,18 +1,15 @@
-final class TwitchEmote {
-  const TwitchEmote({
-    required this.id,
-    required this.name,
-    required this.imageUrl,
-    this.ownerId = '',
-    this.ownerName = '',
-    this.type = 'none',
-  });
+import 'package:twitch_chat_overlay/chat/chat_emote.dart';
 
-  final String id;
-  final String name;
-  final String imageUrl;
-  final String ownerId;
-  final String ownerName;
+final class TwitchEmote extends ChatEmote {
+  const TwitchEmote({
+    required super.id,
+    required super.name,
+    required super.imageUrl,
+    super.ownerId = '',
+    super.ownerName = '',
+    this.type = 'none',
+  }) : super(provider: EmoteProvider.twitch);
+
   final String type;
 
   TwitchEmote withOwnerName(String name) => TwitchEmote(

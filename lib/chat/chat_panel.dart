@@ -13,7 +13,8 @@ import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_actions.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote_picker.dart';
-import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
+import 'package:twitch_chat_overlay/chat/chat_emote.dart';
+import 'package:twitch_chat_overlay/chat/chat_emote_scope.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_entrance.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
@@ -61,7 +62,7 @@ class ChatPanel extends StatefulWidget {
   final Future<SendChatResult> Function(String message, {String? replyTo})
   onSend;
   final Future<void> Function(String messageId)? onDeleteMessage;
-  final Future<List<TwitchEmote>> Function({bool refresh}) onLoadEmotes;
+  final Future<List<ChatEmote>> Function({bool refresh}) onLoadEmotes;
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -77,7 +78,7 @@ class _ChatPanelState extends State<ChatPanel> {
   final Set<String> _deletingIds = {};
   int _actionGeneration = 0;
   bool _emotesOpen = false;
-  Future<List<TwitchEmote>>? _emotesFuture;
+  Future<List<ChatEmote>>? _emotesFuture;
   final Object _emoteTapGroup = Object();
   final Stopwatch _arrivalClock = Stopwatch()..start();
   final Map<String, Duration> _messageArrivals = {};
@@ -124,9 +125,13 @@ class _ChatPanelState extends State<ChatPanel> {
   void didUpdateWidget(ChatPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.authState.status != TwitchAuthStatus.signedIn ||
-        oldWidget.authState.token?.userId != widget.authState.token?.userId) {
+        oldWidget.authState.token?.userId != widget.authState.token?.userId ||
+        oldWidget.chatState.broadcasterId != widget.chatState.broadcasterId) {
       _emotesFuture = null;
       _emotesOpen = false;
+    }
+    if (oldWidget.chatState.emoteOptions != widget.chatState.emoteOptions) {
+      _emotesFuture = _emotesOpen ? _requestEmotes() : null;
     }
     if (oldWidget.authState.token?.userId != widget.authState.token?.userId ||
         oldWidget.chatState.broadcasterId != widget.chatState.broadcasterId ||
@@ -227,7 +232,12 @@ class _ChatPanelState extends State<ChatPanel> {
             child: LayoutBuilder(
               builder: (context, constraints) => Stack(
                 children: [
-                  Positioned.fill(child: body),
+                  Positioned.fill(
+                    child: ChatEmoteScope(
+                      catalog: widget.chatState.emoteCatalog,
+                      child: body,
+                    ),
+                  ),
                   if (_emotesOpen &&
                       _emotesFuture != null &&
                       widget.interactive &&
@@ -476,8 +486,8 @@ class _ChatPanelState extends State<ChatPanel> {
     );
   }
 
-  Future<List<TwitchEmote>> _requestEmotes({bool refresh = false}) {
-    final request = Future<List<TwitchEmote>>.sync(
+  Future<List<ChatEmote>> _requestEmotes({bool refresh = false}) {
+    final request = Future<List<ChatEmote>>.sync(
       () => widget.onLoadEmotes(refresh: refresh),
     );
     // Keep late errors handled if the picker closes before the next frame.
@@ -502,7 +512,7 @@ class _ChatPanelState extends State<ChatPanel> {
     if (_emotesOpen) setState(() => _emotesOpen = false);
   }
 
-  void _insertEmote(TwitchEmote emote) {
+  void _insertEmote(ChatEmote emote) {
     final value = insertChatEmote(_messageController.value, emote.name);
     if (value == null) {
       setState(() => _sendError = AppLocalizations.of(context).messageTooLong);

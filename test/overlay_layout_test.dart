@@ -4,11 +4,72 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
+import 'package:twitch_chat_overlay/emotes/emote_options.dart';
 
 void main() {
   const viewport = Size(1920, 1080);
 
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('integrations default off for new and existing installations', () async {
+    final store = SharedPreferencesOverlayLayoutStore();
+    for (final values in [
+      <String, Object>{},
+      <String, Object>{
+        'overlay.layout.left': .1,
+        'overlay.layout.top': .1,
+        'overlay.layout.width': .4,
+        'overlay.layout.height': .7,
+      },
+    ]) {
+      SharedPreferences.setMockInitialValues(values);
+      expect((await store.load()).emoteOptions, const ThirdPartyEmoteOptions());
+    }
+  });
+
+  test(
+    'integration preferences survive other controls, geometry and reload',
+    () async {
+      final store = SharedPreferencesOverlayLayoutStore();
+      for (final sevenTv in [false, true]) {
+        for (final betterTtv in [false, true]) {
+          SharedPreferences.setMockInitialValues({
+            'overlay.integrations.sevenTv': sevenTv,
+            'overlay.integrations.betterTtv': betterTtv,
+          });
+          final options = ThirdPartyEmoteOptions(
+            sevenTv: sevenTv,
+            betterTtv: betterTtv,
+          );
+          final initial = await store.load();
+          expect(initial.emoteOptions, options);
+          final layout = initial
+              .withVisibleComponents(showViewerCount: false)
+              .withChatFontWeight(800)
+              .withChatFontSize(18)
+              .withContentOpacity(.35)
+              .withBackgroundOpacity(.2)
+              .withMessageLifetimeMinutes(5)
+              .withGifPlayCount(3)
+              .moveBy(const Offset(20, 20), viewport)
+              .resizeBy(
+                ResizeHandle.bottomRight,
+                const Offset(20, 20),
+                viewport,
+              );
+          expect(layout.emoteOptions, options);
+          await store.save(layout);
+          expect((await store.load()).emoteOptions, options);
+          final changed = layout.withEmoteOptions(
+            options.copyWith(sevenTv: !sevenTv),
+          );
+          expect(changed.emoteOptions.betterTtv, betterTtv);
+          expect(changed.resolve(viewport), layout.resolve(viewport));
+          expect(changed.chatFontSize, 18);
+        }
+      }
+    },
+  );
 
   test(
     'component visibility loads defaults and survives edits and reloads',

@@ -1,5 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:twitch_chat_overlay/chat/chat_emote_scope.dart';
+import 'package:twitch_chat_overlay/chat/chat_emote.dart';
+
 import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -29,7 +32,13 @@ class ChatMessageContent extends StatelessWidget {
   final StreamerMentionTarget? mentionTarget;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) =>
+        _buildContent(context, constraints.maxWidth),
+  );
+
+  Widget _buildContent(BuildContext context, double maxWidth) {
+    final fragments = ChatEmoteScope.of(context).resolve(this.fragments);
     final children = <Widget>[];
     var spans = <InlineSpan>[...prefix];
     void flushText() {
@@ -54,7 +63,7 @@ class ChatMessageContent extends StatelessWidget {
         flushText();
         children.add(ChatGifImage(fragment: fragment));
       } else {
-        spans.add(_fragmentSpan(context, fragment, mentionTarget));
+        spans.add(_fragmentSpan(context, fragment, mentionTarget, maxWidth));
       }
     }
     flushText();
@@ -260,6 +269,7 @@ InlineSpan _fragmentSpan(
   BuildContext context,
   ChatFragment fragment,
   StreamerMentionTarget? mentionTarget,
+  double maxWidth,
 ) {
   final pattern = mentionTarget?.textPattern;
   if (fragment is ChatTextFragment && pattern != null) {
@@ -298,6 +308,13 @@ InlineSpan _fragmentSpan(
       ),
     ),
     ChatEmoteFragment() => _emoteSpan(fragment),
+    ChatThirdPartyEmoteFragment() => WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: _ThirdPartyEmoteImage(
+        emote: fragment.emote,
+        maxWidth: math.max(1, math.min(140, maxWidth - 2)),
+      ),
+    ),
     ChatGifFragment() => throw StateError('GIFs are rendered as media blocks'),
   };
 }
@@ -319,3 +336,39 @@ InlineSpan _emoteSpan(ChatEmoteFragment fragment) => WidgetSpan(
     ),
   ),
 );
+
+class _ThirdPartyEmoteImage extends StatelessWidget {
+  const _ThirdPartyEmoteImage({required this.emote, required this.maxWidth});
+  final ChatEmote emote;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: emote.name,
+    image: true,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: SizedBox(
+          height: 28,
+          width: emote.aspectRatio == null
+              ? null
+              : (28 * emote.aspectRatio!).clamp(1.0, maxWidth),
+          child: emote.animated
+              ? _ChatPlaybackImage(
+                  url: emote.imageUrl,
+                  errorBuilder: (_, _, _) => Text(emote.name),
+                )
+              : CachedNetworkImage(
+                  imageUrl: emote.imageUrl,
+                  height: 28,
+                  fit: BoxFit.contain,
+                  fadeInDuration: Duration.zero,
+                  errorWidget: (_, _, _) => Text(emote.name),
+                ),
+        ),
+      ),
+    ),
+  );
+}
