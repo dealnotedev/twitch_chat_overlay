@@ -17,13 +17,11 @@ final class LocaleViewModel extends BaseViewModel {
     _locale = register(
       ObservableValue(
         current: Locale(preferences.getString(key) == 'en' ? 'en' : 'uk'),
-        sync: true,
       ),
     );
     _saveProcess = register(
       ObservableValue<SimpleFailableProcess>(
         current: const SimpleFailableProcess.initial(),
-        sync: true,
       ),
     );
   }

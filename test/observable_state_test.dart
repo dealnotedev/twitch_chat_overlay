@@ -6,9 +6,9 @@ import 'package:observable_state/observable_state.dart';
 
 void main() {
   test(
-    'synchronous listeners can issue another change without reordering it',
+    'notifications are synchronous by default and nested changes stay ordered',
     () async {
-      final value = ObservableValue<int>(current: 0, sync: true);
+      final value = ObservableValue<int>(current: 0);
       addTearDown(value.dispose);
       final received = <int>[];
       final first = value.changes.listen((next) {
@@ -26,7 +26,7 @@ void main() {
   test(
     'a synchronous listener can dispose the value during delivery',
     () async {
-      final value = ObservableValue<int>(current: 0, sync: true);
+      final value = ObservableValue<int>(current: 0);
       final done = Completer<void>();
       value.changes.listen((_) => value.dispose(), onDone: done.complete);
       value.set(1);
@@ -39,7 +39,7 @@ void main() {
   testWidgets(
     'late-mounted builders render the latest value on their first frame',
     (tester) async {
-      final value = ObservableValue<int>(current: 1);
+      final value = ObservableValue<int>(current: 1, sync: false);
       addTearDown(value.dispose);
       value.set(2); // No listener existed when this update happened.
       final rendered = <int>[];
@@ -63,9 +63,9 @@ void main() {
   );
 
   test(
-    'independent consumers receive changes and disposal closes both streams',
+    'async consumers receive deferred changes and disposal closes both streams',
     () async {
-      final value = ObservableValue<int>(current: 0);
+      final value = ObservableValue<int>(current: 0, sync: false);
       final first = <int>[];
       final second = <int>[];
       final firstDone = Completer<void>();
@@ -74,6 +74,9 @@ void main() {
       value.changes.listen(second.add, onDone: secondDone.complete);
       value.set(1);
       value.set(2);
+      expect(value.current, 2);
+      expect(first, isEmpty);
+      expect(second, isEmpty);
       value.dispose();
       value.dispose();
       await Future.wait([firstDone.future, secondDone.future]);
@@ -119,7 +122,7 @@ void main() {
 
   test('apply keeps the collection and notifies independent consumers', () {
     final items = <int>[1];
-    final value = ObservableValue(current: items, sync: true);
+    final value = ObservableValue(current: items);
     addTearDown(value.dispose);
     final first = <List<int>>[];
     final second = <List<int>>[];
@@ -138,8 +141,8 @@ void main() {
 
 final class _ViewModel extends BaseViewModel {
   _ViewModel(Stream<int> source) {
-    state = register(ObservableValue(current: 0, sync: true));
-    items = register(ObservableValue<List<int>>(current: [], sync: true));
+    state = register(ObservableValue(current: 0));
+    items = register(ObservableValue<List<int>>(current: []));
     observe(source, state.set);
   }
   late final ObservableValue<int> state;

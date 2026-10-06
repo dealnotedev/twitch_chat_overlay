@@ -18,10 +18,9 @@ wires subscriptions, and starts initial requests. There is no separate
 ```dart
 final class ExampleViewModel extends BaseViewModel {
   ExampleViewModel(Repository repository) {
-    _items = register(ObservableValue<List<Item>>(current: [], sync: true));
+    _items = register(ObservableValue<List<Item>>(current: []));
     _process = register(ObservableValue<SimpleFailableProcess>(
       current: const SimpleFailableProcess.loading(),
-      sync: true,
     ));
     observe(repository.changes, _onChange);
     unawaited(_load(repository));
@@ -85,9 +84,10 @@ StreamBuilder<ChatComposerState>(
 `StreamWithInitial<T>` provides the read-only `current` and `changes` contract
 when passing state sources between components. The stream is stable and
 broadcasts notifications; it does not replay old events. `current` changes
-immediately. Models use synchronous notifications; nested notifications are
-queued until the preceding event reaches all listeners. `ObservableValue` also
-supports asynchronous notifications, used by the existing Twitch chat session.
+immediately. `ObservableValue` notifies synchronously by default; nested
+notifications are queued until the preceding event reaches all listeners.
+Pass `sync: false` for asynchronous notifications, as the existing Twitch chat
+session does.
 Event-only streams such as native close requests do not need initial data.
 
 `ChatPanel` accepts only `authSource` and `chatSource`. For a snapshot without

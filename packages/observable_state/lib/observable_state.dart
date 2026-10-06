@@ -26,8 +26,9 @@ final class _FixedValue<T> implements StreamWithInitial<T> {
 ///
 /// Supply [current] as StreamBuilder.initialData, including when a consumer
 /// subscribes after earlier changes. Changes are notifications, not a replay log.
+/// Notifications are synchronous by default; pass `sync: false` to defer them.
 final class ObservableValue<T> implements StreamWithInitial<T> {
-  ObservableValue({required T current, bool sync = false})
+  ObservableValue({required T current, bool sync = true})
     : _current = current,
       _changes = StreamController<T>.broadcast(sync: sync);
 

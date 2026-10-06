@@ -74,7 +74,6 @@ final class TwitchAuthClient implements TwitchAuth {
 
   final ObservableValue<TwitchAuthState> _observable = ObservableValue(
     current: const TwitchAuthState.loading(),
-    sync: true,
   );
 
   TwitchAuthState get _state => _observable.current;

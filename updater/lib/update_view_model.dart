@@ -100,14 +100,10 @@ final class UpdateViewModel extends BaseViewModel {
             UpdateOperation.check,
           ),
         ),
-        sync: true,
       ),
     );
     _download = register(
-      ObservableValue<DownloadProgress>(
-        current: const DownloadProgress(),
-        sync: true,
-      ),
+      ObservableValue<DownloadProgress>(current: const DownloadProgress()),
     );
     _checking = _runCheck().whenComplete(() => _checking = null);
   }

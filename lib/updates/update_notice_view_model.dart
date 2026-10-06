@@ -34,9 +34,7 @@ final class UpdateNoticeViewModel extends BaseViewModel {
     required this._onUpdate,
     Future<String?> Function()? check,
   }) : _check = check == null ? UpdateCheck() : null {
-    _state = register(
-      ObservableValue(current: const UpdateNoticeState(), sync: true),
-    );
+    _state = register(ObservableValue(current: const UpdateNoticeState()));
     _load(check ?? _check!.newerVersion);
   }
 

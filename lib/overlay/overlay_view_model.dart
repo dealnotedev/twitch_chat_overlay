@@ -46,18 +46,14 @@ final class OverlayViewModel extends BaseViewModel {
     _frame = register(
       ObservableValue(
         current: OverlayFrameState(layout: initialLayout, host: host.state),
-        sync: true,
       ),
     );
-    _authState = register(ObservableValue(current: auth.state, sync: true));
-    _chatState = register(ObservableValue(current: chat.state, sync: true));
-    _connectionStatus = register(
-      ObservableValue(current: chat.state.status, sync: true),
-    );
+    _authState = register(ObservableValue(current: auth.state));
+    _chatState = register(ObservableValue(current: chat.state));
+    _connectionStatus = register(ObservableValue(current: chat.state.status));
     _captureExclusionProcess = register(
       ObservableValue<SimpleFailableProcess>(
         current: const SimpleFailableProcess.initial(),
-        sync: true,
       ),
     );
 

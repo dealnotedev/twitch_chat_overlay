@@ -40,13 +40,14 @@ void main() {
   ) async {
     final oldAuth = ObservableValue<TwitchAuthState>(
       current: const TwitchAuthState(status: TwitchAuthStatus.signedOut),
-      sync: true,
     );
     final newAuth = ObservableValue<TwitchAuthState>(
       current: const TwitchAuthState.loading(),
-      sync: true,
     );
-    final chat = ObservableValue<ChatState>(current: const ChatState.idle());
+    final chat = ObservableValue<ChatState>(
+      current: const ChatState.idle(),
+      sync: false,
+    );
     addTearDown(oldAuth.dispose);
     addTearDown(newAuth.dispose);
     addTearDown(chat.dispose);
@@ -66,10 +67,9 @@ void main() {
     (tester) async {
       final auth = ObservableValue<TwitchAuthState>(
         current: const TwitchAuthState(status: TwitchAuthStatus.signedIn),
-        sync: true,
       );
-      final oldChat = ObservableValue<ChatState>(current: _chat(1), sync: true);
-      final newChat = ObservableValue<ChatState>(current: _chat(2), sync: true);
+      final oldChat = ObservableValue<ChatState>(current: _chat(1));
+      final newChat = ObservableValue<ChatState>(current: _chat(2));
       addTearDown(auth.dispose);
       addTearDown(oldChat.dispose);
       addTearDown(newChat.dispose);

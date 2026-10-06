@@ -55,7 +55,6 @@ final class MethodChannelOverlayHost implements OverlayHost {
 
   final ObservableValue<OverlayHostState> _observable = ObservableValue(
     current: const OverlayHostState.initial(),
-    sync: true,
   );
 
   OverlayHostState get _state => _observable.current;

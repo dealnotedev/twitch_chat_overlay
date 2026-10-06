@@ -171,25 +171,16 @@ final class ChatPanelViewModel extends BaseViewModel {
   }) {
     _recent.update(_input.chat.items, _input.messageLifetimeMinutes);
     final initialMessages = _messagesState();
-    _messages = register(ObservableValue(current: initialMessages, sync: true));
-    _composer = register(
-      ObservableValue(current: const ChatComposerState(), sync: true),
-    );
-    _deletions = register(
-      ObservableValue(current: ChatDeletionsState(), sync: true),
-    );
-    _emotes = register(
-      ObservableValue(current: const ChatEmotePickerState(), sync: true),
-    );
+    _messages = register(ObservableValue(current: initialMessages));
+    _composer = register(ObservableValue(current: const ChatComposerState()));
+    _deletions = register(ObservableValue(current: ChatDeletionsState()));
+    _emotes = register(ObservableValue(current: const ChatEmotePickerState()));
     _startupHint = register(
       ObservableValue(
         current: ChatStartupHintState(visible: initialMessages.items.isEmpty),
-        sync: true,
       ),
     );
-    _session = register(
-      ObservableValue(current: _presentation(_input), sync: true),
-    );
+    _session = register(ObservableValue(current: _presentation(_input)));
 
     _recent.addListener(_onRecentChanged);
     _watchSources(authSource, chatSource);
