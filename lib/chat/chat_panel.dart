@@ -15,6 +15,7 @@ import 'package:twitch_chat_overlay/chat/chat_panel_view_model.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_actions.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote_picker.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote.dart';
+import 'package:twitch_chat_overlay/chat/emote_catalog.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote_scope.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_entrance.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_retention.dart';
@@ -29,6 +30,22 @@ import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
+
+typedef _ChatAccessState = ({
+  TwitchAuthState auth,
+  bool rewardSubscriptionFailed,
+});
+typedef _ChatContentState = ({
+  ChatConnectionStatus status,
+  String? broadcasterId,
+  TwitchBadges badges,
+  EmoteCatalog emoteCatalog,
+});
+typedef _ChatStatusState = ({
+  ChatConnectionStatus status,
+  int? viewerCount,
+  bool streamOffline,
+});
 
 class ChatPanel extends StatefulWidget {
   const ChatPanel({
@@ -73,6 +90,9 @@ class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _messageFocus = FocusNode();
   late final ChatPanelViewModel _viewModel;
+  late final StreamWithInitial<_ChatAccessState> _access;
+  late final StreamWithInitial<_ChatContentState> _content;
+  late final StreamWithInitial<_ChatStatusState> _status;
   final Object _emoteTapGroup = Object();
 
   ChatPanelInput get _input => ChatPanelInput(
@@ -92,6 +112,27 @@ class _ChatPanelState extends State<ChatPanel> {
       _input,
       authSource: widget.authSource,
       chatSource: widget.chatSource,
+    );
+    _access = _viewModel.session.select(
+      (session) => (
+        auth: session.auth,
+        rewardSubscriptionFailed: session.rewardSubscriptionFailed,
+      ),
+    );
+    _content = _viewModel.session.select(
+      (session) => (
+        status: session.status,
+        broadcasterId: session.broadcasterId,
+        badges: session.badges,
+        emoteCatalog: session.emoteCatalog,
+      ),
+    );
+    _status = _viewModel.session.select(
+      (session) => (
+        status: session.status,
+        viewerCount: session.viewerCount,
+        streamOffline: session.streamOffline,
+      ),
     );
   }
 
@@ -114,13 +155,13 @@ class _ChatPanelState extends State<ChatPanel> {
   }
 
   @override
-  Widget build(BuildContext context) => StreamBuilder<ChatPanelSessionState>(
-    initialData: _viewModel.session.current,
-    stream: _viewModel.session.changes,
+  Widget build(BuildContext context) => StreamBuilder<_ChatAccessState>(
+    initialData: _access.current,
+    stream: _access.changes,
     builder: (context, snapshot) => _buildPanel(context, snapshot.requireData),
   );
 
-  Widget _buildPanel(BuildContext context, ChatPanelSessionState viewSession) {
+  Widget _buildPanel(BuildContext context, _ChatAccessState viewSession) {
     final l10n = AppLocalizations.of(context);
     final body = switch (viewSession.auth.status) {
       TwitchAuthStatus.loading => _CenteredStatus(
@@ -161,17 +202,12 @@ class _ChatPanelState extends State<ChatPanel> {
               builder: (context, constraints) => Stack(
                 fit: StackFit.expand,
                 children: [
-                  Positioned.fill(
-                    child: ChatEmoteScope(
-                      catalog: viewSession.emoteCatalog,
-                      child: body,
-                    ),
-                  ),
-                  StreamBuilder<ChatEmotePickerState>(
-                    initialData: _viewModel.emotes.current,
-                    stream: _viewModel.emotes.changes,
+                  Positioned.fill(child: body),
+                  StreamBuilder<ChatEditorState>(
+                    initialData: _viewModel.editor.current,
+                    stream: _viewModel.editor.changes,
                     builder: (context, snapshot) {
-                      final emotes = snapshot.requireData;
+                      final emotes = snapshot.requireData.emotes;
                       if (!emotes.open ||
                           emotes.request == null ||
                           !widget.interactive ||
@@ -243,50 +279,54 @@ class _ChatPanelState extends State<ChatPanel> {
           ),
         if (viewSession.auth.status == TwitchAuthStatus.signedIn &&
             widget.interactive)
-          StreamBuilder<ChatComposerState>(
-            initialData: _viewModel.composer.current,
-            stream: _viewModel.composer.changes,
-            builder: (context, composerSnapshot) =>
-                StreamBuilder<ChatEmotePickerState>(
-                  initialData: _viewModel.emotes.current,
-                  stream: _viewModel.emotes.changes,
-                  builder: (context, emotesSnapshot) => ChatComposer(
-                    controller: _messageController,
-                    focusNode: _messageFocus,
-                    sending: composerSnapshot.requireData.sending,
-                    error: _chatPanelError(
-                      l10n,
-                      composerSnapshot.requireData.sendError,
-                    ),
-                    emotesOpen: emotesSnapshot.requireData.open,
-                    tapGroup: _emoteTapGroup,
-                    onSend: _send,
-                    onSignOut: () => unawaited(widget.onSignOut()),
-                    onToggleEmotes: _viewModel.toggleEmotes,
-                    onCloseEmotes: _viewModel.closeEmotes,
-                    replyTo: composerSnapshot.requireData.replyTo,
-                    onCancelReply: _cancelReply,
-                  ),
-                ),
+          StreamBuilder<ChatEditorState>(
+            initialData: _viewModel.editor.current,
+            stream: _viewModel.editor.changes,
+            builder: (context, snapshot) => ChatComposer(
+              controller: _messageController,
+              focusNode: _messageFocus,
+              sending: snapshot.requireData.sending,
+              error: _chatPanelError(l10n, snapshot.requireData.sendError),
+              emotesOpen: snapshot.requireData.emotes.open,
+              tapGroup: _emoteTapGroup,
+              onSend: _send,
+              onSignOut: () => unawaited(widget.onSignOut()),
+              onToggleEmotes: _viewModel.toggleEmotes,
+              onCloseEmotes: _viewModel.closeEmotes,
+              replyTo: snapshot.requireData.replyTo,
+              onCancelReply: _cancelReply,
+            ),
           ),
       ],
     );
   }
 
   Widget _connectedBody(AppLocalizations l10n) =>
-      StreamBuilder<ChatMessagesState>(
-        initialData: _viewModel.messages.current,
-        stream: _viewModel.messages.changes,
-        builder: (context, snapshot) =>
-            _buildMessages(context, l10n, snapshot.requireData),
+      StreamBuilder<_ChatContentState>(
+        initialData: _content.current,
+        stream: _content.changes,
+        builder: (context, contentSnapshot) => ChatEmoteScope(
+          catalog: contentSnapshot.requireData.emoteCatalog,
+          child: StreamBuilder<ChatTimelineState>(
+            initialData: _viewModel.timeline.current,
+            stream: _viewModel.timeline.changes,
+            builder: (context, snapshot) => _buildMessages(
+              context,
+              l10n,
+              snapshot.requireData,
+              contentSnapshot.requireData,
+            ),
+          ),
+        ),
       );
 
   Widget _buildMessages(
     BuildContext context,
     AppLocalizations l10n,
-    ChatMessagesState state,
+    ChatTimelineState timeline,
+    _ChatContentState viewSession,
   ) {
-    final viewSession = _viewModel.session.current;
+    final state = timeline.messages;
     final recentItems = state.items;
     if (recentItems.isEmpty &&
         viewSession.status != ChatConnectionStatus.connected) {
@@ -312,7 +352,7 @@ class _ChatPanelState extends State<ChatPanel> {
     };
     final items = recentItems;
     final broadcasterId = viewSession.broadcasterId;
-    final token = viewSession.auth.token;
+    final token = _access.current.auth.token;
     final mentionTarget = broadcasterId == null
         ? null
         : StreamerMentionTarget(
@@ -380,7 +420,7 @@ class _ChatPanelState extends State<ChatPanel> {
                                 },
                                 onReply:
                                     widget.interactive &&
-                                        viewSession.auth.status ==
+                                        _access.current.auth.status ==
                                             TwitchAuthStatus.signedIn
                                     ? _startReply
                                     : null,
@@ -407,63 +447,59 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           ),
         ),
-        if (items.isEmpty)
-          StreamBuilder<ChatStartupHintState>(
-            initialData: _viewModel.startupHint.current,
-            stream: _viewModel.startupHint.changes,
-            builder: (context, snapshot) {
-              final hint = snapshot.requireData;
-              if (!widget.interactive && !hint.visible) {
-                return const SizedBox.shrink();
-              }
-              return Positioned.fill(
-                child: AnimatedOpacity(
-                  key: const ValueKey('startup-chat-hint'),
-                  opacity: !widget.interactive && hint.fading ? 0 : 1,
-                  duration:
-                      widget.interactive ||
-                          MediaQuery.disableAnimationsOf(context)
-                      ? Duration.zero
-                      : ChatPanelViewModel.startupHintFadeDuration,
-                  curve: Curves.easeInOut,
-                  child: _CenteredStatus(
-                    text: l10n.noChatMessages,
-                    hint: widget.interactive ? null : l10n.openControlsShortcut,
-                  ),
-                ),
-              );
-            },
+        if (items.isEmpty &&
+            (widget.interactive || timeline.startupHint.visible))
+          Positioned.fill(
+            child: AnimatedOpacity(
+              key: const ValueKey('startup-chat-hint'),
+              opacity: !widget.interactive && timeline.startupHint.fading
+                  ? 0
+                  : 1,
+              duration:
+                  widget.interactive || MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : ChatPanelViewModel.startupHintFadeDuration,
+              curve: Curves.easeInOut,
+              child: _CenteredStatus(
+                text: l10n.noChatMessages,
+                hint: widget.interactive ? null : l10n.openControlsShortcut,
+              ),
+            ),
           ),
         if (!widget.interactive &&
             (widget.showViewerCount || widget.showConnectionIndicator))
-          Positioned(
-            top: 8,
-            left: 12,
-            right: 8,
-            child: IgnorePointer(
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Row(
-                  key: const ValueKey('chat-status-row'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.showViewerCount)
-                      Flexible(
-                        child: ViewerCount(
-                          count: viewSession.viewerCount,
-                          offline: viewSession.streamOffline,
+          StreamBuilder<_ChatStatusState>(
+            initialData: _status.current,
+            stream: _status.changes,
+            builder: (context, snapshot) => Positioned(
+              top: 8,
+              left: 12,
+              right: 8,
+              child: IgnorePointer(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Row(
+                    key: const ValueKey('chat-status-row'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.showViewerCount)
+                        Flexible(
+                          child: ViewerCount(
+                            count: snapshot.requireData.viewerCount,
+                            offline: snapshot.requireData.streamOffline,
+                          ),
                         ),
-                      ),
-                    if (widget.showViewerCount &&
-                        widget.showConnectionIndicator)
-                      const Gap(8),
-                    if (widget.showConnectionIndicator)
-                      Flexible(
-                        child: _ChatConnectionIndicator(
-                          status: viewSession.status,
+                      if (widget.showViewerCount &&
+                          widget.showConnectionIndicator)
+                        const Gap(8),
+                      if (widget.showConnectionIndicator)
+                        Flexible(
+                          child: _ChatConnectionIndicator(
+                            status: snapshot.requireData.status,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

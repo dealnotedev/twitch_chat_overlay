@@ -184,22 +184,19 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                 if (state.settingsOpen && state.host.interactive)
                   Positioned.fromRect(
                     rect: OverlaySettingsPanel.placeBeside(rect, viewport),
-                    child: StreamBuilder<SimpleFailableProcess>(
-                      initialData: _viewModel.captureExclusionProcess.current,
-                      stream: _viewModel.captureExclusionProcess.changes,
-                      builder: (context, snapshot) => OverlaySettingsPanel(
-                        key: const ValueKey('overlay-settings-panel'),
-                        layout: state.layout,
-                        onChanged: _viewModel.updateLayout,
-                        onChangeEnd: _viewModel.saveLayout,
-                        onClose: _viewModel.closeSettings,
-                        onCaptureExclusionChanged: (value) =>
-                            unawaited(_viewModel.changeCaptureExclusion(value)),
-                        changingCaptureExclusion: snapshot.requireData.isActive,
-                        captureExclusionFailed:
-                            snapshot.requireData.error ==
-                            OverlayFailure.captureExclusion,
-                      ),
+                    child: OverlaySettingsPanel(
+                      key: const ValueKey('overlay-settings-panel'),
+                      layout: state.layout,
+                      onChanged: _viewModel.updateLayout,
+                      onChangeEnd: _viewModel.saveLayout,
+                      onClose: _viewModel.closeSettings,
+                      onCaptureExclusionChanged: (value) =>
+                          unawaited(_viewModel.changeCaptureExclusion(value)),
+                      changingCaptureExclusion:
+                          state.captureExclusionProcess.isActive,
+                      captureExclusionFailed:
+                          state.captureExclusionProcess.error ==
+                          OverlayFailure.captureExclusion,
                     ),
                   ),
               ],

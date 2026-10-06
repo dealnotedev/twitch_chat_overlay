@@ -22,6 +22,45 @@ final class _FixedValue<T> implements StreamWithInitial<T> {
   Stream<T> get changes => const Stream.empty(broadcast: true);
 }
 
+extension StreamWithInitialSelection<T> on StreamWithInitial<T> {
+  /// A stable read-only projection, notifying only when its selected value changes.
+  /// Create it once; it follows the source's lifetime and exposes no writes.
+  StreamWithInitial<R> select<R>(R Function(T value) select) =>
+      _SelectedValue(this, select);
+}
+
+final class _SelectedValue<T, R> implements StreamWithInitial<R> {
+  _SelectedValue(this._source, this._select) {
+    changes = Stream<R>.multi((controller) {
+      var previous = current;
+      final subscription = _source.changes.listen(
+        (value) {
+          try {
+            final next = _select(value);
+            if (next == previous) return;
+            previous = next;
+            controller.addSync(next);
+          } catch (error, stack) {
+            controller.addErrorSync(error, stack);
+          }
+        },
+        onError: controller.addErrorSync,
+        onDone: controller.closeSync,
+      );
+      controller.onCancel = subscription.cancel;
+    }, isBroadcast: true);
+  }
+
+  final StreamWithInitial<T> _source;
+  final R Function(T value) _select;
+
+  @override
+  R get current => _select(_source.current);
+
+  @override
+  late final Stream<R> changes;
+}
+
 /// Owns a value with a current snapshot and change notifications.
 ///
 /// Supply [current] as StreamBuilder.initialData, including when a consumer

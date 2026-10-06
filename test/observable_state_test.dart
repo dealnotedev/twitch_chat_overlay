@@ -6,6 +6,83 @@ import 'package:observable_state/observable_state.dart';
 
 void main() {
   test(
+    'selection errors reach consumers without stopping later changes',
+    () async {
+      final source = ObservableValue<int>(current: 0);
+      addTearDown(source.dispose);
+      final selected = source.select((value) {
+        if (value == 1) throw const FormatException('cannot select value');
+        return value;
+      });
+      final values = <int>[];
+      final errors = <Object>[];
+      final subscription = selected.changes.listen(
+        values.add,
+        onError: errors.add,
+      );
+      source.set(1);
+      expect(errors.single, isA<FormatException>());
+      expect(values, isEmpty);
+      source.set(2);
+      expect(values, [2]);
+      await subscription.cancel();
+    },
+  );
+
+  test(
+    'a selection reads current state before its own listener runs',
+    () async {
+      final source = ObservableValue<int>(current: 0);
+      addTearDown(source.dispose);
+      final selected = source.select((value) => value.isEven);
+      final currentValues = <bool>[];
+      final upstream = source.changes.listen(
+        (_) => currentValues.add(selected.current),
+      );
+      final events = <bool>[];
+      final subscription = selected.changes.listen(events.add);
+      source.set(1);
+      expect(currentValues, [false]);
+      expect(events, [false]);
+      expect(selected.changes, same(selected.changes));
+      await upstream.cancel();
+      await subscription.cancel();
+    },
+  );
+
+  test('selection filters from each subscriber snapshot and follows source disposal', () async {
+    final source = ObservableValue<int>(current: 0);
+    final selected = source.select((value) => value ~/ 10);
+    final first = <int>[];
+    final second = <int>[];
+    final firstDone = Completer<void>();
+    final secondDone = Completer<void>();
+    final subscription = selected.changes.listen(
+      first.add,
+      onDone: firstDone.complete,
+    );
+    source.set(1);
+    expect(first, isEmpty);
+    source.set(10);
+    expect(first, [1]);
+    selected.changes.listen(second.add, onDone: secondDone.complete);
+    source.set(11);
+    expect(second, isEmpty);
+    source.set(20);
+    expect(first, [1, 2]);
+    expect(second, [2]);
+    await subscription.cancel();
+    source.set(30);
+    expect(first, [1, 2]);
+    expect(second, [2, 3]);
+    source.dispose();
+    await secondDone.future;
+    expect(firstDone.isCompleted, isFalse);
+    expect(selected.current, 3);
+    expect(selected.changes.isBroadcast, isTrue);
+  });
+
+  test(
     'notifications are synchronous by default and nested changes stay ordered',
     () async {
       final value = ObservableValue<int>(current: 0);

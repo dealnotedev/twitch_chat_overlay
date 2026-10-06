@@ -11,6 +11,10 @@ separating independently changing parts of the UI. Observable fields are private
 and `final` (or `late final` when assigned in the constructor). Public getters
 expose `StreamWithInitial<T>` for reading; only intent methods change the state.
 
+Keep one observable for a coherent interaction. Separate frequently changing data
+when it has a different UI subscriber, such as the timeline and download progress.
+Use read-only selections for derived values instead of maintaining duplicate state.
+
 The constructor creates initial values directly, registers their ownership,
 wires subscriptions, and starts initial requests. There is no separate
 `initialize()` call and no emission just to establish initial state.
@@ -74,9 +78,9 @@ Subscribe near the part of the UI that needs the value. Every state
 with `requireData`:
 
 ```dart
-StreamBuilder<ChatComposerState>(
-  initialData: viewModel.composer.current,
-  stream: viewModel.composer.changes,
+StreamBuilder<ChatEditorState>(
+  initialData: viewModel.editor.current,
+  stream: viewModel.editor.changes,
   builder: (context, snapshot) => buildComposer(snapshot.requireData),
 )
 ```
@@ -90,11 +94,22 @@ Pass `sync: false` for asynchronous notifications, as the existing Twitch chat
 session does.
 Event-only streams such as native close requests do not need initial data.
 
+`source.select(selector)` creates a stable read-only source. Its `current` is
+computed directly from the source snapshot, so it cannot lag behind another
+listener. Each subscription filters changes with `==`, starting from its own
+initial selection, and follows the source's disposal. Create selections once,
+not inside `build`; records provide equality for a small group of selected fields.
+
 `ChatPanel` accepts only `authSource` and `chatSource`. For a snapshot without
 events, pass `StreamWithInitial.value(snapshot)`. The model replaces subscriptions
 when sources change and ignores events from the previous source. Its session
 presentation is a record of the fields used by the view, excluding the timeline;
 record equality suppresses message-only session notifications automatically.
+The view selects access, timeline metadata, and status information separately;
+viewer count changes rebuild the status row without rebuilding the timeline or
+editor. The editor groups sending, reply feedback, and picker state. Sending and
+starting a reply close the picker in the same notification. Timeline state groups
+the message snapshot and startup hint; hint-only changes reuse the message snapshot.
 
 ## Failable processes and typed errors
 
@@ -108,10 +123,11 @@ race the previous operation.
 Set operation guards, cancellation tokens and persistence queues before publishing
 synchronous notifications: a listener can issue another intent immediately.
 Installation becomes busy before download reset is published, and each locale
-write is queued before its new locale is published.
+write is queued before its new locale is published. Capture exclusion publishes
+its resulting layout and completed process together in frame state.
 
 Feature failures are typed (`ChatPanelError`, `OverlayFailure`,
-`UpdateNoticeFailure`, `LocaleFailure`, or `UpdateIssue`). `FailedProcess.error`
+`UpdateNoticeFailure`, or `UpdateIssue`). `FailedProcess.error`
 holds that value, while `cause` and `stackTrace` retain original diagnostics.
 Views localize typed failures and do not display exception text. Twitch message
 rejection details remain separate server-provided feedback.
@@ -119,22 +135,24 @@ rejection details remain separate server-provided feedback.
 Independent operations have independent processes. Chat deletions use a map
 from message ID to process; dismissing a failed deletion preserves pending ones.
 Composer validation has a separate field because a draft can change while a
-submitted message is in flight. Locale writes are serialized and use a generation
-so an old failure cannot replace the latest process. Keep session generations
+submitted message is in flight. Locale writes are serialized; `cycle()` and
+`flush()` report persistence failures through `LocalePersistenceException` without
+publishing a separate process that has no UI consumers. Keep session generations
 and request identity checks to reject completions from earlier sessions.
 
 ## Current models
 
-- `OverlayViewModel`: window frame/layout, auth, chat, connection status, and
-  capture exclusion process. Its constructor applies emote options before
+- `OverlayViewModel`: frame (layout, host, settings, and capture exclusion process),
+  auth, and chat. Connection status is a read-only selection of chat, not a stored
+  observable. Its constructor applies emote options before
   reading the initial chat snapshot, subscribes, and starts host/auth requests.
   Move and resize intents derive their deltas from the current layout, so multiple
   pointer events before a frame accumulate correctly.
-- `ChatPanelViewModel`: separate observables for messages, composer, deletions,
-  emote picker, startup hint, and session presentation. Message-only changes
-  update the list without rebuilding the composer or window frame.
-- `LocaleViewModel`: selected locale and save process. Persistence completion
-  does not rebuild `MaterialApp`.
+- `ChatPanelViewModel`: four observables for timeline, editor, deletions, and
+  session presentation. Message-only changes update the list without rebuilding
+  the editor or window frame.
+- `LocaleViewModel`: selected locale. Persistence completion does not notify
+  locale subscribers or rebuild `MaterialApp`.
 - `UpdateNoticeViewModel`: the small coherent notice state; the constructor
   starts its optional release check, which stays silent on failure.
 - `UpdateViewModel`: installation phase/process and a separate download progress

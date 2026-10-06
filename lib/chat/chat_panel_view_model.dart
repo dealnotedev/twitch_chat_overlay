@@ -80,15 +80,17 @@ final class ChatMessagesState {
   final Map<String, String?> userColors;
 }
 
-final class ChatComposerState {
-  const ChatComposerState({
+final class ChatEditorState {
+  const ChatEditorState({
     this.sendProcess = const SimpleFailableProcess.initial(),
     this.composerError,
     this.replyTo,
+    this.emotes = const ChatEmotePickerState(),
   });
   final SimpleFailableProcess sendProcess;
   final ChatPanelError? composerError;
   final ChatReply? replyTo;
+  final ChatEmotePickerState emotes;
 
   bool get sending => sendProcess.isActive;
   ChatPanelError? get sendError =>
@@ -98,14 +100,16 @@ final class ChatComposerState {
         _ => null,
       };
 
-  ChatComposerState copyWith({
+  ChatEditorState copyWith({
     SimpleFailableProcess? sendProcess,
     Nullable<ChatPanelError>? composerError,
     Nullable<ChatReply>? replyTo,
-  }) => ChatComposerState(
+    ChatEmotePickerState? emotes,
+  }) => ChatEditorState(
     sendProcess: sendProcess ?? this.sendProcess,
     composerError: composerError.getOr(this.composerError),
     replyTo: replyTo.getOr(this.replyTo),
+    emotes: emotes ?? this.emotes,
   );
 }
 
@@ -141,6 +145,24 @@ final class ChatStartupHintState {
   final bool fading;
 }
 
+final class ChatTimelineState {
+  const ChatTimelineState({
+    required this.messages,
+    this.startupHint = const ChatStartupHintState(),
+  });
+
+  final ChatMessagesState messages;
+  final ChatStartupHintState startupHint;
+
+  ChatTimelineState copyWith({
+    ChatMessagesState? messages,
+    ChatStartupHintState? startupHint,
+  }) => ChatTimelineState(
+    messages: messages ?? this.messages,
+    startupHint: startupHint ?? this.startupHint,
+  );
+}
+
 typedef ChatPanelSessionState = ({
   TwitchAuthState auth,
   ChatConnectionStatus status,
@@ -171,15 +193,18 @@ final class ChatPanelViewModel extends BaseViewModel {
   }) {
     _recent.update(_input.chat.items, _input.messageLifetimeMinutes);
     final initialMessages = _messagesState();
-    _messages = register(ObservableValue(current: initialMessages));
-    _composer = register(ObservableValue(current: const ChatComposerState()));
-    _deletions = register(ObservableValue(current: ChatDeletionsState()));
-    _emotes = register(ObservableValue(current: const ChatEmotePickerState()));
-    _startupHint = register(
+    _timeline = register(
       ObservableValue(
-        current: ChatStartupHintState(visible: initialMessages.items.isEmpty),
+        current: ChatTimelineState(
+          messages: initialMessages,
+          startupHint: ChatStartupHintState(
+            visible: initialMessages.items.isEmpty,
+          ),
+        ),
       ),
     );
+    _editor = register(ObservableValue(current: const ChatEditorState()));
+    _deletions = register(ObservableValue(current: ChatDeletionsState()));
     _session = register(ObservableValue(current: _presentation(_input)));
 
     _recent.addListener(_onRecentChanged);
@@ -187,29 +212,33 @@ final class ChatPanelViewModel extends BaseViewModel {
     if (initialMessages.items.isEmpty) {
       _startupHintTimer = Timer(startupHintDuration, () {
         if (isDisposed) return;
-        _startupHint.set(const ChatStartupHintState(fading: true));
+        _timeline.set(
+          _timeline.current.copyWith(
+            startupHint: const ChatStartupHintState(fading: true),
+          ),
+        );
         if (isDisposed) return;
         _startupHintTimer = Timer(startupHintFadeDuration, () {
           if (!isDisposed) {
-            _startupHint.set(const ChatStartupHintState(visible: false));
+            _timeline.set(
+              _timeline.current.copyWith(
+                startupHint: const ChatStartupHintState(visible: false),
+              ),
+            );
           }
         });
       });
     }
   }
 
-  late final ObservableValue<ChatMessagesState> _messages;
-  late final ObservableValue<ChatComposerState> _composer;
+  late final ObservableValue<ChatTimelineState> _timeline;
+  late final ObservableValue<ChatEditorState> _editor;
   late final ObservableValue<ChatDeletionsState> _deletions;
-  late final ObservableValue<ChatEmotePickerState> _emotes;
-  late final ObservableValue<ChatStartupHintState> _startupHint;
   late final ObservableValue<ChatPanelSessionState> _session;
 
-  StreamWithInitial<ChatMessagesState> get messages => _messages;
-  StreamWithInitial<ChatComposerState> get composer => _composer;
+  StreamWithInitial<ChatTimelineState> get timeline => _timeline;
+  StreamWithInitial<ChatEditorState> get editor => _editor;
   StreamWithInitial<ChatDeletionsState> get deletions => _deletions;
-  StreamWithInitial<ChatEmotePickerState> get emotes => _emotes;
-  StreamWithInitial<ChatStartupHintState> get startupHint => _startupHint;
   StreamWithInitial<ChatPanelSessionState> get session => _session;
 
   static const startupHintDuration = Duration(seconds: 20);
@@ -274,37 +303,49 @@ final class ChatPanelViewModel extends BaseViewModel {
         previous.auth.token?.userId != input.auth.token?.userId ||
         previous.chat.broadcasterId != input.chat.broadcasterId ||
         input.auth.status == TwitchAuthStatus.signedOut;
-    if (input.auth.status != TwitchAuthStatus.signedIn || sessionChanged) {
-      if (_emotes.current.open || _emotes.current.request != null) {
-        _emotes.set(const ChatEmotePickerState());
-      }
-    } else if (previous.chat.emoteOptions != input.chat.emoteOptions) {
-      _emotes.set(
-        ChatEmotePickerState(
-          open: _emotes.current.open,
-          request: _emotes.current.open ? _requestEmotes() : null,
-        ),
-      );
-    }
+    var editor = _editor.current;
     if (sessionChanged) {
       _actionGeneration++;
       _recent.clear();
-      _composer.set(const ChatComposerState());
+      editor = const ChatEditorState();
+    }
+    if (input.auth.status != TwitchAuthStatus.signedIn || sessionChanged) {
+      if (editor.emotes.open || editor.emotes.request != null) {
+        editor = editor.copyWith(emotes: const ChatEmotePickerState());
+      }
+    } else if (previous.chat.emoteOptions != input.chat.emoteOptions) {
+      editor = editor.copyWith(
+        emotes: ChatEmotePickerState(
+          open: editor.emotes.open,
+          request: editor.emotes.open ? _requestEmotes() : null,
+        ),
+      );
+    }
+    if (!input.interactive && editor.emotes.open) {
+      editor = editor.copyWith(
+        emotes: ChatEmotePickerState(request: editor.emotes.request),
+      );
+    }
+    if (sessionChanged) {
       _deletions.set(ChatDeletionsState());
     }
+    if (isDisposed) return;
     _recent.update(input.chat.items, input.messageLifetimeMinutes);
-    if (_recent.visibleItems.isNotEmpty ||
+    final hideStartupHint =
+        _recent.visibleItems.isNotEmpty ||
         (previous.chat.status == ChatConnectionStatus.connected &&
-            input.chat.status != ChatConnectionStatus.connected)) {
-      _hideStartupHint();
-    }
-    if (!input.interactive) closeEmotes();
+            input.chat.status != ChatConnectionStatus.connected);
     final previousIds = previous.chat.items.map((item) => item.id).toSet();
     final currentIds = input.chat.items.map((item) => item.id).toSet();
-    if (_composer.current.replyTo case final reply?) {
+    if (editor.replyTo case final reply?) {
       if (previousIds.contains(reply.parentMessageId) &&
           !currentIds.contains(reply.parentMessageId)) {
-        _replyUnavailable();
+        editor = editor.copyWith(
+          replyTo: const Nullable(null),
+          composerError: const Nullable(
+            ChatPanelError(ChatPanelFailure.replyUnavailable),
+          ),
+        );
       }
     }
     final now = _arrivalClock.elapsed;
@@ -318,22 +359,17 @@ final class ChatPanelViewModel extends BaseViewModel {
         _messageArrivals[item.id] = now;
       }
     }
-    _publishRecent();
+    if (!identical(editor, _editor.current)) _editor.set(editor);
+    if (isDisposed) return;
+    _publishRecent(hideStartupHint: hideStartupHint);
     if (isDisposed) return;
     final presentation = _presentation(input);
     if (_session.current != presentation) _session.set(presentation);
   }
 
-  void _hideStartupHint() {
-    _startupHintTimer?.cancel();
-    if (_startupHint.current.visible) {
-      _startupHint.set(const ChatStartupHintState(visible: false));
-    }
-  }
-
   void _replyUnavailable() {
-    _composer.set(
-      _composer.current.copyWith(
+    _editor.set(
+      _editor.current.copyWith(
         replyTo: const Nullable(null),
         composerError: const Nullable(
           ChatPanelError(ChatPanelFailure.replyUnavailable),
@@ -358,20 +394,30 @@ final class ChatPanelViewModel extends BaseViewModel {
     },
   );
 
-  void _publishRecent() {
+  void _publishRecent({bool hideStartupHint = false}) {
     if (isDisposed) return;
+    if (hideStartupHint) _startupHintTimer?.cancel();
+    final current = _timeline.current;
     final next = _messagesState();
-    if (listEquals(_messages.current.items, next.items) &&
-        setEquals(_messages.current.fadingIds, next.fadingIds) &&
-        mapEquals(_messages.current.userColors, next.userColors)) {
-      return;
-    }
-    _messages.set(next);
+    final messagesChanged =
+        !listEquals(current.messages.items, next.items) ||
+        !setEquals(current.messages.fadingIds, next.fadingIds) ||
+        !mapEquals(current.messages.userColors, next.userColors);
+    final hintChanged = hideStartupHint && current.startupHint.visible;
+    if (!messagesChanged && !hintChanged) return;
+    _timeline.set(
+      current.copyWith(
+        messages: messagesChanged ? next : null,
+        startupHint: hintChanged
+            ? const ChatStartupHintState(visible: false)
+            : null,
+      ),
+    );
   }
 
   void _onRecentChanged() {
     if (isDisposed) return;
-    if (_composer.current.replyTo case final reply?) {
+    if (_editor.current.replyTo case final reply?) {
       if (!_recent.visibleItems.any(
         (item) => item.id == reply.parentMessageId,
       )) {
@@ -391,38 +437,46 @@ final class ChatPanelViewModel extends BaseViewModel {
 
   void toggleEmotes() {
     if (isDisposed) return;
-    final open = !_emotes.current.open;
-    _emotes.set(
-      ChatEmotePickerState(
-        open: open,
-        request: open ? _requestEmotes() : _emotes.current.request,
+    final open = !_editor.current.emotes.open;
+    _editor.set(
+      _editor.current.copyWith(
+        emotes: ChatEmotePickerState(
+          open: open,
+          request: open ? _requestEmotes() : _editor.current.emotes.request,
+        ),
       ),
     );
   }
 
   void reloadEmotes() {
     if (!isDisposed) {
-      _emotes.set(
-        ChatEmotePickerState(
-          open: _emotes.current.open,
-          request: _requestEmotes(refresh: true),
+      _editor.set(
+        _editor.current.copyWith(
+          emotes: ChatEmotePickerState(
+            open: _editor.current.emotes.open,
+            request: _requestEmotes(refresh: true),
+          ),
         ),
       );
     }
   }
 
   void closeEmotes() {
-    if (!isDisposed && _emotes.current.open) {
-      _emotes.set(ChatEmotePickerState(request: _emotes.current.request));
+    if (!isDisposed && _editor.current.emotes.open) {
+      _editor.set(
+        _editor.current.copyWith(
+          emotes: ChatEmotePickerState(request: _editor.current.emotes.request),
+        ),
+      );
     }
   }
 
   void emoteInserted({required bool accepted}) {
     if (isDisposed) return;
-    _composer.set(
-      _composer.current.copyWith(
-        sendProcess: _composer.current.sending
-            ? _composer.current.sendProcess
+    _editor.set(
+      _editor.current.copyWith(
+        sendProcess: _editor.current.sending
+            ? _editor.current.sendProcess
             : const SimpleFailableProcess.initial(),
         composerError: Nullable(
           accepted
@@ -445,8 +499,9 @@ final class ChatPanelViewModel extends BaseViewModel {
 
   void startReply(ChatUserMessage message) {
     if (isDisposed) return;
-    _composer.set(
-      _composer.current.copyWith(
+    _editor.set(
+      _editor.current.copyWith(
+        emotes: ChatEmotePickerState(request: _editor.current.emotes.request),
         replyTo: Nullable(
           ChatReply(
             parentMessageId: message.id,
@@ -457,17 +512,16 @@ final class ChatPanelViewModel extends BaseViewModel {
           ),
         ),
         composerError: const Nullable(null),
-        sendProcess: _composer.current.sending
-            ? _composer.current.sendProcess
+        sendProcess: _editor.current.sending
+            ? _editor.current.sendProcess
             : const SimpleFailableProcess.initial(),
       ),
     );
-    closeEmotes();
   }
 
   void cancelReply() {
     if (!isDisposed) {
-      _composer.set(_composer.current.copyWith(replyTo: const Nullable(null)));
+      _editor.set(_editor.current.copyWith(replyTo: const Nullable(null)));
     }
   }
 
@@ -539,32 +593,33 @@ final class ChatPanelViewModel extends BaseViewModel {
 
   Future<bool> send(String draft) async {
     final text = draft.trim();
-    if (isDisposed || text.isEmpty || _composer.current.sending) return false;
-    final reply = _composer.current.replyTo;
+    if (isDisposed || text.isEmpty || _editor.current.sending) return false;
+    final reply = _editor.current.replyTo;
     final generation = _actionGeneration;
-    _composer.set(
-      _composer.current.copyWith(
+    _editor.set(
+      _editor.current.copyWith(
+        emotes: ChatEmotePickerState(request: _editor.current.emotes.request),
         sendProcess: const SimpleFailableProcess.loading(),
         composerError: const Nullable(null),
       ),
     );
-    closeEmotes();
+    if (!_isCurrent(generation)) return false;
     try {
       final result = await _input.send(text, replyTo: reply?.parentMessageId);
       if (!_isCurrent(generation)) return false;
       if (result.sent) {
-        _composer.set(
-          _composer.current.copyWith(
+        _editor.set(
+          _editor.current.copyWith(
             sendProcess: const SimpleFailableProcess.initial(),
-            replyTo: identical(_composer.current.replyTo, reply)
+            replyTo: identical(_editor.current.replyTo, reply)
                 ? const Nullable(null)
                 : null,
           ),
         );
         return true;
       }
-      _composer.set(
-        _composer.current.copyWith(
+      _editor.set(
+        _editor.current.copyWith(
           sendProcess: SimpleFailableProcess.failed(
             ChatPanelError(ChatPanelFailure.messageRejected, result.dropReason),
           ),
@@ -594,8 +649,8 @@ final class ChatPanelViewModel extends BaseViewModel {
         TimeoutException() => ChatPanelFailure.network,
         _ => ChatPanelFailure.sendFailed,
       };
-      _composer.set(
-        _composer.current.copyWith(
+      _editor.set(
+        _editor.current.copyWith(
           sendProcess: SimpleFailableProcess.failed(
             ChatPanelError(failure),
             cause: error,

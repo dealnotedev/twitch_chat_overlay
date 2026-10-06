@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
+import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/chat/viewer_count.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
@@ -35,6 +36,41 @@ ChatState _chat(int viewers) => ChatState(
 );
 
 void main() {
+  for (final interactive in [false, true]) {
+    testWidgets(
+      'viewer updates preserve the timeline and editor ($interactive)',
+      (tester) async {
+        final chat = ObservableValue<ChatState>(current: _chat(1));
+        addTearDown(chat.dispose);
+        await tester.pumpWidget(
+          _app(
+            auth: const StreamWithInitial.value(
+              TwitchAuthState(status: TwitchAuthStatus.signedIn),
+            ),
+            chat: chat,
+            interactive: interactive,
+          ),
+        );
+        final timeline = tester.widget<ListView>(find.byType(ListView));
+        final editor = interactive
+            ? tester.widget<ChatComposer>(find.byType(ChatComposer))
+            : null;
+        chat.set(_chat(2));
+        await tester.pump();
+        expect(tester.widget<ListView>(find.byType(ListView)), same(timeline));
+        if (interactive) {
+          expect(
+            tester.widget<ChatComposer>(find.byType(ChatComposer)),
+            same(editor),
+          );
+        } else {
+          expect(tester.widget<ViewerCount>(find.byType(ViewerCount)).count, 2);
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
   testWidgets('replacing auth source follows new events and ignores old ones', (
     tester,
   ) async {

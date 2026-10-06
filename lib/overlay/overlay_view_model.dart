@@ -15,20 +15,25 @@ final class OverlayFrameState {
     required this.layout,
     required this.host,
     this.settingsOpen = false,
+    this.captureExclusionProcess = const SimpleFailableProcess.initial(),
   });
 
   final OverlayLayout layout;
   final OverlayHostState host;
   final bool settingsOpen;
+  final SimpleFailableProcess captureExclusionProcess;
 
   OverlayFrameState copyWith({
     OverlayLayout? layout,
     OverlayHostState? host,
     bool? settingsOpen,
+    SimpleFailableProcess? captureExclusionProcess,
   }) => OverlayFrameState(
     layout: layout ?? this.layout,
     host: host ?? this.host,
     settingsOpen: settingsOpen ?? this.settingsOpen,
+    captureExclusionProcess:
+        captureExclusionProcess ?? this.captureExclusionProcess,
   );
 }
 
@@ -50,12 +55,7 @@ final class OverlayViewModel extends BaseViewModel {
     );
     _authState = register(ObservableValue(current: auth.state));
     _chatState = register(ObservableValue(current: chat.state));
-    _connectionStatus = register(ObservableValue(current: chat.state.status));
-    _captureExclusionProcess = register(
-      ObservableValue<SimpleFailableProcess>(
-        current: const SimpleFailableProcess.initial(),
-      ),
-    );
+    _connectionStatus = _chatState.select((state) => state.status);
 
     observe(_host.states, (hostState) {
       if (!hostState.interactive && _frame.current.settingsOpen) {
@@ -77,16 +77,13 @@ final class OverlayViewModel extends BaseViewModel {
   late final ObservableValue<OverlayFrameState> _frame;
   late final ObservableValue<TwitchAuthState> _authState;
   late final ObservableValue<ChatState> _chatState;
-  late final ObservableValue<ChatConnectionStatus> _connectionStatus;
-  late final ObservableValue<SimpleFailableProcess> _captureExclusionProcess;
+  late final StreamWithInitial<ChatConnectionStatus> _connectionStatus;
 
   StreamWithInitial<OverlayFrameState> get frame => _frame;
   StreamWithInitial<TwitchAuthState> get authState => _authState;
   StreamWithInitial<ChatState> get chatState => _chatState;
   StreamWithInitial<ChatConnectionStatus> get connectionStatus =>
       _connectionStatus;
-  StreamWithInitial<SimpleFailableProcess> get captureExclusionProcess =>
-      _captureExclusionProcess;
   final OverlayLayoutStore _layoutStore;
   final OverlayHost _host;
   final TwitchAuth _auth;
@@ -94,9 +91,6 @@ final class OverlayViewModel extends BaseViewModel {
 
   void _onChatState(ChatState value) {
     if (!identical(_chatState.current, value)) _chatState.set(value);
-    if (!isDisposed && _connectionStatus.current != value.status) {
-      _connectionStatus.set(value.status);
-    }
   }
 
   Future<void> _initializeHost() async {
@@ -111,17 +105,13 @@ final class OverlayViewModel extends BaseViewModel {
           layout: _frame.current.layout.withExcludedFromCapture(
             _host.state.excludedFromCapture,
           ),
-        ),
-      );
-      if (!isDisposed) {
-        _captureExclusionProcess.set(
-          SimpleFailableProcess.failed(
+          captureExclusionProcess: SimpleFailableProcess.failed(
             OverlayFailure.captureExclusion,
             cause: error,
             stackTrace: stack,
           ),
-        );
-      }
+        ),
+      );
     }
   }
 
@@ -163,17 +153,24 @@ final class OverlayViewModel extends BaseViewModel {
   Future<void> saveLayout() => _layoutStore.save(_frame.current.layout);
 
   Future<void> changeCaptureExclusion(bool excluded) async {
-    if (isDisposed || _captureExclusionProcess.current.isActive) return;
-    _captureExclusionProcess.set(const SimpleFailableProcess.loading());
+    if (isDisposed || _frame.current.captureExclusionProcess.isActive) return;
+    _frame.set(
+      _frame.current.copyWith(
+        captureExclusionProcess: const SimpleFailableProcess.loading(),
+      ),
+    );
+    if (isDisposed) return;
     try {
       await _host.setExcludedFromCapture(excluded);
     } catch (error, stack) {
       if (!isDisposed) {
-        _captureExclusionProcess.set(
-          SimpleFailableProcess.failed(
-            OverlayFailure.captureExclusion,
-            cause: error,
-            stackTrace: stack,
+        _frame.set(
+          _frame.current.copyWith(
+            captureExclusionProcess: SimpleFailableProcess.failed(
+              OverlayFailure.captureExclusion,
+              cause: error,
+              stackTrace: stack,
+            ),
           ),
         );
       }
@@ -183,10 +180,10 @@ final class OverlayViewModel extends BaseViewModel {
     _frame.set(
       _frame.current.copyWith(
         layout: _frame.current.layout.withExcludedFromCapture(excluded),
+        captureExclusionProcess: const SimpleFailableProcess.initial(),
       ),
     );
     if (isDisposed) return;
-    _captureExclusionProcess.set(const SimpleFailableProcess.initial());
     await saveLayout();
   }
 
