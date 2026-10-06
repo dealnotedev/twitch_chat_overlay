@@ -158,9 +158,16 @@ void main() {
       );
     }
 
+    // Widget tests mock HttpClient; this fixture needs a real loopback socket.
+    Future<void> join(String broadcasterId) =>
+        HttpOverrides.runWithHttpOverrides(
+          () => session.join(broadcasterId: broadcasterId),
+          _LoopbackHttpOverrides(),
+        );
+
     await runZoned(
       () async {
-        await session.join(broadcasterId: 'owner');
+        await join('owner');
         await flush();
         expect(requests, hasLength(1));
         expect(timers, hasLength(1));
@@ -171,7 +178,7 @@ void main() {
         expect(session.state.viewerCount, 120);
 
         // Joining the same channel does not create another polling timer.
-        await session.join(broadcasterId: 'owner');
+        await join('owner');
         expect(timers, hasLength(1));
         timers.last.fire();
         await flush();
@@ -205,9 +212,10 @@ void main() {
         timers.last.fire();
         await flush();
         final oldTimer = timers.last;
-        await session.join(broadcasterId: 'other');
+        await join('other');
         await flush();
         expect(oldTimer.isActive, isFalse);
+        expect(requests[4].$1.cancelToken!.isCancelled, isTrue);
         expect(requests.last.$1.queryParameters, {'user_id': 'other'});
         resolve(5, [
           {'viewer_count': 42},
@@ -223,6 +231,7 @@ void main() {
         await flush();
         await session.leave();
         expect(timers.every((timer) => !timer.isActive), isTrue);
+        expect(requests[6].$1.cancelToken!.isCancelled, isTrue);
         resolve(6, [
           {'viewer_count': 888},
         ]);
@@ -243,6 +252,8 @@ void main() {
     );
   });
 }
+
+class _LoopbackHttpOverrides extends HttpOverrides {}
 
 class _ManualTimer implements Timer {
   _ManualTimer(this.callback);

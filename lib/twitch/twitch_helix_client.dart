@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
@@ -19,7 +21,16 @@ final class SendChatResult {
 
 final class TwitchHelixClient {
   TwitchHelixClient(this._auth, {Dio? dio})
-    : _dio = dio ?? Dio(BaseOptions(baseUrl: 'https://api.twitch.tv/helix'));
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: 'https://api.twitch.tv/helix',
+              connectTimeout: const Duration(seconds: 15),
+              sendTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 15),
+            ),
+          );
 
   static const List<String> chatSubscriptionTypes = [
     'channel.chat.message',
@@ -33,11 +44,15 @@ final class TwitchHelixClient {
   final Dio _dio;
 
   /// A null count means the channel is offline, not a failed request.
-  Future<int?> getViewerCount({required String broadcasterId}) async {
+  Future<int?> getViewerCount({
+    required String broadcasterId,
+    CancelToken? cancelToken,
+  }) async {
     final response = await _request(
       '/streams',
       queryParameters: {'user_id': broadcasterId},
-    ).timeout(const Duration(seconds: 20));
+      cancelToken: cancelToken,
+    );
     final data = response.data?['data'];
     if (data is! List) throw const FormatException('Invalid stream response');
     if (data.isEmpty) return null;
@@ -248,6 +263,7 @@ final class TwitchHelixClient {
           },
         ),
       ),
+      eagerError: true,
     );
   }
 
@@ -325,9 +341,37 @@ final class TwitchHelixClient {
     Map<String, Object?>? queryParameters,
     String? emoteUserId,
     String? actorUserId,
+    CancelToken? cancelToken,
+  }) async {
+    final cancellation = cancelToken ?? CancelToken();
+    try {
+      return await _requestWithToken(
+        path,
+        method: method,
+        data: data,
+        queryParameters: queryParameters,
+        emoteUserId: emoteUserId,
+        actorUserId: actorUserId,
+        cancellation: cancellation,
+      ).timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      cancellation.cancel('Helix request timeout');
+      rethrow;
+    }
+  }
+
+  Future<Response<Map<String, Object?>>> _requestWithToken(
+    String path, {
+    required CancelToken cancellation,
+    required String method,
+    Map<String, Object?>? data,
+    Map<String, Object?>? queryParameters,
+    String? emoteUserId,
+    String? actorUserId,
   }) async {
     var token = await _auth.validToken();
     for (var attempt = 0; ; attempt++) {
+      if (cancellation.isCancelled) throw cancellation.cancelError!;
       if (actorUserId != null && token.userId != actorUserId) {
         throw const TwitchChatActionException(
           TwitchChatActionFailure.sessionChanged,
@@ -343,6 +387,7 @@ final class TwitchHelixClient {
           path,
           data: data,
           queryParameters: queryParameters,
+          cancelToken: cancellation,
           options: Options(
             method: method,
             listFormat: ListFormat.multi,

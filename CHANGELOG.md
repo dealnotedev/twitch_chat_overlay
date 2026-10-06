@@ -1,3 +1,22 @@
+# Twitch Chat Overlay 1.5.2
+
+## Changes
+
+- Fixed chat recovery after network interruptions, stalled connections and failed EventSub server migrations. Existing messages remain visible while the connection is restored.
+- Reduced silent-connection detection from up to 32 seconds to 12 seconds and capped retry pauses at 5.5 seconds, helping chat reconnect sooner after the network returns.
+- Refresh the viewer count immediately after reconnecting, including server migrations. Cancel stalled viewer requests and ignore late responses from previous connections or channels.
+- Added deadlines and cancellation for Twitch API requests so stalled requests cannot leave chat setup waiting indefinitely.
+- Handle revoked chat subscriptions explicitly: revoked authorization requires signing in again, unavailable users or subscription versions show a connection error, and optional reward failures leave ordinary chat working.
+- Keep the reconnect indicator visible until the replacement connection is ready, even when the old connection is still delivering messages.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.5.1
 
 ## Changes

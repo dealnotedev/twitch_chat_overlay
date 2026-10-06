@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:dio/dio.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_mutation.dart';
 import 'package:twitch_chat_overlay/chat/chat_timeline.dart';
@@ -85,7 +86,10 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   });
 
   static const String _defaultEventSubUrl =
-      'wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30';
+      'wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=10';
+  static const _connectTimeout = Duration(seconds: 15);
+  static const _welcomeTimeout = Duration(seconds: 10);
+  static const _subscriptionTimeout = Duration(seconds: 20);
   final String eventSubUrl;
   final TwitchRecentMessages? history;
   final ThirdPartyEmotes? thirdPartyEmotes;
@@ -109,12 +113,13 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   ChatState _state = const ChatState.idle();
   _EventSubSocket? _active;
   _EventSubSocket? _candidate;
+  _EventSubConnectAttempt? _connecting;
   Timer? _retryTimer;
   Timer? _viewerTimer;
   Timer? _emoteTimer;
   int? _viewerCount;
   bool _streamOffline = false;
-  bool _viewerLoadInFlight = false;
+  CancelToken? _viewerRequest;
   String? _broadcasterId;
   int _retryAttempt = 0;
   int _generation = 0;
@@ -140,7 +145,10 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       return;
     }
 
-    await leave();
+    final leaving = leave();
+    final generation = _generation;
+    await leaving;
+    if (generation != _generation) return;
     _broadcasterId = broadcasterId;
     _timeline.clear();
     // Capture moderation as soon as subscriptions can start delivering events.
@@ -162,7 +170,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
 
   @override
   Future<void> leave() async {
-    _generation++;
+    final generation = ++_generation;
+    _broadcasterId = null;
     _emoteCatalog = const EmoteCatalog.empty();
     _emoteTimer?.cancel();
     _emoteTimer = null;
@@ -172,7 +181,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     _viewerTimer = null;
     _viewerCount = null;
     _streamOffline = false;
-    _viewerLoadInFlight = false;
+    _viewerRequest?.cancel('Chat session ended');
+    _viewerRequest = null;
     _badgeChannels.clear();
     _badgeLoads.clear();
     _badgeRetryAt.clear();
@@ -182,16 +192,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     _rewardsRefreshAt = null;
     _retryTimer?.cancel();
     _retryTimer = null;
-    final active = _active;
-    final candidate = _candidate;
-    _active = null;
-    _candidate = null;
-    await Future.wait([
-      if (active != null) active.close(),
-      if (candidate != null) candidate.close(),
-    ]);
-    _broadcasterId = null;
-    _emit(ChatConnectionStatus.idle);
+    await _closeConnections();
+    if (generation == _generation) _emit(ChatConnectionStatus.idle);
   }
 
   @override
@@ -348,17 +350,36 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     String url, {
     required bool inheritedSubscriptions,
   }) async {
+    if (_broadcasterId == null || _connecting != null) return;
     final generation = _generation;
+    final attempt = _EventSubConnectAttempt(_connectTimeout);
+    _connecting = attempt;
     try {
-      final webSocket = await WebSocket.connect(url);
-      if (generation != _generation || _broadcasterId == null) {
-        await webSocket.close();
+      final pending = WebSocket.connect(url, customClient: attempt.client);
+      // A timed-out handshake may complete after its HTTP response detached.
+      // Close that late transport instead of leaking or adopting it.
+      unawaited(
+        pending.then((webSocket) async {
+          if (attempt.cancelled) {
+            await webSocket.close(WebSocketStatus.normalClosure);
+          }
+        }, onError: (Object _, StackTrace _) {}),
+      );
+      final webSocket = await pending.timeout(_connectTimeout);
+      if (generation != _generation ||
+          _broadcasterId == null ||
+          attempt != _connecting ||
+          attempt.cancelled) {
+        await webSocket.close(WebSocketStatus.normalClosure);
         return;
       }
-      webSocket.pingInterval = const Duration(seconds: 10);
-      final socket = _EventSubSocket(
-        channel: IOWebSocketChannel(webSocket),
+      // EventSub permits Pong replies only. Dart answers server Ping itself.
+      late final _EventSubSocket socket;
+      socket = _EventSubSocket(
+        webSocket: webSocket,
         inheritedSubscriptions: inheritedSubscriptions,
+        generation: generation,
+        onTimeout: (error) => _handleSocketFailure(socket, error),
       );
       if (inheritedSubscriptions) {
         _candidate = socket;
@@ -372,23 +393,52 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
         },
         onDone: () => _handleSocketFailure(socket, 'Connection closed'),
       );
+      socket.welcomeTimer = Timer(_welcomeTimeout, () {
+        _handleSocketFailure(
+          socket,
+          TimeoutException('EventSub welcome timeout'),
+        );
+      });
     } catch (error) {
+      if (generation != _generation ||
+          attempt != _connecting ||
+          attempt.cancelled) {
+        return;
+      }
+      attempt.cancel();
+      _connecting = null;
       if (inheritedSubscriptions) {
-        await _handleReconnectFailure(error);
+        _handleReconnectFailure(error);
       } else {
         _scheduleReconnect(error);
       }
+    } finally {
+      attempt.client.close(force: true);
+      if (_connecting == attempt) _connecting = null;
     }
   }
 
   Future<void> _handleFrame(_EventSubSocket socket, Object? raw) async {
+    if (socket.closed ||
+        socket.failureHandled ||
+        socket.generation != _generation ||
+        (socket != _active && socket != _candidate)) {
+      return;
+    }
+    try {
+      await _processFrame(socket, raw);
+    } catch (error) {
+      _handleSocketFailure(socket, error);
+    }
+  }
+
+  Future<void> _processFrame(_EventSubSocket socket, Object? raw) async {
     if (raw is! String) return;
     final envelope = (jsonDecode(raw) as Map).cast<String, Object?>();
     final metadata = _map(envelope['metadata']);
     final messageId = metadata['message_id'] as String?;
-    if (messageId != null && !_rememberMessageId(messageId)) return;
-
     socket.touch();
+    if (messageId != null && !_rememberMessageId(messageId)) return;
     switch (metadata['message_type']) {
       case 'session_welcome':
         await _handleWelcome(socket, envelope);
@@ -414,7 +464,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
               unawaited(_loadBadges(channel));
             }
           }
-          _emit(ChatConnectionStatus.connected);
+          _emit(_state.status, error: _state.error);
         }
         return;
       case 'session_reconnect':
@@ -442,7 +492,26 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
             ),
           ),
         );
-        _emit(ChatConnectionStatus.connected);
+        final error = 'EventSub subscription revoked: $type ($status)';
+        final requiredChat = TwitchHelixClient.chatSubscriptionTypes.contains(
+          type,
+        );
+        if (status == 'authorization_revoked' ||
+            (requiredChat &&
+                (status == 'user_removed' || status == 'version_removed'))) {
+          _retryTimer?.cancel();
+          _retryTimer = null;
+          unawaited(_closeConnections());
+          _emit(ChatConnectionStatus.failure, error: error);
+          if (status == 'authorization_revoked') await _auth.signOut();
+        } else if (requiredChat) {
+          _handleReconnectFailure(error);
+        } else {
+          if (type == TwitchHelixClient.rewardSubscriptionType) {
+            _rewardSubscriptionFailed = true;
+          }
+          _emit(_state.status, error: _state.error);
+        }
         return;
       default:
         return;
@@ -453,19 +522,26 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     _EventSubSocket socket,
     Map<String, Object?> envelope,
   ) async {
+    if (socket.sessionId != null) return;
     final session = _map(_map(envelope['payload'])['session']);
     socket.sessionId = session['id'] as String?;
+    if (socket.sessionId == null || socket.sessionId!.isEmpty) {
+      throw const FormatException('EventSub welcome is missing session ID');
+    }
     socket.keepaliveSeconds =
         session['keepalive_timeout_seconds'] as int? ?? 30;
+    if (socket.keepaliveSeconds < 1) {
+      throw const FormatException('Invalid EventSub keepalive timeout');
+    }
+    socket.welcomeTimer?.cancel();
     socket.touch();
 
     if (socket.inheritedSubscriptions) {
       final old = _active;
       _active = socket;
       _candidate = null;
-      await old?.close();
-      _retryAttempt = 0;
-      _emit(ChatConnectionStatus.connected);
+      if (old != null) unawaited(old.close());
+      _markConnected();
       return;
     }
 
@@ -474,19 +550,22 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     if (socket != _active || broadcasterId == null || sessionId == null) return;
 
     try {
-      final token = await _auth.validToken();
-      await _helix.createChatSubscriptions(
-        sessionId: sessionId,
-        broadcasterId: broadcasterId,
-        userId: token.userId,
-      );
-      await _helix.createBitsSubscription(
-        sessionId: sessionId,
-        broadcasterId: broadcasterId,
-      );
+      await (() async {
+        final token = await _auth.validToken();
+        if (socket != _active || socket.closed) return;
+        await _helix.createChatSubscriptions(
+          sessionId: sessionId,
+          broadcasterId: broadcasterId,
+          userId: token.userId,
+        );
+        if (socket != _active || socket.closed) return;
+        await _helix.createBitsSubscription(
+          sessionId: sessionId,
+          broadcasterId: broadcasterId,
+        );
+      })().timeout(_subscriptionTimeout);
       if (socket == _active) {
-        _retryAttempt = 0;
-        _emit(ChatConnectionStatus.connected);
+        _markConnected();
         unawaited(_loadHistory());
         unawaited(_subscribeRewards(socket, broadcasterId, sessionId));
       }
@@ -495,21 +574,32 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     }
   }
 
+  void _markConnected() {
+    final recovered = _state.status == ChatConnectionStatus.reconnecting;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _retryAttempt = 0;
+    _emit(ChatConnectionStatus.connected);
+    if (recovered) unawaited(_refreshViewerCount(refresh: true));
+  }
+
   void _handleSocketFailure(_EventSubSocket socket, Object error) {
     if (socket.failureHandled) return;
     socket.failureHandled = true;
 
     if (socket == _candidate) {
-      _candidate = null;
-      unawaited(socket.close());
-      unawaited(_handleReconnectFailure(error));
+      _handleReconnectFailure(error);
       return;
     }
     if (socket != _active) return;
 
     _active = null;
     unawaited(socket.close());
-    if (_candidate == null) _scheduleReconnect(error);
+    if (_candidate == null && _connecting == null) {
+      _scheduleReconnect(error);
+    } else {
+      _emit(ChatConnectionStatus.reconnecting, error: error.toString());
+    }
   }
 
   Future<void> _subscribeRewards(
@@ -602,16 +692,32 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     }
   }
 
-  Future<void> _handleReconnectFailure(Object error) async {
+  Future<void> _closeConnections() async {
+    _connecting?.cancel();
+    _connecting = null;
     final active = _active;
+    final candidate = _candidate;
     _active = null;
-    await active?.close();
+    _candidate = null;
+    await Future.wait([
+      if (active != null) active.close(),
+      if (candidate != null) candidate.close(),
+    ]);
+  }
+
+  void _handleReconnectFailure(Object error) {
+    unawaited(_closeConnections());
     _scheduleReconnect(error);
   }
 
   void _scheduleReconnect(Object error) {
-    if (_broadcasterId == null || _retryTimer != null) return;
-    final exponential = min(30, 1 << min(_retryAttempt, 5));
+    if (_broadcasterId == null ||
+        _retryTimer != null ||
+        _state.status == ChatConnectionStatus.failure) {
+      return;
+    }
+    // Continue probing a restored network without a 30-second backoff tail.
+    final exponential = min(5, 1 << min(_retryAttempt, 3));
     final delay = Duration(
       milliseconds: exponential * 1000 + _random.nextInt(500),
     );
@@ -662,23 +768,29 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     }
   }
 
-  Future<void> _refreshViewerCount() async {
+  Future<void> _refreshViewerCount({bool refresh = false}) async {
     final broadcasterId = _broadcasterId;
-    if (broadcasterId == null || _viewerLoadInFlight) return;
+    if (broadcasterId == null || (_viewerRequest != null && !refresh)) return;
     final generation = _generation;
-    _viewerLoadInFlight = true;
+    // Reconnection must not wait for an HTTP request from the previous network.
+    _viewerRequest?.cancel('Refreshing after reconnect');
+    final request = CancelToken();
+    _viewerRequest = request;
     try {
-      final count = await _helix.getViewerCount(broadcasterId: broadcasterId);
-      if (generation != _generation) return;
+      final count = await _helix.getViewerCount(
+        broadcasterId: broadcasterId,
+        cancelToken: request,
+      );
+      if (generation != _generation || _viewerRequest != request) return;
       _viewerCount = count;
       _streamOffline = count == null;
     } catch (_) {
-      if (generation != _generation) return;
+      if (generation != _generation || _viewerRequest != request) return;
       // Never present an old count as current, or interrupt chat on failure.
       _viewerCount = null;
       _streamOffline = false;
     } finally {
-      if (generation == _generation) _viewerLoadInFlight = false;
+      if (_viewerRequest == request) _viewerRequest = null;
     }
     _emit(_state.status, error: _state.error);
   }
@@ -708,33 +820,65 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   }
 }
 
+final class _EventSubConnectAttempt {
+  _EventSubConnectAttempt(Duration timeout)
+    : client = HttpClient()..connectionTimeout = timeout;
+
+  final HttpClient client;
+  bool cancelled = false;
+
+  void cancel() {
+    cancelled = true;
+    client.close(force: true);
+  }
+}
+
 final class _EventSubSocket {
   _EventSubSocket({
-    required this.channel,
+    required WebSocket webSocket,
     required this.inheritedSubscriptions,
-  });
+    required this.generation,
+    required this.onTimeout,
+  }) : _webSocket = webSocket,
+       channel = IOWebSocketChannel(webSocket);
 
+  final WebSocket _webSocket;
   final IOWebSocketChannel channel;
   final bool inheritedSubscriptions;
+  final int generation;
+  final void Function(Object) onTimeout;
   StreamSubscription<Object?>? subscription;
+  Timer? welcomeTimer;
   Timer? watchdog;
   String? sessionId;
   int keepaliveSeconds = 30;
   bool failureHandled = false;
   bool closed = false;
+  Future<void>? _closing;
 
   void touch() {
+    if (closed || sessionId == null) return;
     watchdog?.cancel();
     watchdog = Timer(Duration(seconds: keepaliveSeconds + 2), () {
-      channel.sink.close(WebSocketStatus.goingAway, 'Keepalive timeout');
+      onTimeout(TimeoutException('EventSub keepalive timeout'));
     });
   }
 
-  Future<void> close() async {
-    if (closed) return;
+  Future<void> close() {
+    if (_closing != null) return _closing!;
     closed = true;
+    welcomeTimer?.cancel();
     watchdog?.cancel();
-    await subscription?.cancel();
-    await channel.sink.close(WebSocketStatus.normalClosure);
+    return _closing = _close();
+  }
+
+  Future<void> _close() async {
+    try {
+      await subscription?.cancel();
+      await channel.sink.close(WebSocketStatus.normalClosure);
+    } finally {
+      // Close the native transport even if the channel adapter failed cleanup.
+      await _webSocket.close(WebSocketStatus.normalClosure);
+    }
   }
 }

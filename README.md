@@ -142,8 +142,10 @@ with the signed-in broadcaster's token.
 
 In locked mode, the viewer count appears beside the connection indicator in one
 compact row at the top right. Helix Get Streams is queried immediately on joining
-and every minute; offline channels show a localized Offline label, and unavailable
-counts show a dash. Polling stops on sign-out and ignores results from old sessions.
+and every minute, and refreshed immediately after reconnecting (including server
+migration). Reconnection cancels an older viewer request and ignores its late
+response. Offline channels show a localized Offline label, and unavailable counts
+show a dash. Polling stops and pending viewer requests are cancelled on sign-out.
 ### Composer and sender emotes
 
 The logout button stays left of the input and Send stays right; the emote button
@@ -234,6 +236,19 @@ Helix retries a request once after a 401, sharing one refresh across concurrent
 requests and persisting rotated credentials before further validation. Network
 failures, rate limits and server outages retain the account and retry through
 the existing reconnect loop. Signing out invalidates pending refresh work.
+WebSocket handshakes, welcome messages and subscription setup have separate
+deadlines. A stalled connection is closed and retried, including a failed server
+migration, while existing messages remain visible. Incoming messages during a
+migration do not clear the reconnect indicator. EventSub keepalive timeouts close
+the underlying socket; only Pong replies are sent to the EventSub server. New
+connections request Twitch's minimum 10-second keepalive interval, with a
+2-second watchdog margin. Retry pauses grow from 1 second to a maximum of
+5 seconds plus up to 0.5 seconds of jitter; recovery still requires a successful
+WebSocket handshake and chat subscription requests.
+Revoked authorization requires signing in again. Removed users or unsupported
+chat subscription versions show a connection failure instead of a connected
+indicator; an unavailable optional rewards subscription leaves ordinary chat
+working. Helix requests have network and overall deadlines and cancel on timeout.
 Twitch sessions use one JSON format in `twitch_oauth`: access and refresh tokens,
 client/user IDs, login, scopes and expiration time. Other stored formats are
 rejected and require signing in again; no migration is performed.
@@ -337,4 +352,4 @@ is intentionally not used by the desktop callback server.
 - Official cheermote images and native rendering of special messages/events.
 - Additional moderation actions and channel controls.
 - Device Code OAuth and production packaging/signing.
-- Integration tests for EventSub reconnect and the OAuth callback.
+- Integration tests for the OAuth callback.
