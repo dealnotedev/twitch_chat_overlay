@@ -8,6 +8,7 @@ abstract interface class OverlayLayoutStore {
 }
 
 final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
+  static const String _captureExclusionKey = 'overlay.capture.excluded';
   static const String _sevenTvKey = 'overlay.integrations.sevenTv';
   static const String _betterTtvKey = 'overlay.integrations.betterTtv';
   static const String _leftKey = 'overlay.layout.left';
@@ -27,6 +28,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   @override
   Future<OverlayLayout> load() async {
     final preferences = await SharedPreferences.getInstance();
+    final excludedFromCapture =
+        preferences.getBool(_captureExclusionKey) ?? false;
     final emoteOptions = ThirdPartyEmoteOptions(
       sevenTv: preferences.getBool(_sevenTvKey) ?? false,
       betterTtv: preferences.getBool(_betterTtvKey) ?? false,
@@ -60,6 +63,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
 
     if (left == null || top == null || width == null || height == null) {
       return const OverlayLayout.defaults()
+          .withExcludedFromCapture(excludedFromCapture)
           .withEmoteOptions(emoteOptions)
           .withVisibleComponents(
             showViewerCount: showViewerCount,
@@ -74,6 +78,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     }
 
     return OverlayLayout(
+          excludedFromCapture: excludedFromCapture,
           emoteOptions: emoteOptions,
           left: left,
           top: top,
@@ -94,6 +99,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   Future<void> save(OverlayLayout layout) async {
     final preferences = await SharedPreferences.getInstance();
     await Future.wait<void>([
+      preferences.setBool(_captureExclusionKey, layout.excludedFromCapture),
       preferences.setBool(_sevenTvKey, layout.emoteOptions.sevenTv),
       preferences.setBool(_betterTtvKey, layout.emoteOptions.betterTtv),
       preferences.setBool(_viewerCountKey, layout.showViewerCount),

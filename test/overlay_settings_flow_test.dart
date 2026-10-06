@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:twitch_chat_overlay/emotes/emote_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,12 +25,15 @@ void main() {
       const hostChannel = MethodChannel('overlay/window');
       final messenger = tester.binding.defaultBinaryMessenger;
       final trayFactory = FakeTrayFactory();
-      messenger.setMockMethodCallHandler(
-        hostChannel,
-        (call) async => call.method == 'getState'
+      final captureCalls = <bool>[];
+      messenger.setMockMethodCallHandler(hostChannel, (call) async {
+        if (call.method == 'setExcludedFromCapture') {
+          captureCalls.add(call.arguments as bool);
+        }
+        return call.method == 'getState'
             ? {'topmost': true, 'interactive': false}
-            : null,
-      );
+            : null;
+      });
       addTearDown(() {
         messenger.setMockMethodCallHandler(hostChannel, null);
       });
@@ -78,6 +83,15 @@ void main() {
       expect(tester.getRect(find.byType(ChatPanel)), chatRect);
       expect(tester.getRect(panel).right, lessThan(chatRect.left));
       expect(chat.options, const ThirdPartyEmoteOptions(betterTtv: true));
+      final capture = find.byKey(const ValueKey('capture-exclusion-switch'));
+      await tester.ensureVisible(capture);
+      await tester.pumpAndSettle();
+      await tester.tap(capture);
+      await tester.pumpAndSettle();
+      expect(captureCalls, [true]);
+      expect(host.state.excludedFromCapture, isTrue);
+      expect(store.saved!.excludedFromCapture, isTrue);
+      expect(find.text('Keep this draft'), findsOneWidget);
       final sevenTv = find.byKey(const ValueKey('integration-7tv'));
       final bttv = find.byKey(const ValueKey('integration-bttv'));
       await tester.ensureVisible(sevenTv);
@@ -89,6 +103,7 @@ void main() {
         const ThirdPartyEmoteOptions(sevenTv: true, betterTtv: true),
       );
       expect(store.saved!.emoteOptions, chat.options);
+      expect(store.saved!.excludedFromCapture, isTrue);
       await tester.ensureVisible(bttv);
       await tester.pumpAndSettle();
       await tester.tap(bttv);
@@ -143,6 +158,14 @@ void main() {
       expect(host.state.interactive, isTrue);
       expect(panel, findsOneWidget);
       expect(tester.widget<Slider>(opacitySlider).value, 1);
+      await tester.ensureVisible(capture);
+      await tester.pumpAndSettle();
+      expect(tester.widget<Switch>(capture).value, isTrue);
+      await tester.tap(capture);
+      await tester.pumpAndSettle();
+      expect(captureCalls, [true, false]);
+      expect(host.state.excludedFromCapture, isFalse);
+      expect(store.saved!.excludedFromCapture, isFalse);
       expect(
         find.ancestor(of: panel, matching: find.byType(Opacity)),
         findsNothing,
@@ -152,6 +175,75 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  testWidgets('capture changes save only after success and allow retry', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const channel = MethodChannel('overlay/window');
+    final messenger = tester.binding.defaultBinaryMessenger;
+    var change = Completer<void>();
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getState') {
+        return {'topmost': true, 'interactive': true};
+      }
+      if (call.method == 'setExcludedFromCapture') await change.future;
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final host = MethodChannelOverlayHost();
+    final store = _LayoutStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: OverlaySurface(
+          initialLayout: const OverlayLayout.defaults(),
+          layoutStore: store,
+          overlayHost: host,
+          twitchAuth: _Auth(),
+          twitchChat: _Chat(),
+          trayFactory: FakeTrayFactory(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('settings-toggle')));
+    await tester.pumpAndSettle();
+    final capture = find.byKey(const ValueKey('capture-exclusion-switch'));
+    await tester.ensureVisible(capture);
+    await tester.pumpAndSettle();
+    await tester.tap(capture);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(capture).onChanged, isNull);
+    expect(store.saved, isNull);
+    change.completeError(PlatformException(code: 'DISPLAY_AFFINITY_FAILED'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(capture).value, isFalse);
+    expect(host.state.excludedFromCapture, isFalse);
+    expect(store.saved, isNull);
+    expect(find.textContaining("Windows couldn't"), findsOneWidget);
+    change = Completer<void>()..complete();
+    await tester.tap(capture);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(capture).value, isTrue);
+    expect(store.saved!.excludedFromCapture, isTrue);
+    expect(find.textContaining("Windows couldn't"), findsNothing);
+    // A rejected disable keeps the enabled state and saved preference.
+    change = Completer<void>();
+    await tester.tap(capture);
+    await tester.pumpAndSettle();
+    change.completeError(PlatformException(code: 'DISPLAY_AFFINITY_FAILED'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(capture).value, isTrue);
+    expect(host.state.excludedFromCapture, isTrue);
+    expect(store.saved!.excludedFromCapture, isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
 }
 
 class _Auth extends Fake implements TwitchAuth {

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/chat_font_size_control.dart';
+import 'package:twitch_chat_overlay/overlay/capture_exclusion_control.dart';
 import 'package:twitch_chat_overlay/overlay/chat_font_weight_control.dart';
 import 'package:twitch_chat_overlay/overlay/component_visibility_control.dart';
 import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
@@ -18,6 +19,9 @@ class OverlaySettingsPanel extends StatefulWidget {
     required this.onChanged,
     required this.onChangeEnd,
     required this.onClose,
+    required this.onCaptureExclusionChanged,
+    this.changingCaptureExclusion = false,
+    this.captureExclusionFailed = false,
     super.key,
   });
 
@@ -25,6 +29,9 @@ class OverlaySettingsPanel extends StatefulWidget {
   final ValueChanged<OverlayLayout> onChanged;
   final VoidCallback onChangeEnd;
   final VoidCallback onClose;
+  final ValueChanged<bool> onCaptureExclusionChanged;
+  final bool changingCaptureExclusion;
+  final bool captureExclusionFailed;
 
   static Rect placeBeside(Rect chat, Size viewport) {
     const margin = 12.0;
@@ -246,6 +253,20 @@ class _OverlaySettingsPanelState extends State<OverlaySettingsPanel> {
                                             showConnectionIndicator: value,
                                           ),
                                         ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              _SettingsSection(
+                                title: l10n.settingsScreenCapture,
+                                icon: Icons.screen_share_outlined,
+                                children: [
+                                  CaptureExclusionControl(
+                                    value: layout.excludedFromCapture,
+                                    onChanged: widget.changingCaptureExclusion
+                                        ? null
+                                        : widget.onCaptureExclusionChanged,
+                                    failed: widget.captureExclusionFailed,
                                   ),
                                 ],
                               ),

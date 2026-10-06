@@ -30,6 +30,17 @@ void OverlayWindowPolicy::Detach() {
     hotkey_registered_ = false;
   }
   window_ = nullptr;
+  excluded_from_capture_ = false;
+}
+
+bool OverlayWindowPolicy::SetExcludedFromCapture(bool excluded) {
+  // Display affinity belongs to the top-level host, not the Flutter child.
+  if (!SetWindowDisplayAffinity(
+          window_, excluded ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE)) {
+    return false;
+  }
+  excluded_from_capture_ = excluded;
+  return true;
 }
 
 void OverlayWindowPolicy::SetTopmostEnabled(bool enabled) {

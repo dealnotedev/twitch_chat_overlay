@@ -28,6 +28,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsIndicators => 'Indicators';
 
   @override
+  String get settingsScreenCapture => 'Screen capture';
+
+  @override
+  String get captureExclusionLabel => 'Hide overlay from capture';
+
+  @override
+  String get captureExclusionDescription =>
+      'The overlay stays visible to you, but is hidden from compatible recording and screen sharing apps.';
+
+  @override
+  String get captureExclusionFailed =>
+      'Windows couldn\'t apply this change. The previous setting is still active. Try again.';
+
+  @override
   String get settingsIntegrations => 'Integrations';
 
   @override

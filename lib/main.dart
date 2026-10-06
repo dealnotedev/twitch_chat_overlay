@@ -32,6 +32,14 @@ Future<void> main() async {
   final layoutStore = SharedPreferencesOverlayLayoutStore();
   final initialLayout = await layoutStore.load();
   final overlayHost = MethodChannelOverlayHost();
+  // Restore display affinity before runApp can submit the first visible frame.
+  try {
+    await overlayHost.initialize(
+      excludedFromCapture: initialLayout.excludedFromCapture,
+    );
+  } on PlatformException {
+    // OverlaySurface handles this same initialization failure in the settings UI.
+  }
   final twitchAuth = TwitchAuthClient(SharedPreferencesTwitchTokenStore());
   final twitchHelix = TwitchHelixClient(twitchAuth);
   final twitchChat = EventSubTwitchChatSession(

@@ -23,6 +23,10 @@ class OverlayWindowPolicy {
 
   void SetVisible(bool visible);
 
+  // Returns false without changing the state if Windows rejects the affinity.
+  bool SetExcludedFromCapture(bool excluded);
+  bool excluded_from_capture() const { return excluded_from_capture_; }
+
   void SetInteractive(bool interactive);
   bool interactive() const { return interactive_; }
 
@@ -45,6 +49,7 @@ class OverlayWindowPolicy {
   HWND window_ = nullptr;
   bool topmost_enabled_ = true;
   bool interactive_ = false;
+  bool excluded_from_capture_ = false;
   bool hotkey_registered_ = false;
 };
 

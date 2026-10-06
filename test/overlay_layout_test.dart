@@ -11,6 +11,57 @@ void main() {
 
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('capture exclusion defaults off for new and existing layouts', () async {
+    final store = SharedPreferencesOverlayLayoutStore();
+    for (final values in [
+      <String, Object>{},
+      <String, Object>{
+        'overlay.layout.left': .1,
+        'overlay.layout.top': .1,
+        'overlay.layout.width': .4,
+        'overlay.layout.height': .7,
+      },
+    ]) {
+      SharedPreferences.setMockInitialValues(values);
+      expect((await store.load()).excludedFromCapture, isFalse);
+    }
+  });
+
+  test(
+    'capture exclusion survives all settings, geometry and reload',
+    () async {
+      final store = SharedPreferencesOverlayLayoutStore();
+      for (final excluded in [true, false]) {
+        SharedPreferences.setMockInitialValues({
+          'overlay.capture.excluded': excluded,
+        });
+        final initial = await store.load();
+        expect(initial.excludedFromCapture, excluded);
+        final layout = initial
+            .withEmoteOptions(const ThirdPartyEmoteOptions(sevenTv: true))
+            .withVisibleComponents(showViewerCount: false)
+            .withChatFontWeight(800)
+            .withChatFontSize(18)
+            .withContentOpacity(.35)
+            .withBackgroundOpacity(.2)
+            .withMessageLifetimeMinutes(5)
+            .withGifPlayCount(3)
+            .moveBy(const Offset(20, 20), viewport)
+            .resizeBy(ResizeHandle.bottomRight, const Offset(20, 20), viewport);
+        expect(layout.excludedFromCapture, excluded);
+        await store.save(layout);
+        expect((await store.load()).excludedFromCapture, excluded);
+        final changed = layout.withExcludedFromCapture(!excluded);
+        expect(changed.resolve(viewport), layout.resolve(viewport));
+        expect(changed.emoteOptions, layout.emoteOptions);
+        expect(changed.chatFontSize, 18);
+        expect(changed.showViewerCount, isFalse);
+        await store.save(changed);
+        expect((await store.load()).excludedFromCapture, !excluded);
+      }
+    },
+  );
+
   test('integrations default off for new and existing installations', () async {
     final store = SharedPreferencesOverlayLayoutStore();
     for (final values in [

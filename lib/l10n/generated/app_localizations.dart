@@ -134,6 +134,30 @@ abstract class AppLocalizations {
   /// **'Indicators'**
   String get settingsIndicators;
 
+  /// No description provided for @settingsScreenCapture.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen capture'**
+  String get settingsScreenCapture;
+
+  /// No description provided for @captureExclusionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide overlay from capture'**
+  String get captureExclusionLabel;
+
+  /// No description provided for @captureExclusionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The overlay stays visible to you, but is hidden from compatible recording and screen sharing apps.'**
+  String get captureExclusionDescription;
+
+  /// No description provided for @captureExclusionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows couldn\'t apply this change. The previous setting is still active. Try again.'**
+  String get captureExclusionFailed;
+
   /// No description provided for @settingsIntegrations.
   ///
   /// In en, this message translates to:

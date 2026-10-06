@@ -3,17 +3,30 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 final class OverlayHostState {
-  const OverlayHostState({required this.topmost, required this.interactive});
+  const OverlayHostState({
+    required this.topmost,
+    required this.interactive,
+    this.excludedFromCapture = false,
+  });
 
-  const OverlayHostState.initial() : topmost = true, interactive = false;
+  const OverlayHostState.initial()
+    : topmost = true,
+      interactive = false,
+      excludedFromCapture = false;
 
   final bool topmost;
   final bool interactive;
+  final bool excludedFromCapture;
 
-  OverlayHostState copyWith({bool? topmost, bool? interactive}) {
+  OverlayHostState copyWith({
+    bool? topmost,
+    bool? interactive,
+    bool? excludedFromCapture,
+  }) {
     return OverlayHostState(
       topmost: topmost ?? this.topmost,
       interactive: interactive ?? this.interactive,
+      excludedFromCapture: excludedFromCapture ?? this.excludedFromCapture,
     );
   }
 }
@@ -23,11 +36,12 @@ abstract interface class OverlayHost {
   Stream<OverlayHostState> get states;
   Stream<void> get closeRequests;
 
-  Future<void> initialize();
+  Future<void> initialize({bool excludedFromCapture = false});
   Future<bool> isVisible();
   Future<void> setVisible(bool visible);
   Future<void> setInteractive(bool interactive);
   Future<void> setTopmost(bool topmost);
+  Future<void> setExcludedFromCapture(bool excluded);
   Future<void> openUpdater(String locale);
   Future<void> close();
 }
@@ -42,6 +56,7 @@ final class MethodChannelOverlayHost implements OverlayHost {
       StreamController<void>.broadcast(sync: true);
 
   OverlayHostState _state = const OverlayHostState.initial();
+  Future<void>? _initialization;
 
   @override
   OverlayHostState get state => _state;
@@ -53,7 +68,10 @@ final class MethodChannelOverlayHost implements OverlayHost {
   Stream<void> get closeRequests => _closeRequests.stream;
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize({bool excludedFromCapture = false}) =>
+      _initialization ??= _initialize(excludedFromCapture);
+
+  Future<void> _initialize(bool excludedFromCapture) async {
     _channel.setMethodCallHandler(_handleNativeCall);
     final rawState = await _channel.invokeMapMethod<String, Object?>(
       'getState',
@@ -62,8 +80,12 @@ final class MethodChannelOverlayHost implements OverlayHost {
       OverlayHostState(
         topmost: rawState?['topmost'] as bool? ?? true,
         interactive: rawState?['interactive'] as bool? ?? false,
+        excludedFromCapture: rawState?['excludedFromCapture'] as bool? ?? false,
       ),
     );
+    if (_state.excludedFromCapture != excludedFromCapture) {
+      await setExcludedFromCapture(excludedFromCapture);
+    }
   }
 
   @override
@@ -84,6 +106,12 @@ final class MethodChannelOverlayHost implements OverlayHost {
   Future<void> setTopmost(bool topmost) async {
     await _channel.invokeMethod<void>('setTopmost', topmost);
     _emit(_state.copyWith(topmost: topmost));
+  }
+
+  @override
+  Future<void> setExcludedFromCapture(bool excluded) async {
+    await _channel.invokeMethod<void>('setExcludedFromCapture', excluded);
+    _emit(_state.copyWith(excludedFromCapture: excluded));
   }
 
   @override

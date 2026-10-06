@@ -55,6 +55,8 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
   StreamSubscription<ChatState>? _chatSubscription;
   OverlayTray? _tray;
   bool _settingsOpen = false;
+  bool _changingCaptureExclusion = false;
+  bool _captureExclusionFailed = false;
 
   @override
   void initState() {
@@ -77,8 +79,24 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
     _chatSubscription = widget.twitchChat.states.listen((state) {
       if (mounted) setState(() => _chatState = state);
     });
-    unawaited(widget.overlayHost.initialize());
+    unawaited(_initializeHost());
     unawaited(widget.twitchAuth.initialize());
+  }
+
+  Future<void> _initializeHost() async {
+    try {
+      await widget.overlayHost.initialize(
+        excludedFromCapture: _layout.excludedFromCapture,
+      );
+    } on PlatformException {
+      if (!mounted) return;
+      setState(() {
+        _layout = _layout.withExcludedFromCapture(
+          widget.overlayHost.state.excludedFromCapture,
+        );
+        _captureExclusionFailed = true;
+      });
+    }
   }
 
   @override
@@ -196,6 +214,10 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                       onChanged: _updateLayout,
                       onChangeEnd: _saveLayout,
                       onClose: _closeSettings,
+                      onCaptureExclusionChanged: (value) =>
+                          unawaited(_changeCaptureExclusion(value)),
+                      changingCaptureExclusion: _changingCaptureExclusion,
+                      captureExclusionFailed: _captureExclusionFailed,
                     ),
                   ),
               ],
@@ -252,6 +274,25 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
 
   void _saveLayout() {
     unawaited(widget.layoutStore.save(_layout));
+  }
+
+  Future<void> _changeCaptureExclusion(bool excluded) async {
+    if (_changingCaptureExclusion) return;
+    setState(() {
+      _changingCaptureExclusion = true;
+      _captureExclusionFailed = false;
+    });
+    try {
+      await widget.overlayHost.setExcludedFromCapture(excluded);
+    } on PlatformException {
+      if (mounted) setState(() => _captureExclusionFailed = true);
+      return;
+    } finally {
+      if (mounted) setState(() => _changingCaptureExclusion = false);
+    }
+    if (!mounted) return;
+    setState(() => _layout = _layout.withExcludedFromCapture(excluded));
+    _saveLayout();
   }
 
   void _onAuthState(TwitchAuthState state) {

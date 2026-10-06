@@ -50,6 +50,10 @@ void main() {
                           onChanged: (value) => setState(() => layout = value),
                           onChangeEnd: () {},
                           onClose: () {},
+                          onCaptureExclusionChanged: (value) => setState(
+                            () =>
+                                layout = layout.withExcludedFromCapture(value),
+                          ),
                         ),
                       ),
                     ],
@@ -74,6 +78,12 @@ void main() {
         await tester.tap(connection);
         await tester.pumpAndSettle();
         expect(layout.showConnectionIndicator, isFalse);
+        final capture = find.byKey(const ValueKey('capture-exclusion-switch'));
+        await tester.ensureVisible(capture);
+        await tester.pumpAndSettle();
+        await tester.tap(capture);
+        await tester.pumpAndSettle();
+        expect(layout.excludedFromCapture, isTrue);
         final sevenTv = find.byKey(const ValueKey('integration-7tv'));
         final bttv = find.byKey(const ValueKey('integration-bttv'));
         expect(layout.emoteOptions.enabled, isFalse);
@@ -88,6 +98,7 @@ void main() {
         await tester.tap(bttv);
         await tester.pumpAndSettle();
         expect(layout.emoteOptions.betterTtv, isTrue);
+        expect(layout.excludedFromCapture, isTrue);
         expect(
           find.text(locale == 'en' ? 'Integrations' : 'Інтеграції'),
           findsOneWidget,

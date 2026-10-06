@@ -13,6 +13,14 @@ normal use; Debug builds also retain the development runtime and tooling.
 ## Implemented
 
 - Transparent fullscreen Win32 host spanning the virtual desktop.
+- Optional **Screen capture → Hide overlay from capture** setting. It is off
+  by default, applies immediately and saves automatically. The saved setting is
+  restored before the host's first visible frame. Enabling it uses
+  `WDA_EXCLUDEFROMCAPTURE`; disabling it uses `WDA_NONE`. If Windows rejects a
+  change, the previous setting stays active and the panel shows an inline error.
+  Windows 10 version 2004 or newer is required for exclusion from supported
+  Windows capture APIs; older versions behave as `WDA_MONITOR`.
+  See [Microsoft's display affinity documentation](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity).
 - `HWND_TOPMOST` with native one-second topmost enforcement.
 - Topmost protection through `WM_WINDOWPOSCHANGING`.
 - Non-activating click-through mode.

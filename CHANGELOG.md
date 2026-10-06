@@ -1,3 +1,20 @@
+# Twitch Chat Overlay 1.5.1
+
+## Changes
+
+- Added a Screen capture section with a saved Hide overlay from capture switch. The setting is off by default and applies immediately without restarting.
+- Enabled `WDA_EXCLUDEFROMCAPTURE` when the switch is on and restored normal capture with `WDA_NONE` when it is off. The saved choice is applied before the overlay's first visible frame.
+- Added English and Ukrainian labels, a short explanation and an inline error when Windows rejects a change. Failed changes preserve the last confirmed state and saved preference.
+- Made only the capture switch interactive, matching the 7TV and BetterTTV controls without row-wide click or ripple effects.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.5.0
 
 ## Changes

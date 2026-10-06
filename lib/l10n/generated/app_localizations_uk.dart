@@ -28,6 +28,20 @@ class AppLocalizationsUk extends AppLocalizations {
   String get settingsIndicators => 'Індикатори';
 
   @override
+  String get settingsScreenCapture => 'Захоплення екрана';
+
+  @override
+  String get captureExclusionLabel => 'Приховувати оверлей у захопленні';
+
+  @override
+  String get captureExclusionDescription =>
+      'Оверлей залишається видимим для вас, але приховується в сумісних програмах запису та демонстрації екрана.';
+
+  @override
+  String get captureExclusionFailed =>
+      'Windows не вдалося застосувати зміну. Попереднє налаштування залишається активним. Спробуйте ще раз.';
+
+  @override
   String get settingsIntegrations => 'Інтеграції';
 
   @override

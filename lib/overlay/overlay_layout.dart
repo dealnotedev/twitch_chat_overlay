@@ -36,6 +36,7 @@ final class OverlayLayout {
     this.chatFontWeight = ChatFontWeight.defaultWeight,
     this.showViewerCount = true,
     this.showConnectionIndicator = true,
+    this.excludedFromCapture = false,
     this.emoteOptions = const ThirdPartyEmoteOptions(),
   });
 
@@ -52,6 +53,7 @@ final class OverlayLayout {
       chatFontWeight = ChatFontWeight.defaultWeight,
       showViewerCount = true,
       showConnectionIndicator = true,
+      excludedFromCapture = false,
       emoteOptions = const ThirdPartyEmoteOptions();
 
   static const double defaultContentOpacity = 1.0;
@@ -71,9 +73,11 @@ final class OverlayLayout {
   final int chatFontWeight;
   final bool showViewerCount;
   final bool showConnectionIndicator;
+  final bool excludedFromCapture;
   final ThirdPartyEmoteOptions emoteOptions;
 
   OverlayLayout withEmoteOptions(ThirdPartyEmoteOptions value) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     left: left,
     top: top,
     width: width,
@@ -89,10 +93,28 @@ final class OverlayLayout {
     emoteOptions: value,
   );
 
+  OverlayLayout withExcludedFromCapture(bool value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+    gifPlayCount: gifPlayCount,
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
+    emoteOptions: emoteOptions,
+    excludedFromCapture: value,
+  );
+
   OverlayLayout withVisibleComponents({
     bool? showViewerCount,
     bool? showConnectionIndicator,
   }) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
     left: left,
     top: top,
@@ -110,6 +132,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withChatFontWeight(int value) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
     left: left,
     top: top,
@@ -126,6 +149,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withChatFontSize(double value) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
     left: left,
     top: top,
@@ -142,6 +166,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withMessageLifetimeMinutes(int value) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
@@ -161,6 +186,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withBackgroundOpacity(double value) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
@@ -177,6 +203,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withContentOpacity(double value) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
@@ -195,6 +222,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withGifPlayCount(int value) => OverlayLayout(
+    excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
@@ -290,6 +318,7 @@ final class OverlayLayout {
     if (viewport.isEmpty) return this;
     final clamped = _clamp(rect, viewport);
     return OverlayLayout(
+      excludedFromCapture: excludedFromCapture,
       emoteOptions: emoteOptions,
       showViewerCount: showViewerCount,
       showConnectionIndicator: showConnectionIndicator,

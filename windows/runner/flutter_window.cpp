@@ -68,6 +68,8 @@ void FlutterWindow::RegisterOverlayChannel() {
               flutter::EncodableValue(overlay_policy_.topmost_enabled());
           state[flutter::EncodableValue("interactive")] =
               flutter::EncodableValue(overlay_policy_.interactive());
+          state[flutter::EncodableValue("excludedFromCapture")] =
+              flutter::EncodableValue(overlay_policy_.excluded_from_capture());
           result->Success(flutter::EncodableValue(state));
           return;
         }
@@ -120,13 +122,24 @@ void FlutterWindow::RegisterOverlayChannel() {
           return;
         }
 
-        const auto* enabled = std::get_if<bool>(call.arguments());
+        const auto* enabled = call.arguments()
+                                  ? std::get_if<bool>(call.arguments())
+                                  : nullptr;
         if (enabled == nullptr) {
           result->Error("INVALID_ARGS", method + " expects a bool argument");
           return;
         }
 
-        if (method == "setTopmost") {
+        if (method == "setExcludedFromCapture") {
+          if (!overlay_policy_.SetExcludedFromCapture(*enabled)) {
+            const DWORD error = GetLastError();
+            result->Error("DISPLAY_AFFINITY_FAILED",
+                          "Windows could not change screen capture visibility",
+                          flutter::EncodableValue(static_cast<int64_t>(error)));
+            return;
+          }
+          result->Success();
+        } else if (method == "setTopmost") {
           overlay_policy_.SetTopmostEnabled(*enabled);
           result->Success();
         } else if (method == "setVisible") {
