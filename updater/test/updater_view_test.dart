@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:overlay_updater/update_controller.dart';
+import 'package:overlay_updater/update_view_model.dart';
 import 'package:overlay_updater/l10n/generated/updater_localizations.dart';
 import 'package:overlay_updater/updater_view.dart';
 

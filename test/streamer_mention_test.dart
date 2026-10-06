@@ -1,3 +1,4 @@
+import 'package:observable_state/observable_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
@@ -247,22 +248,26 @@ Widget app(ChatUserMessage message, {double opacity = 1}) => MaterialApp(
         child: BackgroundOpacity(
           opacity: opacity,
           child: ChatPanel(
-            authState: TwitchAuthState(
-              status: TwitchAuthStatus.signedIn,
-              token: TwitchToken(
-                accessToken: 'test',
-                refreshToken: 'test',
-                clientId: 'test',
-                userId: 'broadcaster',
-                userLogin: 'streamer',
-                scopes: const [],
-                expiresAt: DateTime.utc(2030),
+            authSource: StreamWithInitial.value(
+              TwitchAuthState(
+                status: TwitchAuthStatus.signedIn,
+                token: TwitchToken(
+                  accessToken: 'test',
+                  refreshToken: 'test',
+                  clientId: 'test',
+                  userId: 'broadcaster',
+                  userLogin: 'streamer',
+                  scopes: const [],
+                  expiresAt: DateTime.utc(2030),
+                ),
               ),
             ),
-            chatState: ChatState(
-              status: ChatConnectionStatus.connected,
-              broadcasterId: 'broadcaster',
-              items: [message],
+            chatSource: StreamWithInitial.value(
+              ChatState(
+                status: ChatConnectionStatus.connected,
+                broadcasterId: 'broadcaster',
+                items: [message],
+              ),
             ),
             interactive: false,
             onSignIn: () async {},

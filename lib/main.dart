@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:twitch_chat_overlay/emotes/third_party_emotes.dart';
 
 import 'package:flutter/foundation.dart';
-import 'package:twitch_chat_overlay/l10n/locale_preferences.dart';
+import 'package:twitch_chat_overlay/l10n/locale_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
@@ -28,7 +28,7 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(['Inter'], license);
   });
 
-  final localePreferences = await LocalePreferences.load();
+  final localeViewModel = await LocaleViewModel.load();
   final layoutStore = SharedPreferencesOverlayLayoutStore();
   final initialLayout = await layoutStore.load();
   final overlayHost = MethodChannelOverlayHost();
@@ -52,7 +52,7 @@ Future<void> main() async {
 
   runApp(
     TwitchChatOverlayApp(
-      localePreferences: localePreferences,
+      localeViewModel: localeViewModel,
       initialLayout: initialLayout,
       layoutStore: layoutStore,
       overlayHost: overlayHost,
@@ -64,7 +64,7 @@ Future<void> main() async {
 
 class TwitchChatOverlayApp extends StatelessWidget {
   const TwitchChatOverlayApp({
-    required this.localePreferences,
+    required this.localeViewModel,
     required this.initialLayout,
     required this.layoutStore,
     required this.overlayHost,
@@ -74,7 +74,7 @@ class TwitchChatOverlayApp extends StatelessWidget {
     super.key,
   });
 
-  final LocalePreferences localePreferences;
+  final LocaleViewModel localeViewModel;
   final OverlayLayout initialLayout;
   final OverlayLayoutStore layoutStore;
   final OverlayHost overlayHost;
@@ -84,16 +84,17 @@ class TwitchChatOverlayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: localePreferences,
-      builder: (context, _) => MaterialApp(
+    return StreamBuilder<Locale>(
+      initialData: localeViewModel.locale.current,
+      stream: localeViewModel.locale.changes,
+      builder: (context, snapshot) => MaterialApp(
         debugShowCheckedModeBanner: false,
         scrollBehavior: const MaterialScrollBehavior().copyWith(
           scrollbars: false,
         ),
         color: Colors.transparent,
         onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-        locale: localePreferences.value,
+        locale: snapshot.requireData,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(
@@ -109,7 +110,7 @@ class TwitchChatOverlayApp extends StatelessWidget {
         home: OverlaySurface(
           trayFactory: trayFactory,
           onCycleLocale: () => unawaited(
-            localePreferences.cycle().catchError((
+            localeViewModel.cycle().catchError((
               Object error,
               StackTrace stack,
             ) {
@@ -122,7 +123,7 @@ class TwitchChatOverlayApp extends StatelessWidget {
               );
             }),
           ),
-          beforeExit: localePreferences.flush,
+          beforeExit: localeViewModel.flush,
           initialLayout: initialLayout,
           layoutStore: layoutStore,
           overlayHost: overlayHost,

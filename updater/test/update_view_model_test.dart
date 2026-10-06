@@ -6,18 +6,28 @@ import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:overlay_updater/core/app_version.dart';
 import 'package:overlay_updater/core/release_client.dart';
 import 'package:overlay_updater/core/update_package.dart';
 import 'package:overlay_updater/platform/updater_host.dart';
-import 'package:overlay_updater/update_controller.dart';
+import 'package:overlay_updater/update_view_model.dart';
+import 'package:overlay_updater/updater_view.dart';
+import 'package:overlay_updater/core/update_failure.dart';
+import 'package:overlay_updater/l10n/generated/updater_localizations.dart';
+
+import 'dart:ui';
+
 import 'package:path/path.dart' as p;
 
 void main() {
   late Directory directory;
   late FakeHost host;
-  late UpdateController controller;
+  late UpdateViewModel viewModel;
   const target = AppVersion(1, 1, 0, 3);
+  final strings = lookupUpdaterLocalizations(const Locale('en'));
+  UpdatePresentation presentation() =>
+      UpdatePresentation.fromState(viewModel.state.current, strings);
   var corrupt = false;
   var tag = '1.1.0';
   var missingPackage = false;
@@ -28,7 +38,7 @@ void main() {
     tag = '1.1.0';
     missingPackage = false;
     noRelease = false;
-    directory = Directory.systemTemp.createTempSync('updater-controller-');
+    directory = Directory.systemTemp.createTempSync('updater-viewModel-');
     File(p.join(directory.path, overlayExecutable)).writeAsStringSync('old');
     File(p.join(directory.path, manifestName)).writeAsStringSync(
       jsonEncode(
@@ -91,31 +101,91 @@ void main() {
         }
         return ResponseBody.fromBytes(bytes, 200);
       });
-    controller = UpdateController(
+    viewModel = UpdateViewModel(
       directory: directory.path,
       host: host,
       client: ReleaseClient(dio: dio),
     );
   });
   tearDown(() {
-    controller.dispose();
+    viewModel.dispose();
     directory.deleteSync(recursive: true);
   });
 
-  test('check, download, validate, stop, install and open through Flutter controller', () async {
-    await controller.check();
-    expect(controller.phase, UpdatePhase.available);
+  test(
+    'constructor starts checking and callers join the same request',
+    () async {
+      expect(host.calls, ['initialize']);
+      expect(viewModel.state.current.busy, isTrue);
+      expect(viewModel.state.current.process.token, UpdateOperation.check);
+      final checking = viewModel.check();
+      expect(viewModel.check(), same(checking));
+      await checking;
+      expect(host.calls, ['initialize', 'version']);
+      expect(viewModel.state.current.phase, UpdatePhase.available);
+    },
+  );
+
+  test(
+    'download progress notifies without replacing the installation state',
+    () async {
+      await viewModel.check();
+      UpdateState? downloading;
+      var notifications = 0;
+      final phaseSubscription = viewModel.state.changes.listen((state) {
+        if (state.phase == UpdatePhase.downloading) downloading = state;
+      });
+      final progressSubscription = viewModel.download.changes.listen((
+        progress,
+      ) {
+        if (progress.received == 0) return;
+        notifications++;
+        expect(viewModel.state.current, same(downloading));
+        expect(progress.fraction, greaterThan(0));
+      });
+      addTearDown(phaseSubscription.cancel);
+      addTearDown(progressSubscription.cancel);
+      await viewModel.activate();
+      expect(notifications, greaterThan(0));
+      expect(viewModel.state.current.phase, UpdatePhase.done);
+    },
+  );
+
+  test(
+    'a synchronous download listener cannot start a second installation',
+    () async {
+      await viewModel.check();
+      Future<void>? nestedInstall;
+      var notified = false;
+      final subscription = viewModel.download.changes.listen((progress) {
+        if (!notified && progress.received == 0) {
+          notified = true;
+          nestedInstall = viewModel.activate();
+        }
+      });
+      addTearDown(subscription.cancel);
+      await viewModel.activate();
+      await nestedInstall;
+      expect(notified, isTrue);
+      expect(host.calls.where((call) => call == 'begin'), hasLength(1));
+      expect(viewModel.state.current.phase, UpdatePhase.done);
+    },
+  );
+
+  test('check, download, validate, stop, install and open through Flutter viewModel', () async {
+    await viewModel.check();
+    expect(viewModel.state.current.phase, UpdatePhase.available);
     expect(host.calls, ['initialize', 'version']);
-    await controller.activate();
-    expect(controller.phase, UpdatePhase.done);
-    expect(controller.busy, false);
-    expect(controller.current, target);
+    await viewModel.activate();
+    expect(viewModel.state.current.phase, UpdatePhase.done);
+    expect(viewModel.state.current.busy, false);
+    expect(viewModel.state.current.installedVersion, target);
     expect(
       File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
       'new',
     );
     expect(host.calls, ['initialize', 'version', 'begin', 'stop', 'end']);
-    await controller.activate();
+    await viewModel.activate();
     expect(host.calls.sublist(host.calls.length - 2), ['start', 'close']);
   });
 
@@ -128,29 +198,29 @@ void main() {
     test('installs ${scenario.tag} over ${scenario.installed}', () async {
       host.version = scenario.installed;
       tag = scenario.tag;
-      await controller.check();
-      expect(controller.phase, UpdatePhase.available);
+      await viewModel.check();
+      expect(viewModel.state.current.phase, UpdatePhase.available);
       expect(
-        controller.action,
+        presentation().action,
         scenario.reinstall
-            ? controller.strings.reinstallOverlay
-            : controller.strings.downgradeOverlay(tag),
+            ? strings.reinstallOverlay
+            : strings.downgradeOverlay(tag),
       );
       expect(host.calls, ['initialize', 'version']);
       expect(
         File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
         'old',
       );
-      await controller.activate();
-      expect(controller.phase, UpdatePhase.done);
-      expect(controller.current, target);
+      await viewModel.activate();
+      expect(viewModel.state.current.phase, UpdatePhase.done);
+      expect(viewModel.state.current.installedVersion, target);
       expect(
         File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
         'new',
       );
       expect(host.calls, ['initialize', 'version', 'begin', 'stop', 'end']);
-      expect(controller.action, controller.strings.openOverlay);
-      await controller.activate();
+      expect(presentation().action, strings.openOverlay);
+      await viewModel.activate();
       expect(host.calls.sublist(host.calls.length - 2), ['start', 'close']);
     });
   }
@@ -159,9 +229,9 @@ void main() {
     () async {
       host.version = target;
       corrupt = true;
-      await controller.check();
-      await controller.activate();
-      expect(controller.phase, UpdatePhase.error);
+      await viewModel.check();
+      await viewModel.activate();
+      expect(viewModel.state.current.phase, UpdatePhase.error);
       expect(host.calls, ['initialize', 'version']);
       expect(
         File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
@@ -172,28 +242,35 @@ void main() {
   test('missing package cannot reinstall or downgrade', () async {
     host.version = const AppVersion(2, 0, 0);
     missingPackage = true;
-    await controller.check();
-    expect(controller.phase, UpdatePhase.error);
-    expect(controller.detail, controller.strings.packageUnavailable);
+    await viewModel.check();
+    expect(viewModel.state.current.phase, UpdatePhase.error);
+    expect(viewModel.state.current.error, UpdateIssue.packageUnavailable);
     expect(host.calls, ['initialize', 'version']);
   });
   test(
     'no GitHub release still offers opening the installed overlay',
     () async {
       noRelease = true;
-      await controller.check();
-      expect(controller.phase, UpdatePhase.current);
-      expect(controller.action, controller.strings.openOverlay);
-      await controller.activate();
+      await viewModel.check();
+      expect(viewModel.state.current.phase, UpdatePhase.current);
+      expect(presentation().action, strings.openOverlay);
+      await viewModel.activate();
       expect(host.calls, ['initialize', 'version', 'start', 'close']);
     },
   );
 
   test('bad checksum never closes the overlay or replaces files', () async {
     corrupt = true;
-    await controller.check();
-    await controller.activate();
-    expect(controller.phase, UpdatePhase.error);
+    await viewModel.check();
+    await viewModel.activate();
+    expect(viewModel.state.current.phase, UpdatePhase.error);
+    final process =
+        viewModel.state.current.process as FailedProcess<UpdateOperation>;
+    expect(process.error, UpdateIssue.checksumMismatch);
+    expect(process.token, UpdateOperation.install);
+    expect(process.cause, isA<UpdateFailure>());
+    expect(process.stackTrace, isNotNull);
+    expect(viewModel.state.current.busy, isFalse);
     expect(host.calls, ['initialize', 'version']);
     expect(
       File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
@@ -202,10 +279,10 @@ void main() {
   });
   test('unresponsive overlay releases gate without replacing files', () async {
     host.failStop = true;
-    await controller.check();
-    await controller.activate();
-    expect(controller.phase, UpdatePhase.error);
-    expect(controller.critical, false);
+    await viewModel.check();
+    await viewModel.activate();
+    expect(viewModel.state.current.phase, UpdatePhase.error);
+    expect(viewModel.state.current.critical, false);
     expect(host.calls, ['initialize', 'version', 'begin', 'stop', 'end']);
     expect(
       File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
@@ -214,9 +291,9 @@ void main() {
   });
   test('another updater holding the lock prevents installation', () async {
     host.lockAvailable = false;
-    await controller.check();
-    await controller.activate();
-    expect(controller.phase, UpdatePhase.error);
+    await viewModel.check();
+    await viewModel.activate();
+    expect(viewModel.state.current.phase, UpdatePhase.error);
     expect(host.calls, ['initialize', 'version', 'begin']);
     expect(
       File(p.join(directory.path, overlayExecutable)).readAsStringSync(),
@@ -224,15 +301,15 @@ void main() {
     );
   });
   test('cancelling download keeps overlay running', () async {
-    await controller.check();
-    controller.addListener(() {
-      if (controller.phase == UpdatePhase.downloading &&
-          controller.received > 0) {
-        controller.cancel();
+    await viewModel.check();
+    final subscription = viewModel.download.changes.listen((progress) {
+      if (progress.received > 0) {
+        viewModel.cancel();
       }
     });
-    await controller.activate();
-    expect(controller.phase, UpdatePhase.error);
+    addTearDown(subscription.cancel);
+    await viewModel.activate();
+    expect(viewModel.state.current.phase, UpdatePhase.error);
     expect(host.calls, ['initialize', 'version']);
     expect(
       File(p.join(directory.path, overlayExecutable)).readAsStringSync(),

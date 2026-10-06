@@ -328,6 +328,25 @@ class AppLocalizationsUk extends AppLocalizations {
       'Не вдалося видалити повідомлення. Спробуйте ще раз.';
 
   @override
+  String get sendFailed =>
+      'Не вдалося надіслати повідомлення. Чернетку збережено. Спробуйте ще раз.';
+
+  @override
+  String get sendNotAllowed => 'Twitch не дозволяє надіслати це повідомлення.';
+
+  @override
+  String get sendNetworkError =>
+      'Не вдалося з’єднатися з Twitch. Чернетку збережено. Спробуйте ще раз.';
+
+  @override
+  String get sendRateLimited =>
+      'Забагато запитів. Зачекайте трохи й спробуйте надіслати знову.';
+
+  @override
+  String get chatSessionChanged =>
+      'Сесію чату змінено. Чернетку збережено. Спробуйте ще раз.';
+
+  @override
   String get deleteNotAllowed => 'Twitch не дозволяє видалити це повідомлення.';
 
   @override

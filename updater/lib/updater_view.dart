@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:observable_state/observable_state.dart';
 
-import 'update_controller.dart';
+import 'core/update_failure.dart';
+import 'l10n/failure_message.dart';
+
+import 'update_view_model.dart';
 import 'release_notes.dart';
 import 'l10n/generated/updater_localizations.dart';
 
@@ -34,23 +39,64 @@ final class UpdatePresentation {
     this.busy = false,
     this.critical = false,
   });
-  factory UpdatePresentation.fromController(UpdateController controller) =>
-      UpdatePresentation(
-        phase: controller.phase,
-        title: controller.title,
-        detail: controller.detail,
-        action: controller.action,
-        current: controller.current?.toString() ?? '—',
-        latest:
-            controller.release?.version.toString() ??
-            (controller.phase == UpdatePhase.checking
-                ? controller.strings.checkingAction
-                : '—'),
-        notes: controller.release?.notes ?? '',
-        progress: controller.progress,
-        busy: controller.busy,
-        critical: controller.critical,
-      );
+  factory UpdatePresentation.fromState(
+    UpdateState state,
+    UpdaterLocalizations strings,
+  ) {
+    String megabytes(int bytes) =>
+        NumberFormat('0.0', strings.localeName).format(bytes / 1048576);
+    final (title, detail) = switch (state.phase) {
+      UpdatePhase.checking => (strings.checkingTitle, strings.checkingDetail),
+      UpdatePhase.current => (strings.currentTitle, strings.currentDetail),
+      UpdatePhase.available => (
+        switch (state.releaseComparison) {
+          > 0 => strings.availableTitle,
+          0 => strings.reinstallTitle,
+          _ => strings.downgradeTitle,
+        },
+        strings.packageSize(megabytes(state.release!.size)),
+      ),
+      UpdatePhase.downloading => (
+        strings.downloadTitle,
+        strings.downloadDetail,
+      ),
+      UpdatePhase.verifying => (strings.verifyTitle, strings.verifyDetail),
+      UpdatePhase.stopping => (strings.stopTitle, strings.stopDetail),
+      UpdatePhase.installing => (strings.installTitle, strings.installDetail),
+      UpdatePhase.recovering => (strings.recoveryTitle, strings.recoveryDetail),
+      UpdatePhase.done => (strings.doneTitle, strings.doneDetail),
+      UpdatePhase.error => (
+        strings.errorTitle,
+        failureMessage(strings, state.error ?? UpdateIssue.unexpected),
+      ),
+    };
+    final action = switch (state.phase) {
+      UpdatePhase.error => strings.retry,
+      UpdatePhase.current || UpdatePhase.done => strings.openOverlay,
+      UpdatePhase.available => switch (state.releaseComparison) {
+        > 0 => strings.updateOverlay,
+        0 => strings.reinstallOverlay,
+        _ => strings.downgradeOverlay(state.release!.version.toString()),
+      },
+      UpdatePhase.downloading => strings.downloadingAction,
+      UpdatePhase.checking => strings.checkingAction,
+      _ => strings.preparingAction,
+    };
+    return UpdatePresentation(
+      phase: state.phase,
+      title: title,
+      detail: detail,
+      action: action,
+      current: state.installedVersion?.toString() ?? '—',
+      latest:
+          state.release?.version.toString() ??
+          (state.phase == UpdatePhase.checking ? strings.checkingAction : '—'),
+      notes: state.release?.notes ?? '',
+      progress: state.progress,
+      busy: state.busy,
+      critical: state.critical,
+    );
+  }
   final UpdatePhase phase;
   final String current, latest, notes, title, detail, action;
   final double? progress;
@@ -62,9 +108,11 @@ class UpdaterView extends StatelessWidget {
     required this.state,
     required this.onAction,
     required this.onCancel,
+    this.download,
     super.key,
   });
   final UpdatePresentation state;
+  final StreamWithInitial<DownloadProgress>? download;
   final VoidCallback onAction, onCancel;
   static const textColor = Colors.white;
   static const accent = Color(0xffbc93ff);
@@ -156,7 +204,18 @@ class UpdaterView extends StatelessWidget {
                 const SizedBox(height: 12),
                 Expanded(child: _NotesPanel(state: state)),
                 const SizedBox(height: 10),
-                _Status(state: state, onCancel: onCancel),
+                if (download case final source?)
+                  StreamBuilder<DownloadProgress>(
+                    initialData: source.current,
+                    stream: source.changes,
+                    builder: (context, snapshot) => _Status(
+                      state: state,
+                      download: snapshot.requireData,
+                      onCancel: onCancel,
+                    ),
+                  )
+                else
+                  _Status(state: state, onCancel: onCancel),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -346,8 +405,9 @@ class _Version extends StatelessWidget {
 }
 
 class _Status extends StatelessWidget {
-  const _Status({required this.state, required this.onCancel});
+  const _Status({required this.state, required this.onCancel, this.download});
   final UpdatePresentation state;
+  final DownloadProgress? download;
   final VoidCallback onCancel;
 
   @override
@@ -356,6 +416,17 @@ class _Status extends StatelessWidget {
     final downloading = state.phase == UpdatePhase.downloading;
     final showProgress = state.busy && !error;
     final strings = UpdaterLocalizations.of(context);
+    final progress = downloading && download != null
+        ? download!.fraction
+        : state.progress;
+    String megabytes(int bytes) =>
+        NumberFormat('0.0', strings.localeName).format(bytes / 1048576);
+    final detail = downloading && download != null && download!.received > 0
+        ? strings.downloadProgress(
+            megabytes(download!.received),
+            megabytes(download!.total),
+          )
+        : state.detail;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
@@ -387,9 +458,9 @@ class _Status extends StatelessWidget {
                   ),
                 ),
               ),
-              if (downloading && state.progress != null)
+              if (downloading && progress != null)
                 Text(
-                  '${(state.progress! * 100).round()}%',
+                  '${(progress * 100).round()}%',
                   style: const TextStyle(
                     color: UpdaterView.accent,
                     fontSize: 11,
@@ -419,7 +490,7 @@ class _Status extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            state.detail,
+            detail,
             style: const TextStyle(
               color: UpdaterView.textColor,
               fontSize: 11,
@@ -431,7 +502,7 @@ class _Status extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(
-                value: state.progress,
+                value: progress,
                 minHeight: 3,
                 backgroundColor: const Color(0xff332b40),
                 color: const Color(0xffa970ff),

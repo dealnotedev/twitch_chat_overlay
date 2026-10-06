@@ -4,7 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 
-import 'update_check.dart';
+import 'update_notice_view_model.dart';
 
 class UpdateNotice extends StatefulWidget {
   const UpdateNotice({
@@ -23,59 +23,38 @@ class UpdateNotice extends StatefulWidget {
 }
 
 class _UpdateNoticeState extends State<UpdateNotice> {
-  UpdateCheck? _check;
-  String? _version;
-  bool _dismissed = false;
-  bool _opening = false;
-  bool _failed = false;
+  late final UpdateNoticeViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final check = widget.check ?? (_check = UpdateCheck()).newerVersion;
-      final version = await check();
-      if (mounted) setState(() => _version = version);
-    } catch (_) {
-      // An update check must never interrupt chat startup.
-    }
+    _viewModel = UpdateNoticeViewModel(
+      onUpdate: (locale) => widget.onUpdate(locale),
+      check: widget.check,
+    );
   }
 
   @override
   void dispose() {
-    _check?.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
-  Future<void> _open() async {
-    if (_opening) return;
-    setState(() {
-      _opening = true;
-      _failed = false;
-    });
-    try {
-      await widget.onUpdate(AppLocalizations.of(context).localeName);
-      if (mounted) setState(() => _dismissed = true);
-    } catch (_) {
-      if (mounted) setState(() => _failed = true);
-    } finally {
-      if (mounted) setState(() => _opening = false);
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final version = _version;
-    if (version == null || _dismissed) return const SizedBox.shrink();
+  Widget build(BuildContext context) => StreamBuilder<UpdateNoticeState>(
+    initialData: _viewModel.state.current,
+    stream: _viewModel.state.changes,
+    builder: (context, snapshot) => _buildNotice(context, snapshot.requireData),
+  );
+
+  Widget _buildNotice(BuildContext context, UpdateNoticeState state) {
+    final version = state.version;
+    if (version == null || state.dismissed) return const SizedBox.shrink();
     final strings = AppLocalizations.of(context);
-    final label = _failed
+    final label = state.failed
         ? strings.updateLaunchFailed
         : strings.updateNoticeTitle(version);
-    final enabled = widget.interactive && !_opening;
+    final enabled = widget.interactive && !state.opening;
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -102,7 +81,7 @@ class _UpdateNoticeState extends State<UpdateNotice> {
             const Gap(6),
             Expanded(
               child: Tooltip(
-                message: _failed || widget.interactive
+                message: state.failed || widget.interactive
                     ? label
                     : strings.updateNoticeShortcut,
                 child: Text(
@@ -120,7 +99,9 @@ class _UpdateNoticeState extends State<UpdateNotice> {
             ),
             const Gap(6),
             TextButton(
-              onPressed: enabled ? _open : null,
+              onPressed: enabled
+                  ? () => _viewModel.open(strings.localeName)
+                  : null,
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFFBC93FF),
                 disabledForegroundColor: Colors.white,
@@ -137,16 +118,16 @@ class _UpdateNoticeState extends State<UpdateNotice> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              child: Text(_opening ? strings.updateOpening : strings.updateNow),
+              child: Text(
+                state.opening ? strings.updateOpening : strings.updateNow,
+              ),
             ),
             IconButton(
               style: IconButton.styleFrom(
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               tooltip: strings.updateDismiss,
-              onPressed: enabled
-                  ? () => setState(() => _dismissed = true)
-                  : null,
+              onPressed: enabled ? _viewModel.dismiss : null,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 22, height: 22),
               visualDensity: VisualDensity.compact,

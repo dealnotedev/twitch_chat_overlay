@@ -15,10 +15,10 @@ final class ChatMessageRetention extends ChangeNotifier {
   List<ChatItem> _source = const [];
   int? _minutes;
 
-  List<ChatItem> get items => [
-    for (final item in _source)
-      if (!_entries[item.id]!.hidden) item,
-  ];
+  Iterable<ChatItem> get visibleItems =>
+      _source.where((item) => !_entries[item.id]!.hidden);
+
+  List<ChatItem> get items => visibleItems.toList();
 
   bool isFading(String id) => _entries[id]?.fading ?? false;
 

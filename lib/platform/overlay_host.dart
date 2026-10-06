@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:observable_state/observable_state.dart';
 
 final class OverlayHostState {
   const OverlayHostState({
@@ -49,20 +50,22 @@ abstract interface class OverlayHost {
 final class MethodChannelOverlayHost implements OverlayHost {
   static const MethodChannel _channel = MethodChannel('overlay/window');
 
-  final StreamController<OverlayHostState> _states =
-      StreamController<OverlayHostState>.broadcast(sync: true);
-
   final StreamController<void> _closeRequests =
       StreamController<void>.broadcast(sync: true);
 
-  OverlayHostState _state = const OverlayHostState.initial();
+  final ObservableValue<OverlayHostState> _observable = ObservableValue(
+    current: const OverlayHostState.initial(),
+    sync: true,
+  );
+
+  OverlayHostState get _state => _observable.current;
   Future<void>? _initialization;
 
   @override
   OverlayHostState get state => _state;
 
   @override
-  Stream<OverlayHostState> get states => _states.stream;
+  Stream<OverlayHostState> get states => _observable.changes;
 
   @override
   Stream<void> get closeRequests => _closeRequests.stream;
@@ -132,7 +135,6 @@ final class MethodChannelOverlayHost implements OverlayHost {
   }
 
   void _emit(OverlayHostState value) {
-    _state = value;
-    _states.add(value);
+    _observable.set(value);
   }
 }

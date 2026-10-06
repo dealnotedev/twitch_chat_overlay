@@ -1,3 +1,5 @@
+import 'package:observable_state/observable_state.dart';
+
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -368,19 +370,21 @@ Widget app({
         width: width,
         height: height,
         child: ChatPanel(
-          authState: TwitchAuthState(
-            status: TwitchAuthStatus.signedIn,
-            token: TwitchToken(
-              accessToken: 'fixture',
-              refreshToken: 'fixture',
-              clientId: 'client',
-              userId: 'sender',
-              userLogin: 'sender',
-              scopes: TwitchAuthClient.authorizationScopes,
-              expiresAt: DateTime.utc(2030),
+          authSource: StreamWithInitial.value(
+            TwitchAuthState(
+              status: TwitchAuthStatus.signedIn,
+              token: TwitchToken(
+                accessToken: 'fixture',
+                refreshToken: 'fixture',
+                clientId: 'client',
+                userId: 'sender',
+                userLogin: 'sender',
+                scopes: TwitchAuthClient.authorizationScopes,
+                expiresAt: DateTime.utc(2030),
+              ),
             ),
           ),
-          chatState: chatState,
+          chatSource: StreamWithInitial.value(chatState),
           interactive: interactive,
           onSignIn: () async {},
           onSignOut: () async {},

@@ -318,6 +318,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteFailed => 'Could not delete the message. Try again.';
 
   @override
+  String get sendFailed =>
+      'Could not send the message. Your draft is saved. Try again.';
+
+  @override
+  String get sendNotAllowed => 'Twitch does not allow sending this message.';
+
+  @override
+  String get sendNetworkError =>
+      'Could not reach Twitch. Your draft is saved. Try again.';
+
+  @override
+  String get sendRateLimited =>
+      'Too many requests. Wait a moment and try sending again.';
+
+  @override
+  String get chatSessionChanged =>
+      'The chat session changed. Your draft is saved. Try again.';
+
+  @override
   String get deleteNotAllowed => 'Twitch does not allow deleting this message.';
 
   @override

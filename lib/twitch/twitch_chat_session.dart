@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_mutation.dart';
 import 'package:twitch_chat_overlay/chat/chat_timeline.dart';
@@ -103,14 +104,16 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   final TwitchHelixClient _helix;
   final TwitchChatEventMapper _mapper = const TwitchChatEventMapper();
   final ChatTimeline _timeline = ChatTimeline();
-  // Listeners may change integration options in response to a catalog update.
-  final StreamController<ChatState> _states =
-      StreamController<ChatState>.broadcast();
   final Queue<String> _messageIdOrder = Queue();
   final Set<String> _messageIds = {};
   final Random _random = Random();
 
-  ChatState _state = const ChatState.idle();
+  final ObservableValue<ChatState> _observable = ObservableValue(
+    current: const ChatState.idle(),
+    sync: false,
+  );
+
+  ChatState get _state => _observable.current;
   _EventSubSocket? _active;
   _EventSubSocket? _candidate;
   _EventSubConnectAttempt? _connecting;
@@ -135,7 +138,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   ChatState get state => _state;
 
   @override
-  Stream<ChatState> get states => _states.stream;
+  Stream<ChatState> get states => _observable.changes;
 
   @override
   Future<void> join({required String broadcasterId}) async {
@@ -809,8 +812,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       emoteCatalog: _emoteCatalog,
       emoteOptions: _emoteOptions,
     );
-    _state = next;
-    _states.add(next);
+    _observable.set(next);
   }
 
   static Map<String, Object?> _map(Object? value) {

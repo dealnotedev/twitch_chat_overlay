@@ -3,6 +3,10 @@
 Native Flutter Twitch chat rendered over Windows games. It does not use a
 WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
 
+UI state lives in ViewModels backed by `ObservableValue`, shared with the updater.
+See [state management](docs/state-management.md) for ownership, initial stream
+data, and asynchronous lifecycle rules.
+
 The Windows runner explicitly uses Skia. On the tested integrated AMD GPU,
 Impeller used substantially more shared GPU memory (system RAM): switching a
 Release build to Skia reduced the process working set from about 829 MiB to

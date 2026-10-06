@@ -1,3 +1,5 @@
+import 'package:observable_state/observable_state.dart';
+
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
@@ -246,14 +248,18 @@ Widget app(
         child: ChatPanel(
           chatFontSize: fontSize,
           chatFontWeight: fontWeight,
-          authState: TwitchAuthState(
-            status: TwitchAuthStatus.signedIn,
-            token: fixtures.makeToken(),
+          authSource: StreamWithInitial.value(
+            TwitchAuthState(
+              status: TwitchAuthStatus.signedIn,
+              token: fixtures.makeToken(),
+            ),
           ),
-          chatState: ChatState(
-            status: ChatConnectionStatus.connected,
-            items: messages,
-            broadcasterId: 'sender',
+          chatSource: StreamWithInitial.value(
+            ChatState(
+              status: ChatConnectionStatus.connected,
+              items: messages,
+              broadcasterId: 'sender',
+            ),
           ),
           interactive: interactive,
           onSignIn: () async {},

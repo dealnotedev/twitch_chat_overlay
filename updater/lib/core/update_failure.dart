@@ -20,6 +20,10 @@ enum UpdateIssue {
   invalidJournal,
   updateBusy,
   closeOverlay,
+  cancelled,
+  network,
+  fileSystem,
+  unexpected,
 }
 
 final class UpdateFailure extends FormatException {

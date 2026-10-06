@@ -9,9 +9,10 @@ import 'package:twitch_chat_overlay/chat/viewer_count.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
+import 'package:twitch_chat_overlay/chat/chat_panel_view_model.dart';
 import 'package:twitch_chat_overlay/chat/chat_message_actions.dart';
-import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote_picker.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote.dart';
 import 'package:twitch_chat_overlay/chat/chat_emote_scope.dart';
@@ -31,8 +32,8 @@ import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 
 class ChatPanel extends StatefulWidget {
   const ChatPanel({
-    required this.authState,
-    required this.chatState,
+    required this.authSource,
+    required this.chatSource,
     required this.interactive,
     required this.onSignIn,
     required this.onSignOut,
@@ -51,8 +52,8 @@ class ChatPanel extends StatefulWidget {
   final Widget? messageFooter;
   final double chatFontSize;
   final int chatFontWeight;
-  final TwitchAuthState authState;
-  final ChatState chatState;
+  final StreamWithInitial<TwitchAuthState> authSource;
+  final StreamWithInitial<ChatState> chatSource;
   final int messageLifetimeMinutes;
   final bool showViewerCount;
   final bool showConnectionIndicator;
@@ -71,130 +72,57 @@ class ChatPanel extends StatefulWidget {
 class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _messageFocus = FocusNode();
-  bool _sending = false;
-  String? _sendError;
-  ChatReply? _replyTo;
-  String? _deleteError;
-  final Set<String> _deletingIds = {};
-  int _actionGeneration = 0;
-  bool _emotesOpen = false;
-  Future<List<ChatEmote>>? _emotesFuture;
+  late final ChatPanelViewModel _viewModel;
   final Object _emoteTapGroup = Object();
-  final Stopwatch _arrivalClock = Stopwatch()..start();
-  final Map<String, Duration> _messageArrivals = {};
-  final ChatMessageRetention _recent = ChatMessageRetention();
-  static const _startupHintDuration = Duration(seconds: 20);
-  static const _startupHintFadeDuration = Duration(milliseconds: 500);
-  Timer? _startupHintTimer;
-  bool _startupHintVisible = true;
-  bool _startupHintFading = false;
+
+  ChatPanelInput get _input => ChatPanelInput(
+    auth: widget.authSource.current,
+    chat: widget.chatSource.current,
+    interactive: widget.interactive,
+    messageLifetimeMinutes: widget.messageLifetimeMinutes,
+    send: widget.onSend,
+    loadEmotes: widget.onLoadEmotes,
+    deleteMessage: widget.onDeleteMessage,
+  );
 
   @override
   void initState() {
     super.initState();
-    _recent.update(widget.chatState.items, widget.messageLifetimeMinutes);
-    _recent.addListener(_onRecentChanged);
-    _startupHintVisible = _recent.items.isEmpty;
-    if (_startupHintVisible) {
-      _startupHintTimer = Timer(_startupHintDuration, () {
-        setState(() => _startupHintFading = true);
-        _startupHintTimer = Timer(_startupHintFadeDuration, () {
-          setState(() => _startupHintVisible = false);
-        });
-      });
-    }
-  }
-
-  void _dismissStartupHint() {
-    _startupHintTimer?.cancel();
-    _startupHintVisible = false;
-  }
-
-  void _onRecentChanged() {
-    setState(() {
-      if (_replyTo case final reply?) {
-        if (!_recent.items.any((item) => item.id == reply.parentMessageId)) {
-          _replyTo = null;
-          _sendError = AppLocalizations.of(context).replyUnavailable;
-        }
-      }
-    });
+    _viewModel = ChatPanelViewModel(
+      _input,
+      authSource: widget.authSource,
+      chatSource: widget.chatSource,
+    );
   }
 
   @override
   void didUpdateWidget(ChatPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.authState.status != TwitchAuthStatus.signedIn ||
-        oldWidget.authState.token?.userId != widget.authState.token?.userId ||
-        oldWidget.chatState.broadcasterId != widget.chatState.broadcasterId) {
-      _emotesFuture = null;
-      _emotesOpen = false;
-    }
-    if (oldWidget.chatState.emoteOptions != widget.chatState.emoteOptions) {
-      _emotesFuture = _emotesOpen ? _requestEmotes() : null;
-    }
-    if (oldWidget.authState.token?.userId != widget.authState.token?.userId ||
-        oldWidget.chatState.broadcasterId != widget.chatState.broadcasterId ||
-        widget.authState.status == TwitchAuthStatus.signedOut) {
-      _recent.clear();
-      _actionGeneration++;
-      _replyTo = null;
-      _sendError = null;
-      _deleteError = null;
-      _deletingIds.clear();
-      _sending = false;
-    }
-    _recent.update(widget.chatState.items, widget.messageLifetimeMinutes);
-    // Messages and reconnects must never bring the startup hint back.
-    if (_recent.items.isNotEmpty ||
-        (oldWidget.chatState.status == ChatConnectionStatus.connected &&
-            widget.chatState.status != ChatConnectionStatus.connected)) {
-      _dismissStartupHint();
-    }
-    if (!widget.interactive) _emotesOpen = false;
-    final now = _arrivalClock.elapsed;
-    final previousIds = oldWidget.chatState.items
-        .map((item) => item.id)
-        .toSet();
-    final currentIds = widget.chatState.items.map((item) => item.id).toSet();
-    if (_replyTo case final reply?) {
-      if (previousIds.contains(reply.parentMessageId) &&
-          !currentIds.contains(reply.parentMessageId)) {
-        _replyTo = null;
-        _sendError = AppLocalizations.of(context).replyUnavailable;
-      }
-    }
-    _messageArrivals.removeWhere(
-      (id, arrivedAt) =>
-          !currentIds.contains(id) ||
-          now - arrivedAt >= ChatMessageEntrance.duration,
+    _viewModel.update(
+      _input,
+      authSource: widget.authSource,
+      chatSource: widget.chatSource,
     );
-    for (final item in widget.chatState.items) {
-      if (!item.isHistorical && !previousIds.contains(item.id)) {
-        _messageArrivals[item.id] = now;
-      }
-    }
-  }
-
-  Duration? _entranceElapsed(String id) {
-    final arrivedAt = _messageArrivals[id];
-    return arrivedAt == null ? null : _arrivalClock.elapsed - arrivedAt;
   }
 
   @override
   void dispose() {
-    _startupHintTimer?.cancel();
-    _recent.dispose();
-    _arrivalClock.stop();
+    _viewModel.dispose();
     _messageController.dispose();
     _messageFocus.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => StreamBuilder<ChatPanelSessionState>(
+    initialData: _viewModel.session.current,
+    stream: _viewModel.session.changes,
+    builder: (context, snapshot) => _buildPanel(context, snapshot.requireData),
+  );
+
+  Widget _buildPanel(BuildContext context, ChatPanelSessionState viewSession) {
     final l10n = AppLocalizations.of(context);
-    final body = switch (widget.authState.status) {
+    final body = switch (viewSession.auth.status) {
       TwitchAuthStatus.loading => _CenteredStatus(
         text: l10n.checkingTwitchSession,
         progress: true,
@@ -205,7 +133,7 @@ class _ChatPanelState extends State<ChatPanel> {
       ),
       TwitchAuthStatus.signedOut || TwitchAuthStatus.failure => _SignedOutPanel(
         interactive: widget.interactive,
-        error: _authError(l10n, widget.authState),
+        error: _authError(l10n, viewSession.auth),
         onSignIn: widget.onSignIn,
       ),
       TwitchAuthStatus.signedIn => _connectedBody(l10n),
@@ -213,8 +141,8 @@ class _ChatPanelState extends State<ChatPanel> {
 
     return Column(
       children: [
-        if (widget.authState.status == TwitchAuthStatus.signedIn &&
-            widget.chatState.rewardSubscriptionFailed)
+        if (viewSession.auth.status == TwitchAuthStatus.signedIn &&
+            viewSession.rewardSubscriptionFailed)
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(
@@ -231,118 +159,160 @@ class _ChatPanelState extends State<ChatPanel> {
             style: chatReadableStyle,
             child: LayoutBuilder(
               builder: (context, constraints) => Stack(
+                fit: StackFit.expand,
                 children: [
                   Positioned.fill(
                     child: ChatEmoteScope(
-                      catalog: widget.chatState.emoteCatalog,
+                      catalog: viewSession.emoteCatalog,
                       child: body,
                     ),
                   ),
-                  if (_emotesOpen &&
-                      _emotesFuture != null &&
-                      widget.interactive &&
-                      widget.authState.status == TwitchAuthStatus.signedIn)
-                    Positioned(
-                      left: 8,
-                      right: 8,
-                      bottom: 8,
-                      height: (constraints.maxHeight - 16).clamp(0.0, 280.0),
-                      child: ChatEmotePicker(
-                        emotes: _emotesFuture!,
-                        tapGroup: _emoteTapGroup,
-                        onSelected: _insertEmote,
-                        onReload: _reloadEmotes,
-                        onClose: () {
-                          _closeEmotes();
-                          _messageFocus.requestFocus();
-                        },
-                      ),
-                    ),
+                  StreamBuilder<ChatEmotePickerState>(
+                    initialData: _viewModel.emotes.current,
+                    stream: _viewModel.emotes.changes,
+                    builder: (context, snapshot) {
+                      final emotes = snapshot.requireData;
+                      if (!emotes.open ||
+                          emotes.request == null ||
+                          !widget.interactive ||
+                          viewSession.auth.status !=
+                              TwitchAuthStatus.signedIn) {
+                        return const SizedBox.shrink();
+                      }
+                      return Positioned(
+                        left: 8,
+                        right: 8,
+                        bottom: 8,
+                        height: (constraints.maxHeight - 16).clamp(0.0, 280.0),
+                        child: ChatEmotePicker(
+                          emotes: emotes.request!,
+                          tapGroup: _emoteTapGroup,
+                          onSelected: _insertEmote,
+                          onReload: _viewModel.reloadEmotes,
+                          onClose: () {
+                            _viewModel.closeEmotes();
+                            _messageFocus.requestFocus();
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
           ),
         ),
         ?widget.messageFooter,
-        if (widget.interactive && _deleteError != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 8, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        if (widget.interactive)
+          StreamBuilder<ChatDeletionsState>(
+            initialData: _viewModel.deletions.current,
+            stream: _viewModel.deletions.changes,
+            builder: (context, snapshot) {
+              final error = snapshot.requireData.error;
+              if (error == null) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 8, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        _deleteError!,
-                        style: const TextStyle(
-                          shadows: chatTextShadows,
-                          fontSize: 11,
-                          color: Color(0xFFFF7676),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _chatPanelError(l10n, error)!,
+                            style: const TextStyle(
+                              shadows: chatTextShadows,
+                              fontSize: 11,
+                              color: Color(0xFFFF7676),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    ChatIconButton(
-                      label: l10n.dismiss,
-                      icon: Icons.close_rounded,
-                      size: 26,
-                      iconSize: 15,
-                      onPressed: () => setState(() {
-                        _deleteError = null;
-                      }),
+                        ChatIconButton(
+                          label: l10n.dismiss,
+                          icon: Icons.close_rounded,
+                          size: 26,
+                          iconSize: 15,
+                          onPressed: _viewModel.dismissDeleteError,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
-        if (widget.authState.status == TwitchAuthStatus.signedIn &&
+        if (viewSession.auth.status == TwitchAuthStatus.signedIn &&
             widget.interactive)
-          ChatComposer(
-            controller: _messageController,
-            focusNode: _messageFocus,
-            sending: _sending,
-            error: _sendError,
-            emotesOpen: _emotesOpen,
-            tapGroup: _emoteTapGroup,
-            onSend: _send,
-            onSignOut: () => unawaited(widget.onSignOut()),
-            onToggleEmotes: _toggleEmotes,
-            onCloseEmotes: _closeEmotes,
-            replyTo: _replyTo,
-            onCancelReply: _cancelReply,
+          StreamBuilder<ChatComposerState>(
+            initialData: _viewModel.composer.current,
+            stream: _viewModel.composer.changes,
+            builder: (context, composerSnapshot) =>
+                StreamBuilder<ChatEmotePickerState>(
+                  initialData: _viewModel.emotes.current,
+                  stream: _viewModel.emotes.changes,
+                  builder: (context, emotesSnapshot) => ChatComposer(
+                    controller: _messageController,
+                    focusNode: _messageFocus,
+                    sending: composerSnapshot.requireData.sending,
+                    error: _chatPanelError(
+                      l10n,
+                      composerSnapshot.requireData.sendError,
+                    ),
+                    emotesOpen: emotesSnapshot.requireData.open,
+                    tapGroup: _emoteTapGroup,
+                    onSend: _send,
+                    onSignOut: () => unawaited(widget.onSignOut()),
+                    onToggleEmotes: _viewModel.toggleEmotes,
+                    onCloseEmotes: _viewModel.closeEmotes,
+                    replyTo: composerSnapshot.requireData.replyTo,
+                    onCancelReply: _cancelReply,
+                  ),
+                ),
           ),
       ],
     );
   }
 
-  Widget _connectedBody(AppLocalizations l10n) {
-    final recentItems = _recent.items;
+  Widget _connectedBody(AppLocalizations l10n) =>
+      StreamBuilder<ChatMessagesState>(
+        initialData: _viewModel.messages.current,
+        stream: _viewModel.messages.changes,
+        builder: (context, snapshot) =>
+            _buildMessages(context, l10n, snapshot.requireData),
+      );
+
+  Widget _buildMessages(
+    BuildContext context,
+    AppLocalizations l10n,
+    ChatMessagesState state,
+  ) {
+    final viewSession = _viewModel.session.current;
+    final recentItems = state.items;
     if (recentItems.isEmpty &&
-        widget.chatState.status != ChatConnectionStatus.connected) {
+        viewSession.status != ChatConnectionStatus.connected) {
       return _CenteredStatus(
-        text: switch (widget.chatState.status) {
+        text: switch (viewSession.status) {
           ChatConnectionStatus.connecting => l10n.connectingEventSub,
           ChatConnectionStatus.reconnecting => l10n.reconnectingChat,
           ChatConnectionStatus.failure => l10n.chatConnectionFailed,
           _ => l10n.waitingForConnection,
         },
         progress:
-            widget.chatState.status == ChatConnectionStatus.connecting ||
-            widget.chatState.status == ChatConnectionStatus.reconnecting,
+            viewSession.status == ChatConnectionStatus.connecting ||
+            viewSession.status == ChatConnectionStatus.reconnecting,
       );
     }
 
     // Redemption events have no color; reuse the latest chat color by user ID.
-    final userColors = <String, Color?>{
-      for (final message in widget.chatState.items.whereType<ChatUserMessage>())
-        message.userId: message.color == null || message.color!.isEmpty
+    final userColors = {
+      for (final entry in state.userColors.entries)
+        entry.key: entry.value == null || entry.value!.isEmpty
             ? null
-            : _parseColor(message.color),
+            : _parseColor(entry.value),
     };
-    final items = recentItems.reversed.toList(growable: false);
-    final broadcasterId = widget.chatState.broadcasterId;
-    final token = widget.authState.token;
+    final items = recentItems;
+    final broadcasterId = viewSession.broadcasterId;
+    final token = viewSession.auth.token;
     final mentionTarget = broadcasterId == null
         ? null
         : StreamerMentionTarget(
@@ -350,7 +320,8 @@ class _ChatPanelState extends State<ChatPanel> {
             login: token?.userId == broadcasterId ? token?.userLogin : null,
           );
     final itemIndices = {
-      for (var index = 0; index < items.length; index++) items[index].id: index,
+      for (var index = 0; index < items.length; index++)
+        items[index].id: items.length - 1 - index,
     };
 
     return Stack(
@@ -377,69 +348,91 @@ class _ChatPanelState extends State<ChatPanel> {
                   reverse: true,
                   findChildIndexCallback: (key) =>
                       itemIndices[(key as ValueKey<String>).value],
-                  itemBuilder: (context, index) => RepaintBoundary(
-                    key: ValueKey(items[index].id),
-                    child: IgnorePointer(
-                      ignoring: _recent.isFading(items[index].id),
-                      child: AnimatedOpacity(
-                        key: ValueKey('message-fade-${items[index].id}'),
-                        opacity: _recent.isFading(items[index].id) ? 0 : 1,
-                        duration: MediaQuery.disableAnimationsOf(context)
-                            ? Duration.zero
-                            : ChatMessageRetention.fadeDuration,
-                        curve: Curves.easeInOut,
-                        child: ChatMessageEntrance(
-                          elapsed: _entranceElapsed(items[index].id),
-                          child: _ChatItemView(
-                            item: items[index],
-                            canCopy: widget.interactive,
-                            badges: widget.chatState.badges,
-                            mentionTarget: mentionTarget,
-                            userColor: switch (items[index]) {
-                              ChatRewardRedemption(:final userId) =>
-                                userColors[userId],
-                              ChatPowerUp(:final userId) => userColors[userId],
-                              _ => null,
-                            },
-                            onReply:
-                                widget.interactive &&
-                                    widget.authState.status ==
-                                        TwitchAuthStatus.signedIn
-                                ? _startReply
-                                : null,
-                            onDelete:
-                                widget.interactive &&
-                                    items[index] is ChatUserMessage &&
-                                    _canDelete(items[index] as ChatUserMessage)
-                                ? (message) =>
-                                      unawaited(_deleteMessage(message))
-                                : null,
-                            deleting: _deletingIds.contains(items[index].id),
+                  itemBuilder: (context, index) {
+                    final item = items[items.length - 1 - index];
+                    return RepaintBoundary(
+                      key: ValueKey(item.id),
+                      child: IgnorePointer(
+                        ignoring: state.fadingIds.contains(item.id),
+                        child: AnimatedOpacity(
+                          key: ValueKey('message-fade-${item.id}'),
+                          opacity: state.fadingIds.contains(item.id) ? 0 : 1,
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : ChatMessageRetention.fadeDuration,
+                          curve: Curves.easeInOut,
+                          child: ChatMessageEntrance(
+                            elapsed: _viewModel.entranceElapsed(item.id),
+                            child: StreamBuilder<ChatDeletionsState>(
+                              initialData: _viewModel.deletions.current,
+                              stream: _viewModel.deletions.changes,
+                              builder: (context, snapshot) => _ChatItemView(
+                                item: item,
+                                canCopy: widget.interactive,
+                                badges: viewSession.badges,
+                                mentionTarget: mentionTarget,
+                                userColor: switch (item) {
+                                  ChatRewardRedemption(:final userId) =>
+                                    userColors[userId],
+                                  ChatPowerUp(:final userId) =>
+                                    userColors[userId],
+                                  _ => null,
+                                },
+                                onReply:
+                                    widget.interactive &&
+                                        viewSession.auth.status ==
+                                            TwitchAuthStatus.signedIn
+                                    ? _startReply
+                                    : null,
+                                onDelete:
+                                    widget.interactive &&
+                                        item is ChatUserMessage &&
+                                        _viewModel.canDelete(item)
+                                    ? (message) => unawaited(
+                                        _viewModel.deleteMessage(message),
+                                      )
+                                    : null,
+                                deleting: snapshot.requireData.isDeleting(
+                                  item.id,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ),
           ),
         ),
-        if (items.isEmpty && (widget.interactive || _startupHintVisible))
-          Positioned.fill(
-            child: AnimatedOpacity(
-              key: const ValueKey('startup-chat-hint'),
-              opacity: !widget.interactive && _startupHintFading ? 0 : 1,
-              duration:
-                  widget.interactive || MediaQuery.disableAnimationsOf(context)
-                  ? Duration.zero
-                  : _startupHintFadeDuration,
-              curve: Curves.easeInOut,
-              child: _CenteredStatus(
-                text: l10n.noChatMessages,
-                hint: widget.interactive ? null : l10n.openControlsShortcut,
-              ),
-            ),
+        if (items.isEmpty)
+          StreamBuilder<ChatStartupHintState>(
+            initialData: _viewModel.startupHint.current,
+            stream: _viewModel.startupHint.changes,
+            builder: (context, snapshot) {
+              final hint = snapshot.requireData;
+              if (!widget.interactive && !hint.visible) {
+                return const SizedBox.shrink();
+              }
+              return Positioned.fill(
+                child: AnimatedOpacity(
+                  key: const ValueKey('startup-chat-hint'),
+                  opacity: !widget.interactive && hint.fading ? 0 : 1,
+                  duration:
+                      widget.interactive ||
+                          MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : ChatPanelViewModel.startupHintFadeDuration,
+                  curve: Curves.easeInOut,
+                  child: _CenteredStatus(
+                    text: l10n.noChatMessages,
+                    hint: widget.interactive ? null : l10n.openControlsShortcut,
+                  ),
+                ),
+              );
+            },
           ),
         if (!widget.interactive &&
             (widget.showViewerCount || widget.showConnectionIndicator))
@@ -457,8 +450,8 @@ class _ChatPanelState extends State<ChatPanel> {
                     if (widget.showViewerCount)
                       Flexible(
                         child: ViewerCount(
-                          count: widget.chatState.viewerCount,
-                          offline: widget.chatState.streamOffline,
+                          count: viewSession.viewerCount,
+                          offline: viewSession.streamOffline,
                         ),
                       ),
                     if (widget.showViewerCount &&
@@ -467,7 +460,7 @@ class _ChatPanelState extends State<ChatPanel> {
                     if (widget.showConnectionIndicator)
                       Flexible(
                         child: _ChatConnectionIndicator(
-                          status: widget.chatState.status,
+                          status: viewSession.status,
                         ),
                       ),
                   ],
@@ -476,7 +469,7 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           )
         else if (widget.interactive &&
-            widget.chatState.status == ChatConnectionStatus.reconnecting)
+            viewSession.status == ChatConnectionStatus.reconnecting)
           Positioned(
             top: 5,
             right: 8,
@@ -486,141 +479,50 @@ class _ChatPanelState extends State<ChatPanel> {
     );
   }
 
-  Future<List<ChatEmote>> _requestEmotes({bool refresh = false}) {
-    final request = Future<List<ChatEmote>>.sync(
-      () => widget.onLoadEmotes(refresh: refresh),
-    );
-    // Keep late errors handled if the picker closes before the next frame.
-    request.ignore();
-    return request;
-  }
-
-  void _toggleEmotes() {
-    setState(() {
-      _emotesOpen = !_emotesOpen;
-      if (_emotesOpen) _emotesFuture = _requestEmotes();
-    });
-  }
-
-  void _reloadEmotes() {
-    setState(() {
-      _emotesFuture = _requestEmotes(refresh: true);
-    });
-  }
-
-  void _closeEmotes() {
-    if (_emotesOpen) setState(() => _emotesOpen = false);
-  }
-
   void _insertEmote(ChatEmote emote) {
     final value = insertChatEmote(_messageController.value, emote.name);
-    if (value == null) {
-      setState(() => _sendError = AppLocalizations.of(context).messageTooLong);
-      return;
-    }
+    _viewModel.emoteInserted(accepted: value != null);
+    if (value == null) return;
     _messageController.value = value;
-    setState(() => _sendError = null);
     _messageFocus.requestFocus();
   }
 
-  bool _canDelete(ChatUserMessage message) {
-    final broadcasterId = widget.chatState.broadcasterId;
-    return widget.authState.status == TwitchAuthStatus.signedIn &&
-        broadcasterId != null &&
-        widget.authState.token?.userId == broadcasterId &&
-        widget.onDeleteMessage != null &&
-        canDeleteTwitchMessage(message, broadcasterId);
-  }
-
   void _startReply(ChatUserMessage message) {
-    setState(() {
-      _replyTo = ChatReply(
-        parentMessageId: message.id,
-        parentUserName: message.userName,
-        parentMessageBody: message.fragments
-            .map((fragment) => fragment.text)
-            .join(),
-      );
-      _sendError = null;
-      _emotesOpen = false;
-    });
+    _viewModel.startReply(message);
     _messageFocus.requestFocus();
   }
 
   void _cancelReply() {
-    setState(() => _replyTo = null);
+    _viewModel.cancelReply();
     _messageFocus.requestFocus();
-  }
-
-  Future<void> _deleteMessage(ChatUserMessage message) async {
-    if (!_canDelete(message) || _deletingIds.contains(message.id)) return;
-    final generation = _actionGeneration;
-    final l10n = AppLocalizations.of(context);
-    setState(() {
-      _deletingIds.add(message.id);
-      _deleteError = null;
-    });
-    try {
-      await widget.onDeleteMessage!(message.id);
-    } catch (error) {
-      if (!mounted || generation != _actionGeneration) return;
-      setState(() {
-        final failure = error is TwitchChatActionException
-            ? error.failure
-            : null;
-        _deleteError = switch (failure) {
-          TwitchChatActionFailure.forbidden => l10n.deleteNotAllowed,
-          TwitchChatActionFailure.messageUnavailable => l10n.messageUnavailable,
-          _ => l10n.deleteFailed,
-        };
-      });
-    } finally {
-      if (mounted && generation == _actionGeneration) {
-        setState(() => _deletingIds.remove(message.id));
-      }
-    }
   }
 
   Future<void> _send() async {
     final draft = _messageController.text;
-    final reply = _replyTo;
-    final generation = _actionGeneration;
-    final text = draft.trim();
-    if (text.isEmpty || _sending) return;
-    final l10n = AppLocalizations.of(context);
-    setState(() {
-      _sending = true;
-      _emotesOpen = false;
-      _sendError = null;
-    });
-
-    try {
-      final result = await widget.onSend(text, replyTo: reply?.parentMessageId);
-      if (!mounted || generation != _actionGeneration) return;
-      if (result.sent) {
-        if (_messageController.text == draft) _messageController.clear();
-        if (identical(_replyTo, reply)) setState(() => _replyTo = null);
-        _messageFocus.requestFocus();
-      } else {
-        setState(() => _sendError = result.dropReason ?? l10n.messageRejected);
-      }
-    } catch (error) {
-      if (mounted && generation == _actionGeneration) {
-        setState(
-          () => _sendError =
-              error is TwitchChatActionException &&
-                  error.failure == TwitchChatActionFailure.messageUnavailable
-              ? l10n.replyUnavailable
-              : error.toString(),
-        );
-      }
-    } finally {
-      if (mounted && generation == _actionGeneration) {
-        setState(() => _sending = false);
-      }
-    }
+    final sent = await _viewModel.send(draft);
+    if (!mounted || !sent) return;
+    if (_messageController.text == draft) _messageController.clear();
+    _messageFocus.requestFocus();
   }
 }
+
+String? _chatPanelError(AppLocalizations strings, ChatPanelError? error) =>
+    error == null
+    ? null
+    : switch (error.failure) {
+        ChatPanelFailure.messageTooLong => strings.messageTooLong,
+        ChatPanelFailure.replyUnavailable => strings.replyUnavailable,
+        ChatPanelFailure.messageRejected =>
+          error.details ?? strings.messageRejected,
+        ChatPanelFailure.deleteNotAllowed => strings.deleteNotAllowed,
+        ChatPanelFailure.messageUnavailable => strings.messageUnavailable,
+        ChatPanelFailure.deleteFailed => strings.deleteFailed,
+        ChatPanelFailure.sendNotAllowed => strings.sendNotAllowed,
+        ChatPanelFailure.network => strings.sendNetworkError,
+        ChatPanelFailure.rateLimited => strings.sendRateLimited,
+        ChatPanelFailure.sessionChanged => strings.chatSessionChanged,
+        ChatPanelFailure.sendFailed => strings.sendFailed,
+      };
 
 String? _authError(AppLocalizations l10n, TwitchAuthState state) {
   final details = state.errorDetails ?? l10n.unknownError;

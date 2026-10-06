@@ -216,6 +216,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
+  observable_state:
+    dependency: "direct main"
+    description:
+      path: "../packages/observable_state"
+      relative: true
+    source: path
+    version: "1.0.0"
   open_url:
     dependency: "direct main"
     description:

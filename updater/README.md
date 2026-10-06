@@ -4,6 +4,11 @@ Separate Flutter / Dart Windows application, implemented from scratch.
 `updater/overlay_updater.exe` ships with its own Flutter engine and `data/`.
 It requires no Dart, Flutter or .NET installation on the user's computer.
 
+`UpdateViewModel` owns separate observables for the installation state and
+download progress, and starts checking in its constructor. The local
+`../packages/observable_state` package is shared with the overlay; see
+[state management](../docs/state-management.md) for the conventions.
+
 The UI supports Ukrainian and English through Flutter gen_l10n and ARB catalogs
 in `lib/l10n/`. The overlay passes its active locale with `--locale uk` or
 `--locale en`. The updater launches the overlay without locale arguments.

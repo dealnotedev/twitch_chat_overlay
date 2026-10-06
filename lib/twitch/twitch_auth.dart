@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:open_url/open_url.dart';
 import 'package:twitch_chat_overlay/secrets.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_token.dart';
@@ -70,10 +71,13 @@ final class TwitchAuthClient implements TwitchAuth {
 
   final TwitchTokenStore _tokenStore;
   final Dio _dio;
-  final StreamController<TwitchAuthState> _states =
-      StreamController<TwitchAuthState>.broadcast(sync: true);
 
-  TwitchAuthState _state = const TwitchAuthState.loading();
+  final ObservableValue<TwitchAuthState> _observable = ObservableValue(
+    current: const TwitchAuthState.loading(),
+    sync: true,
+  );
+
+  TwitchAuthState get _state => _observable.current;
   Future<TwitchToken>? _refreshInFlight;
   Future<void> _storageWork = Future.value();
   int _sessionGeneration = 0;
@@ -83,7 +87,7 @@ final class TwitchAuthClient implements TwitchAuth {
   TwitchAuthState get state => _state;
 
   @override
-  Stream<TwitchAuthState> get states => _states.stream;
+  Stream<TwitchAuthState> get states => _observable.changes;
 
   @override
   Future<void> initialize() async {
@@ -279,7 +283,11 @@ final class TwitchAuthClient implements TwitchAuth {
       await _tokenStore.write(token);
     });
     _checkSession(generation);
-    _state = TwitchAuthState(status: _state.status, token: token);
+    // Publish the authorization transition only after validation completes.
+    _observable.set(
+      TwitchAuthState(status: _state.status, token: token),
+      notify: false,
+    );
   }
 
   Future<TwitchToken> _validate(TwitchToken token) async {
@@ -397,8 +405,7 @@ final class TwitchAuthClient implements TwitchAuth {
   }
 
   void _emit(TwitchAuthState value) {
-    _state = value;
-    _states.add(value);
+    _observable.set(value);
   }
 
   static String _formBody(Map<String, String> values) {

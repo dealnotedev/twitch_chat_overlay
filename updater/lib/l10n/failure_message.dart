@@ -22,4 +22,8 @@ String failureMessage(UpdaterLocalizations strings, UpdateIssue issue) =>
       UpdateIssue.invalidJournal => strings.invalidJournal,
       UpdateIssue.updateBusy => strings.updateBusy,
       UpdateIssue.closeOverlay => strings.closeOverlay,
+      UpdateIssue.cancelled => strings.cancelled,
+      UpdateIssue.network => strings.networkError,
+      UpdateIssue.fileSystem => strings.fileError,
+      UpdateIssue.unexpected => strings.unexpectedError,
     };

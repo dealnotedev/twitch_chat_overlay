@@ -6,7 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:overlay_updater/launch_options.dart';
 import 'package:overlay_updater/l10n/generated/updater_localizations.dart';
 import 'package:overlay_updater/platform/updater_host.dart';
-import 'package:overlay_updater/update_controller.dart';
+import 'package:overlay_updater/update_view_model.dart';
+import 'package:overlay_updater/updater_view.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
@@ -48,7 +49,7 @@ void main() {
   });
   for (final language in ['en', 'uk']) {
     test(
-      '$language localizes the native window title and controller errors',
+      '$language localizes the native window title and viewModel errors',
       () async {
         final strings = lookupUpdaterLocalizations(Locale(language));
         final calls = <MethodCall>[];
@@ -66,23 +67,24 @@ void main() {
         );
         final dir = Directory.systemTemp.createTempSync('updater-locale-');
         addTearDown(() => dir.deleteSync(recursive: true));
-        final controller = UpdateController(
+        final viewModel = UpdateViewModel(
           directory: dir.path,
           host: WindowsUpdaterHost(title: strings.windowTitle),
-          strings: strings,
         );
-        addTearDown(controller.dispose);
-        expect(controller.title, strings.checkingTitle);
-        await controller.check();
+        addTearDown(viewModel.dispose);
+        UpdatePresentation presentation() =>
+            UpdatePresentation.fromState(viewModel.state.current, strings);
+        expect(presentation().title, strings.checkingTitle);
+        await viewModel.check();
         expect(calls.single.method, 'initialize');
         expect(calls.single.arguments, {
           'directory': dir.path,
           'title': strings.windowTitle,
         });
-        expect(controller.phase, UpdatePhase.error);
-        expect(controller.title, strings.errorTitle);
-        expect(controller.detail, strings.invalidInstallation);
-        expect(controller.action, strings.retry);
+        expect(viewModel.state.current.phase, UpdatePhase.error);
+        expect(presentation().title, strings.errorTitle);
+        expect(presentation().detail, strings.invalidInstallation);
+        expect(presentation().action, strings.retry);
       },
     );
   }

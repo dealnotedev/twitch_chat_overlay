@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'launch_options.dart';
 import 'l10n/generated/updater_localizations.dart';
 import 'platform/updater_host.dart';
-import 'update_controller.dart';
+import 'update_view_model.dart';
 import 'updater_view.dart';
 
 void main(List<String> arguments) {
@@ -20,9 +20,9 @@ void main(List<String> arguments) {
   final strings = lookupUpdaterLocalizations(options.locale);
   runApp(
     UpdaterApp(
-      controller: UpdateController(
+      locale: options.locale,
+      createViewModel: () => UpdateViewModel(
         directory: options.directory,
-        strings: strings,
         host: WindowsUpdaterHost(title: strings.windowTitle),
       ),
     ),
@@ -30,22 +30,49 @@ void main(List<String> arguments) {
 }
 
 class UpdaterApp extends StatefulWidget {
-  const UpdaterApp({required this.controller, super.key});
-  final UpdateController controller;
+  const UpdaterApp({
+    required this.createViewModel,
+    this.locale = const Locale('en'),
+    super.key,
+  }) : viewModel = null;
+
+  /// Uses an externally owned model; the caller remains responsible for disposal.
+  const UpdaterApp.withViewModel({
+    required UpdateViewModel this.viewModel,
+    this.locale = const Locale('en'),
+    super.key,
+  }) : createViewModel = null;
+
+  final UpdateViewModel Function()? createViewModel;
+  final UpdateViewModel? viewModel;
+  final Locale locale;
   @override
   State<UpdaterApp> createState() => _UpdaterAppState();
 }
 
 class _UpdaterAppState extends State<UpdaterApp> {
+  late UpdateViewModel _viewModel;
+
   @override
   void initState() {
     super.initState();
-    unawaited(widget.controller.check());
+    _viewModel = widget.viewModel ?? widget.createViewModel!();
+  }
+
+  @override
+  void didUpdateWidget(UpdaterApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.viewModel, widget.viewModel) ||
+        identical(widget.viewModel, _viewModel)) {
+      return;
+    }
+    if (oldWidget.viewModel == null) _viewModel.dispose();
+    _viewModel = widget.viewModel ?? widget.createViewModel!();
   }
 
   @override
   void dispose() {
-    widget.controller.dispose();
+    if (widget.viewModel == null) _viewModel.dispose();
     super.dispose();
   }
 
@@ -53,16 +80,22 @@ class _UpdaterAppState extends State<UpdaterApp> {
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     onGenerateTitle: (context) => UpdaterLocalizations.of(context).windowTitle,
-    locale: Locale(widget.controller.strings.localeName),
+    locale: widget.locale,
     supportedLocales: UpdaterLocalizations.supportedLocales,
     localizationsDelegates: UpdaterLocalizations.localizationsDelegates,
     theme: updaterTheme(),
-    home: ListenableBuilder(
-      listenable: widget.controller,
-      builder: (context, _) => UpdaterView(
-        state: UpdatePresentation.fromController(widget.controller),
-        onAction: () => unawaited(widget.controller.activate()),
-        onCancel: widget.controller.cancel,
+    home: StreamBuilder<UpdateState>(
+      key: ValueKey(_viewModel),
+      initialData: _viewModel.state.current,
+      stream: _viewModel.state.changes,
+      builder: (context, snapshot) => UpdaterView(
+        download: _viewModel.download,
+        state: UpdatePresentation.fromState(
+          snapshot.requireData,
+          UpdaterLocalizations.of(context),
+        ),
+        onAction: () => unawaited(_viewModel.activate()),
+        onCancel: _viewModel.cancel,
       ),
     ),
   );

@@ -4,6 +4,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/widgets/overlay_action_button.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
@@ -11,6 +12,7 @@ import 'package:twitch_chat_overlay/chat/gif_playback.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
+import 'package:twitch_chat_overlay/overlay/overlay_view_model.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_settings_panel.dart';
 import 'package:twitch_chat_overlay/platform/overlay_host.dart';
@@ -46,57 +48,20 @@ class OverlaySurface extends StatefulWidget {
 }
 
 class _OverlaySurfaceState extends State<OverlaySurface> {
-  late OverlayLayout _layout;
-  late OverlayHostState _hostState;
-  late TwitchAuthState _authState;
-  late ChatState _chatState;
-  StreamSubscription<OverlayHostState>? _hostSubscription;
-  StreamSubscription<TwitchAuthState>? _authSubscription;
-  StreamSubscription<ChatState>? _chatSubscription;
+  late final OverlayViewModel _viewModel;
   OverlayTray? _tray;
-  bool _settingsOpen = false;
-  bool _changingCaptureExclusion = false;
-  bool _captureExclusionFailed = false;
 
   @override
   void initState() {
     super.initState();
     FocusManager.instance.addEarlyKeyEventHandler(_handleSettingsKey);
-    _layout = widget.initialLayout;
-    widget.twitchChat.setEmoteOptions(_layout.emoteOptions);
-    _hostState = widget.overlayHost.state;
-    _authState = widget.twitchAuth.state;
-    _chatState = widget.twitchChat.state;
-    _hostSubscription = widget.overlayHost.states.listen((state) {
-      if (!mounted) return;
-      if (!state.interactive && _settingsOpen) _saveLayout();
-      setState(() {
-        _hostState = state;
-        if (!state.interactive) _settingsOpen = false;
-      });
-    });
-    _authSubscription = widget.twitchAuth.states.listen(_onAuthState);
-    _chatSubscription = widget.twitchChat.states.listen((state) {
-      if (mounted) setState(() => _chatState = state);
-    });
-    unawaited(_initializeHost());
-    unawaited(widget.twitchAuth.initialize());
-  }
-
-  Future<void> _initializeHost() async {
-    try {
-      await widget.overlayHost.initialize(
-        excludedFromCapture: _layout.excludedFromCapture,
-      );
-    } on PlatformException {
-      if (!mounted) return;
-      setState(() {
-        _layout = _layout.withExcludedFromCapture(
-          widget.overlayHost.state.excludedFromCapture,
-        );
-        _captureExclusionFailed = true;
-      });
-    }
+    _viewModel = OverlayViewModel(
+      initialLayout: widget.initialLayout,
+      layoutStore: widget.layoutStore,
+      host: widget.overlayHost,
+      auth: widget.twitchAuth,
+      chat: widget.twitchChat,
+    );
   }
 
   @override
@@ -113,9 +78,9 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
     final tray = OverlayTray(
       factory: widget.trayFactory,
       host: widget.overlayHost,
-      onConfigure: _openSettingsFromTray,
+      onConfigure: _viewModel.openSettings,
       beforeExit: () async {
-        await widget.layoutStore.save(_layout);
+        await _viewModel.saveLayout();
         await widget.beforeExit?.call();
       },
     );
@@ -131,15 +96,30 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
   void dispose() {
     FocusManager.instance.removeEarlyKeyEventHandler(_handleSettingsKey);
     unawaited(_tray?.dispose());
-    _hostSubscription?.cancel();
-    _authSubscription?.cancel();
-    _chatSubscription?.cancel();
-    unawaited(widget.twitchChat.leave());
+    _viewModel.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => StreamBuilder<OverlayFrameState>(
+    initialData: _viewModel.frame.current,
+    stream: _viewModel.frame.changes,
+    builder: (context, frameSnapshot) => StreamBuilder<TwitchAuthState>(
+      initialData: _viewModel.authState.current,
+      stream: _viewModel.authState.changes,
+      builder: (context, authSnapshot) => _buildSurface(
+        context,
+        frameSnapshot.requireData,
+        authSnapshot.requireData,
+      ),
+    ),
+  );
+
+  Widget _buildSurface(
+    BuildContext context,
+    OverlayFrameState state,
+    TwitchAuthState auth,
+  ) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ColoredBox(
@@ -147,50 +127,46 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final viewport = constraints.biggest;
-            final rect = _layout.resolve(viewport);
+            final rect = state.layout.resolve(viewport);
             return Stack(
               children: [
                 Positioned.fromRect(
                   rect: rect,
                   child: BackgroundOpacity(
-                    opacity: _layout.backgroundOpacity,
+                    opacity: state.layout.backgroundOpacity,
                     child: _VirtualChatWindow(
-                      editing: _hostState.interactive,
+                      editing: state.host.interactive,
                       onCycleLocale: widget.onCycleLocale,
-                      signedIn: _authState.status == TwitchAuthStatus.signedIn,
-                      contentOpacity: _layout.contentOpacity,
-                      showConnectionIndicator: _layout.showConnectionIndicator,
-                      gifPlayCount: _layout.gifPlayCount,
-                      settingsOpen: _settingsOpen,
-                      onSettings: _toggleSettings,
-                      onMove: (delta) =>
-                          _updateLayout(_layout.moveBy(delta, viewport)),
-                      onResize: (handle, delta) => _updateLayout(
-                        _layout.resizeBy(handle, delta, viewport),
-                      ),
-                      onGestureEnd: _saveLayout,
-                      onLock: () =>
-                          unawaited(widget.overlayHost.setInteractive(false)),
-                      connectionStatus: _chatState.status,
+                      signedIn: auth.status == TwitchAuthStatus.signedIn,
+                      contentOpacity: state.layout.contentOpacity,
+                      showConnectionIndicator:
+                          state.layout.showConnectionIndicator,
+                      gifPlayCount: state.layout.gifPlayCount,
+                      settingsOpen: state.settingsOpen,
+                      onSettings: _viewModel.toggleSettings,
+                      onMove: (delta) => _viewModel.move(delta, viewport),
+                      onResize: (handle, delta) =>
+                          _viewModel.resize(handle, delta, viewport),
+                      onGestureEnd: _viewModel.saveLayout,
+                      onLock: () => unawaited(_viewModel.lock()),
+                      connectionStatus: _viewModel.connectionStatus,
                       child: ChatPanel(
-                        showViewerCount: _layout.showViewerCount,
+                        showViewerCount: state.layout.showViewerCount,
                         showConnectionIndicator:
-                            _layout.showConnectionIndicator,
-                        chatFontSize: _layout.chatFontSize,
-                        chatFontWeight: _layout.chatFontWeight,
+                            state.layout.showConnectionIndicator,
+                        chatFontSize: state.layout.chatFontSize,
+                        chatFontWeight: state.layout.chatFontWeight,
                         messageFooter: UpdateNotice(
-                          interactive: _hostState.interactive,
+                          interactive: state.host.interactive,
                           onUpdate: widget.overlayHost.openUpdater,
                         ),
-                        authState: _authState,
-                        chatState: _chatState,
-                        messageLifetimeMinutes: _layout.messageLifetimeMinutes,
-                        interactive: _hostState.interactive,
-                        onSignIn: () async {
-                          await widget.overlayHost.setInteractive(false);
-                          await widget.twitchAuth.signIn();
-                        },
-                        onSignOut: widget.twitchAuth.signOut,
+                        authSource: _viewModel.authState,
+                        chatSource: _viewModel.chatState,
+                        messageLifetimeMinutes:
+                            state.layout.messageLifetimeMinutes,
+                        interactive: state.host.interactive,
+                        onSignIn: _viewModel.signIn,
+                        onSignOut: _viewModel.signOut,
                         onSend: widget.twitchChat.send,
                         onDeleteMessage: widget.twitchChat.deleteMessage,
                         onLoadEmotes: widget.twitchChat.loadEmotes,
@@ -198,26 +174,32 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                     ),
                   ),
                 ),
-                if (_hostState.interactive)
+                if (state.host.interactive)
                   const Positioned(
                     left: 0,
                     right: 0,
                     top: 18,
                     child: IgnorePointer(child: _EditModeBanner()),
                   ),
-                if (_settingsOpen && _hostState.interactive)
+                if (state.settingsOpen && state.host.interactive)
                   Positioned.fromRect(
                     rect: OverlaySettingsPanel.placeBeside(rect, viewport),
-                    child: OverlaySettingsPanel(
-                      key: const ValueKey('overlay-settings-panel'),
-                      layout: _layout,
-                      onChanged: _updateLayout,
-                      onChangeEnd: _saveLayout,
-                      onClose: _closeSettings,
-                      onCaptureExclusionChanged: (value) =>
-                          unawaited(_changeCaptureExclusion(value)),
-                      changingCaptureExclusion: _changingCaptureExclusion,
-                      captureExclusionFailed: _captureExclusionFailed,
+                    child: StreamBuilder<SimpleFailableProcess>(
+                      initialData: _viewModel.captureExclusionProcess.current,
+                      stream: _viewModel.captureExclusionProcess.changes,
+                      builder: (context, snapshot) => OverlaySettingsPanel(
+                        key: const ValueKey('overlay-settings-panel'),
+                        layout: state.layout,
+                        onChanged: _viewModel.updateLayout,
+                        onChangeEnd: _viewModel.saveLayout,
+                        onClose: _viewModel.closeSettings,
+                        onCaptureExclusionChanged: (value) =>
+                            unawaited(_viewModel.changeCaptureExclusion(value)),
+                        changingCaptureExclusion: snapshot.requireData.isActive,
+                        captureExclusionFailed:
+                            snapshot.requireData.error ==
+                            OverlayFailure.captureExclusion,
+                      ),
                     ),
                   ),
               ],
@@ -228,30 +210,10 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
     );
   }
 
-  Future<void> _openSettingsFromTray() async {
-    await widget.overlayHost.setInteractive(true);
-    if (mounted && widget.overlayHost.state.interactive) {
-      setState(() => _settingsOpen = true);
-    }
-  }
-
-  void _toggleSettings() {
-    if (_settingsOpen) {
-      _closeSettings();
-    } else {
-      setState(() => _settingsOpen = true);
-    }
-  }
-
-  void _closeSettings() {
-    if (!_settingsOpen) return;
-    _saveLayout();
-    setState(() => _settingsOpen = false);
-  }
-
   KeyEventResult _handleSettingsKey(KeyEvent event) {
-    if (_settingsOpen && event.logicalKey == LogicalKeyboardKey.escape) {
-      if (event is KeyDownEvent) _closeSettings();
+    if (_viewModel.frame.current.settingsOpen &&
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      if (event is KeyDownEvent) _viewModel.closeSettings();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -265,45 +227,6 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
         library: 'overlay tray localization',
       ),
     );
-  }
-
-  void _updateLayout(OverlayLayout value) {
-    setState(() => _layout = value);
-    widget.twitchChat.setEmoteOptions(value.emoteOptions);
-  }
-
-  void _saveLayout() {
-    unawaited(widget.layoutStore.save(_layout));
-  }
-
-  Future<void> _changeCaptureExclusion(bool excluded) async {
-    if (_changingCaptureExclusion) return;
-    setState(() {
-      _changingCaptureExclusion = true;
-      _captureExclusionFailed = false;
-    });
-    try {
-      await widget.overlayHost.setExcludedFromCapture(excluded);
-    } on PlatformException {
-      if (mounted) setState(() => _captureExclusionFailed = true);
-      return;
-    } finally {
-      if (mounted) setState(() => _changingCaptureExclusion = false);
-    }
-    if (!mounted) return;
-    setState(() => _layout = _layout.withExcludedFromCapture(excluded));
-    _saveLayout();
-  }
-
-  void _onAuthState(TwitchAuthState state) {
-    if (mounted) setState(() => _authState = state);
-    final token = state.token;
-    if (state.status == TwitchAuthStatus.signedIn && token != null) {
-      unawaited(widget.twitchChat.join(broadcasterId: token.userId));
-    } else if (state.status == TwitchAuthStatus.signedOut ||
-        state.status == TwitchAuthStatus.failure) {
-      unawaited(widget.twitchChat.leave());
-    }
   }
 }
 
@@ -365,7 +288,7 @@ class _VirtualChatWindow extends StatelessWidget {
   final VoidCallback onGestureEnd;
   final VoidCallback onLock;
   final VoidCallback? onCycleLocale;
-  final ChatConnectionStatus connectionStatus;
+  final StreamWithInitial<ChatConnectionStatus> connectionStatus;
   final Widget child;
 
   @override
@@ -477,7 +400,7 @@ class _ChatHeader extends StatelessWidget {
   final VoidCallback onGestureEnd;
   final VoidCallback onLock;
   final VoidCallback? onCycleLocale;
-  final ChatConnectionStatus connectionStatus;
+  final StreamWithInitial<ChatConnectionStatus> connectionStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -512,13 +435,17 @@ class _ChatHeader extends StatelessWidget {
               ),
             ),
             if (showConnectionIndicator)
-              Container(
-                key: const ValueKey('chat-header-connection-indicator'),
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: _connectionColor(connectionStatus),
-                  shape: BoxShape.circle,
+              StreamBuilder<ChatConnectionStatus>(
+                initialData: connectionStatus.current,
+                stream: connectionStatus.changes,
+                builder: (context, snapshot) => Container(
+                  key: const ValueKey('chat-header-connection-indicator'),
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: _connectionColor(snapshot.requireData),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             if (!editing) ...[

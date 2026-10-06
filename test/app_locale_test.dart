@@ -9,7 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:twitch_chat_overlay/l10n/locale_preferences.dart';
+import 'package:twitch_chat_overlay/l10n/locale_view_model.dart';
 import 'package:twitch_chat_overlay/main.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
@@ -34,20 +34,23 @@ void main() {
   });
   test('restores supported locales and defaults to Ukrainian', () async {
     for (final stored in [null, 'uk', 'en', 'de']) {
-      SharedPreferences.setMockInitialValues({LocalePreferences.key: ?stored});
-      final settings = await LocalePreferences.load();
-      expect(settings.value.languageCode, stored == 'en' ? 'en' : 'uk');
+      SharedPreferences.setMockInitialValues({LocaleViewModel.key: ?stored});
+      final settings = await LocaleViewModel.load();
+      expect(
+        settings.locale.current.languageCode,
+        stored == 'en' ? 'en' : 'uk',
+      );
       settings.dispose();
     }
   });
   test('rapid switches persist the final language across restarts', () async {
-    final settings = await LocalePreferences.load();
+    final settings = await LocaleViewModel.load();
     addTearDown(settings.dispose);
     await Future.wait([settings.cycle(), settings.cycle(), settings.cycle()]);
     await settings.flush();
-    final reopened = await LocalePreferences.load();
+    final reopened = await LocaleViewModel.load();
     addTearDown(reopened.dispose);
-    expect(reopened.value, const Locale('en'));
+    expect(reopened.locale.current, const Locale('en'));
   });
   testWidgets(
     'header cycles locale, saves it and updates tray without restarting chat',
@@ -70,7 +73,7 @@ void main() {
       addTearDown(() {
         messenger.setMockMethodCallHandler(channel, null);
       });
-      final settings = await LocalePreferences.load();
+      final settings = await LocaleViewModel.load();
       final host = MethodChannelOverlayHost();
       final auth = _Auth();
       final boundary = GlobalKey();
@@ -79,7 +82,7 @@ void main() {
           key: boundary,
           child: TwitchChatOverlayApp(
             trayFactory: trayFactory,
-            localePreferences: settings,
+            localeViewModel: settings,
             initialLayout: const OverlayLayout.defaults(),
             layoutStore: _LayoutStore(),
             overlayHost: host,
@@ -104,9 +107,7 @@ void main() {
       );
       expect(find.text('Sign in with Twitch'), findsOneWidget);
       expect(
-        (await SharedPreferences.getInstance()).getString(
-          LocalePreferences.key,
-        ),
+        (await SharedPreferences.getInstance()).getString(LocaleViewModel.key),
         'en',
       );
       expect(trayFactory.items.first.label, 'Hide overlay');
@@ -133,8 +134,8 @@ void main() {
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       await settings.flush();
-      final reopened = await LocalePreferences.load();
-      expect(reopened.value, const Locale('uk'));
+      final reopened = await LocaleViewModel.load();
+      expect(reopened.locale.current, const Locale('uk'));
       reopened.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

@@ -1,3 +1,5 @@
+import 'package:observable_state/observable_state.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -46,11 +48,15 @@ void main() {
           width: 320,
           height: 400,
           child: ChatPanel(
-            authState: const TwitchAuthState(status: TwitchAuthStatus.signedIn),
-            chatState: ChatState(
-              status: ChatConnectionStatus.connected,
-              items: items,
-              emoteCatalog: catalog,
+            authSource: StreamWithInitial.value(
+              const TwitchAuthState(status: TwitchAuthStatus.signedIn),
+            ),
+            chatSource: StreamWithInitial.value(
+              ChatState(
+                status: ChatConnectionStatus.connected,
+                items: items,
+                emoteCatalog: catalog,
+              ),
             ),
             interactive: false,
             onSignIn: () async {},

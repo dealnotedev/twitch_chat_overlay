@@ -1,3 +1,4 @@
+import 'package:observable_state/observable_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:twitch_chat_overlay/chat/chat_item.dart';
@@ -31,12 +32,14 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ChatPanel(
-                authState: const TwitchAuthState(
-                  status: TwitchAuthStatus.signedIn,
+                authSource: StreamWithInitial.value(
+                  const TwitchAuthState(status: TwitchAuthStatus.signedIn),
                 ),
-                chatState: ChatState(
-                  status: ChatConnectionStatus.connected,
-                  items: [item],
+                chatSource: StreamWithInitial.value(
+                  ChatState(
+                    status: ChatConnectionStatus.connected,
+                    items: [item],
+                  ),
                 ),
                 interactive: interactive,
                 messageLifetimeMinutes: 1,

@@ -1,3 +1,5 @@
+import 'package:observable_state/observable_state.dart';
+
 import 'dart:async';
 
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
@@ -182,12 +184,14 @@ void main() {
             height: 280,
             child: ChatPanel(
               key: panelKey,
-              authState: const TwitchAuthState(
-                status: TwitchAuthStatus.signedIn,
+              authSource: StreamWithInitial.value(
+                const TwitchAuthState(status: TwitchAuthStatus.signedIn),
               ),
-              chatState: const ChatState(
-                status: ChatConnectionStatus.connected,
-                items: [],
+              chatSource: StreamWithInitial.value(
+                const ChatState(
+                  status: ChatConnectionStatus.connected,
+                  items: [],
+                ),
               ),
               interactive: interactive,
               onSignIn: () async {},

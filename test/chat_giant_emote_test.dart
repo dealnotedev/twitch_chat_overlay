@@ -1,3 +1,5 @@
+import 'package:observable_state/observable_state.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -180,10 +182,11 @@ Widget _app(ChatUserMessage message, {double width = 320}) => MaterialApp(
         width: width,
         height: 500,
         child: ChatPanel(
-          authState: const TwitchAuthState(status: TwitchAuthStatus.signedIn),
-          chatState: ChatState(
-            status: ChatConnectionStatus.connected,
-            items: [message],
+          authSource: StreamWithInitial.value(
+            const TwitchAuthState(status: TwitchAuthStatus.signedIn),
+          ),
+          chatSource: StreamWithInitial.value(
+            ChatState(status: ChatConnectionStatus.connected, items: [message]),
           ),
           interactive: false,
           onSignIn: () async {},

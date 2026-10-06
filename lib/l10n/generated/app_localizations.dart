@@ -644,6 +644,36 @@ abstract class AppLocalizations {
   /// **'Could not delete the message. Try again.'**
   String get deleteFailed;
 
+  /// No description provided for @sendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the message. Your draft is saved. Try again.'**
+  String get sendFailed;
+
+  /// No description provided for @sendNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Twitch does not allow sending this message.'**
+  String get sendNotAllowed;
+
+  /// No description provided for @sendNetworkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reach Twitch. Your draft is saved. Try again.'**
+  String get sendNetworkError;
+
+  /// No description provided for @sendRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Wait a moment and try sending again.'**
+  String get sendRateLimited;
+
+  /// No description provided for @chatSessionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The chat session changed. Your draft is saved. Try again.'**
+  String get chatSessionChanged;
+
   /// No description provided for @deleteNotAllowed.
   ///
   /// In en, this message translates to:
