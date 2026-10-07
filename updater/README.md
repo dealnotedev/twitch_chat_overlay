@@ -3,6 +3,7 @@
 Separate Flutter / Dart Windows application, implemented from scratch.
 `updater/overlay_updater.exe` ships with its own Flutter engine and `data/`.
 It requires no Dart, Flutter or .NET installation on the user's computer.
+The Windows runner explicitly disables Impeller and uses Skia, matching the overlay.
 
 `UpdateViewModel` owns separate observables for the installation state and
 download progress, and starts checking in its constructor. The local

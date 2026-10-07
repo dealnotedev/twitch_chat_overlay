@@ -1,3 +1,20 @@
+# Twitch Chat Overlay 1.5.3
+
+## Changes
+
+- Simplified state management in the overlay and updater, with clearer ownership of chat, message sending and update operations.
+- Reduced unnecessary interface rebuilds by separating chat content, editor feedback, connection status and download progress updates.
+- Render the latest state when asynchronous notifications arrive or state sources are replaced, avoiding stale snapshots in the interface.
+- Switched the Windows updater to Skia, matching the overlay's graphics backend.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+**Use Release.zip to get the updater's Skia renderer.** In-app updates preserve the existing updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.5.2
 
 ## Changes
