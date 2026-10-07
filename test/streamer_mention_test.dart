@@ -248,7 +248,7 @@ Widget app(ChatUserMessage message, {double opacity = 1}) => MaterialApp(
         child: BackgroundOpacity(
           opacity: opacity,
           child: ChatPanel(
-            authSource: StreamWithInitial.value(
+            authSource: Observable.value(
               TwitchAuthState(
                 status: TwitchAuthStatus.signedIn,
                 token: TwitchToken(
@@ -262,7 +262,7 @@ Widget app(ChatUserMessage message, {double opacity = 1}) => MaterialApp(
                 ),
               ),
             ),
-            chatSource: StreamWithInitial.value(
+            chatSource: Observable.value(
               ChatState(
                 status: ChatConnectionStatus.connected,
                 broadcasterId: 'broadcaster',

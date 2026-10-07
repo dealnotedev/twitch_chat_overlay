@@ -157,8 +157,9 @@ void main() {
       await viewModel.check();
       Future<void>? nestedInstall;
       var notified = false;
-      final subscription = viewModel.download.changes.listen((progress) {
-        if (!notified && progress.received == 0) {
+      // The reset to zero is not a change, so react to the first progress.
+      final subscription = viewModel.download.changes.listen((_) {
+        if (!notified) {
           notified = true;
           nestedInstall = viewModel.activate();
         }

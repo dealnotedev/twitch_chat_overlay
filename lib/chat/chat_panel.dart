@@ -69,8 +69,8 @@ class ChatPanel extends StatefulWidget {
   final Widget? messageFooter;
   final double chatFontSize;
   final int chatFontWeight;
-  final StreamWithInitial<TwitchAuthState> authSource;
-  final StreamWithInitial<ChatState> chatSource;
+  final Observable<TwitchAuthState> authSource;
+  final Observable<ChatState> chatSource;
   final int messageLifetimeMinutes;
   final bool showViewerCount;
   final bool showConnectionIndicator;
@@ -90,14 +90,12 @@ class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _messageFocus = FocusNode();
   late final ChatPanelViewModel _viewModel;
-  late final StreamWithInitial<_ChatAccessState> _access;
-  late final StreamWithInitial<_ChatContentState> _content;
-  late final StreamWithInitial<_ChatStatusState> _status;
+  late final Observable<_ChatAccessState> _access;
+  late final Observable<_ChatContentState> _content;
+  late final Observable<_ChatStatusState> _status;
   final Object _emoteTapGroup = Object();
 
-  ChatPanelInput get _input => ChatPanelInput(
-    auth: widget.authSource.current,
-    chat: widget.chatSource.current,
+  ChatPanelConfig get _config => ChatPanelConfig(
     interactive: widget.interactive,
     messageLifetimeMinutes: widget.messageLifetimeMinutes,
     send: widget.onSend,
@@ -105,13 +103,15 @@ class _ChatPanelState extends State<ChatPanel> {
     deleteMessage: widget.onDeleteMessage,
   );
 
+  ChatComposerViewModel get _composer => _viewModel.composer;
+
   @override
   void initState() {
     super.initState();
     _viewModel = ChatPanelViewModel(
-      _input,
-      authSource: widget.authSource,
-      chatSource: widget.chatSource,
+      auth: widget.authSource,
+      chat: widget.chatSource,
+      config: _config,
     );
     _access = _viewModel.session.select(
       (session) => (
@@ -140,9 +140,9 @@ class _ChatPanelState extends State<ChatPanel> {
   void didUpdateWidget(ChatPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     _viewModel.update(
-      _input,
-      authSource: widget.authSource,
-      chatSource: widget.chatSource,
+      auth: widget.authSource,
+      chat: widget.chatSource,
+      config: _config,
     );
   }
 
@@ -155,10 +155,9 @@ class _ChatPanelState extends State<ChatPanel> {
   }
 
   @override
-  Widget build(BuildContext context) => StreamBuilder<_ChatAccessState>(
-    initialData: _access.current,
-    stream: _access.changes,
-    builder: (context, snapshot) => _buildPanel(context, snapshot.requireData),
+  Widget build(BuildContext context) => ObservableBuilder<_ChatAccessState>(
+    source: _access,
+    builder: (context, access, _) => _buildPanel(context, access),
   );
 
   Widget _buildPanel(BuildContext context, _ChatAccessState viewSession) {
@@ -203,11 +202,10 @@ class _ChatPanelState extends State<ChatPanel> {
                 fit: StackFit.expand,
                 children: [
                   Positioned.fill(child: body),
-                  StreamBuilder<ChatEditorState>(
-                    initialData: _viewModel.editor.current,
-                    stream: _viewModel.editor.changes,
-                    builder: (context, snapshot) {
-                      final emotes = snapshot.requireData.emotes;
+                  ObservableBuilder<ChatEditorState>(
+                    source: _composer.editor,
+                    builder: (context, editor, _) {
+                      final emotes = editor.emotes;
                       if (!emotes.open ||
                           emotes.request == null ||
                           !widget.interactive ||
@@ -224,9 +222,9 @@ class _ChatPanelState extends State<ChatPanel> {
                           emotes: emotes.request!,
                           tapGroup: _emoteTapGroup,
                           onSelected: _insertEmote,
-                          onReload: _viewModel.reloadEmotes,
+                          onReload: _composer.reloadEmotes,
                           onClose: () {
-                            _viewModel.closeEmotes();
+                            _composer.closeEmotes();
                             _messageFocus.requestFocus();
                           },
                         ),
@@ -240,11 +238,10 @@ class _ChatPanelState extends State<ChatPanel> {
         ),
         ?widget.messageFooter,
         if (widget.interactive)
-          StreamBuilder<ChatDeletionsState>(
-            initialData: _viewModel.deletions.current,
-            stream: _viewModel.deletions.changes,
-            builder: (context, snapshot) {
-              final error = snapshot.requireData.error;
+          ObservableBuilder<ChatDeletionsState>(
+            source: _viewModel.deletions,
+            builder: (context, deletions, _) {
+              final error = deletions.error;
               if (error == null) return const SizedBox.shrink();
               return Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 8, 0),
@@ -279,21 +276,20 @@ class _ChatPanelState extends State<ChatPanel> {
           ),
         if (viewSession.auth.status == TwitchAuthStatus.signedIn &&
             widget.interactive)
-          StreamBuilder<ChatEditorState>(
-            initialData: _viewModel.editor.current,
-            stream: _viewModel.editor.changes,
-            builder: (context, snapshot) => ChatComposer(
+          ObservableBuilder<ChatEditorState>(
+            source: _composer.editor,
+            builder: (context, editor, _) => ChatComposer(
               controller: _messageController,
               focusNode: _messageFocus,
-              sending: snapshot.requireData.sending,
-              error: _chatPanelError(l10n, snapshot.requireData.sendError),
-              emotesOpen: snapshot.requireData.emotes.open,
+              sending: editor.sending,
+              error: _chatPanelError(l10n, editor.sendError),
+              emotesOpen: editor.emotes.open,
               tapGroup: _emoteTapGroup,
               onSend: _send,
               onSignOut: () => unawaited(widget.onSignOut()),
-              onToggleEmotes: _viewModel.toggleEmotes,
-              onCloseEmotes: _viewModel.closeEmotes,
-              replyTo: snapshot.requireData.replyTo,
+              onToggleEmotes: _composer.toggleEmotes,
+              onCloseEmotes: _composer.closeEmotes,
+              replyTo: editor.replyTo,
               onCancelReply: _cancelReply,
             ),
           ),
@@ -302,20 +298,14 @@ class _ChatPanelState extends State<ChatPanel> {
   }
 
   Widget _connectedBody(AppLocalizations l10n) =>
-      StreamBuilder<_ChatContentState>(
-        initialData: _content.current,
-        stream: _content.changes,
-        builder: (context, contentSnapshot) => ChatEmoteScope(
-          catalog: contentSnapshot.requireData.emoteCatalog,
-          child: StreamBuilder<ChatTimelineState>(
-            initialData: _viewModel.timeline.current,
-            stream: _viewModel.timeline.changes,
-            builder: (context, snapshot) => _buildMessages(
-              context,
-              l10n,
-              snapshot.requireData,
-              contentSnapshot.requireData,
-            ),
+      ObservableBuilder<_ChatContentState>(
+        source: _content,
+        builder: (context, content, _) => ChatEmoteScope(
+          catalog: content.emoteCatalog,
+          child: ObservableBuilder<ChatTimelineState>(
+            source: _viewModel.timeline,
+            builder: (context, timeline, _) =>
+                _buildMessages(context, l10n, timeline, content),
           ),
         ),
       );
@@ -403,10 +393,9 @@ class _ChatPanelState extends State<ChatPanel> {
                           curve: Curves.easeInOut,
                           child: ChatMessageEntrance(
                             elapsed: _viewModel.entranceElapsed(item.id),
-                            child: StreamBuilder<ChatDeletionsState>(
-                              initialData: _viewModel.deletions.current,
-                              stream: _viewModel.deletions.changes,
-                              builder: (context, snapshot) => _ChatItemView(
+                            child: ObservableBuilder<ChatDeletionsState>(
+                              source: _viewModel.deletions,
+                              builder: (context, deletions, _) => _ChatItemView(
                                 item: item,
                                 canCopy: widget.interactive,
                                 badges: viewSession.badges,
@@ -432,9 +421,7 @@ class _ChatPanelState extends State<ChatPanel> {
                                         _viewModel.deleteMessage(message),
                                       )
                                     : null,
-                                deleting: snapshot.requireData.isDeleting(
-                                  item.id,
-                                ),
+                                deleting: deletions.isDeleting(item.id),
                               ),
                             ),
                           ),
@@ -468,10 +455,9 @@ class _ChatPanelState extends State<ChatPanel> {
           ),
         if (!widget.interactive &&
             (widget.showViewerCount || widget.showConnectionIndicator))
-          StreamBuilder<_ChatStatusState>(
-            initialData: _status.current,
-            stream: _status.changes,
-            builder: (context, snapshot) => Positioned(
+          ObservableBuilder<_ChatStatusState>(
+            source: _status,
+            builder: (context, status, _) => Positioned(
               top: 8,
               left: 12,
               right: 8,
@@ -485,8 +471,8 @@ class _ChatPanelState extends State<ChatPanel> {
                       if (widget.showViewerCount)
                         Flexible(
                           child: ViewerCount(
-                            count: snapshot.requireData.viewerCount,
-                            offline: snapshot.requireData.streamOffline,
+                            count: status.viewerCount,
+                            offline: status.streamOffline,
                           ),
                         ),
                       if (widget.showViewerCount &&
@@ -495,7 +481,7 @@ class _ChatPanelState extends State<ChatPanel> {
                       if (widget.showConnectionIndicator)
                         Flexible(
                           child: _ChatConnectionIndicator(
-                            status: snapshot.requireData.status,
+                            status: status.status,
                           ),
                         ),
                     ],
@@ -517,25 +503,25 @@ class _ChatPanelState extends State<ChatPanel> {
 
   void _insertEmote(ChatEmote emote) {
     final value = insertChatEmote(_messageController.value, emote.name);
-    _viewModel.emoteInserted(accepted: value != null);
+    _composer.emoteInserted(accepted: value != null);
     if (value == null) return;
     _messageController.value = value;
     _messageFocus.requestFocus();
   }
 
   void _startReply(ChatUserMessage message) {
-    _viewModel.startReply(message);
+    _composer.startReply(message);
     _messageFocus.requestFocus();
   }
 
   void _cancelReply() {
-    _viewModel.cancelReply();
+    _composer.cancelReply();
     _messageFocus.requestFocus();
   }
 
   Future<void> _send() async {
     final draft = _messageController.text;
-    final sent = await _viewModel.send(draft);
+    final sent = await _composer.send(draft);
     if (!mounted || !sent) return;
     if (_messageController.text == draft) _messageController.clear();
     _messageFocus.requestFocus();

@@ -21,12 +21,10 @@ Widget _app({
   supportedLocales: AppLocalizations.supportedLocales,
   home: Scaffold(
     body: ChatPanel(
-      authSource: StreamWithInitial.value(
+      authSource: Observable.value(
         const TwitchAuthState(status: TwitchAuthStatus.signedIn),
       ),
-      chatSource: StreamWithInitial.value(
-        ChatState(status: status, items: items),
-      ),
+      chatSource: Observable.value(ChatState(status: status, items: items)),
       interactive: interactive,
       onSignIn: () async {},
       onSignOut: () async {},

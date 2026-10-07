@@ -21,7 +21,7 @@ final class LocaleViewModel extends BaseViewModel {
 
   late final ObservableValue<Locale> _locale;
 
-  StreamWithInitial<Locale> get locale => _locale;
+  Observable<Locale> get locale => _locale;
 
   static const key = 'overlay.locale';
   final SharedPreferences _preferences;

@@ -182,10 +182,10 @@ Widget _app(ChatUserMessage message, {double width = 320}) => MaterialApp(
         width: width,
         height: 500,
         child: ChatPanel(
-          authSource: StreamWithInitial.value(
+          authSource: Observable.value(
             const TwitchAuthState(status: TwitchAuthStatus.signedIn),
           ),
-          chatSource: StreamWithInitial.value(
+          chatSource: Observable.value(
             ChatState(status: ChatConnectionStatus.connected, items: [message]),
           ),
           interactive: false,

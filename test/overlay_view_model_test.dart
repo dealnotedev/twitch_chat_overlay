@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/emotes/emote_options.dart';
@@ -79,6 +80,20 @@ void main() {
       expect(observed, [ChatConnectionStatus.connected]);
     },
   );
+
+  test('chat and sign-in views read the services without copies', () {
+    final host = _Host();
+    final chat = _Chat();
+    final viewModel = _model(host, _Store(), chat: chat);
+    addTearDown(viewModel.dispose);
+    addTearDown(host.value.dispose);
+    addTearDown(chat.value.dispose);
+    const next = ChatState(status: ChatConnectionStatus.connected, items: []);
+    chat.value.set(next);
+    expect(viewModel.chatState.current, same(next));
+    expect(viewModel.chatState, same(viewModel.chatState));
+    expect(viewModel.signedIn.current, isFalse);
+  });
 }
 
 OverlayViewModel _model(
@@ -109,7 +124,7 @@ class _Host extends Fake implements OverlayHost {
   Stream<OverlayHostState> get states => value.changes;
   @override
   Future<void> initialize({bool excludedFromCapture = false}) async {
-    if (failInitialize) throw StateError('capture initialization failed');
+    if (failInitialize) throw PlatformException(code: 'capture');
   }
 
   @override

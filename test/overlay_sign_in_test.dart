@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
 import 'package:twitch_chat_overlay/chat/gif_playback.dart';
 import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
@@ -163,10 +164,20 @@ void main() {
       addTearDown(() {
         messenger.setMockMethodCallHandler(hostChannel, null);
       });
-      final authUpdates = StreamController<TwitchAuthState>();
-      final chatUpdates = StreamController<ChatState>();
-      addTearDown(authUpdates.close);
-      addTearDown(chatUpdates.close);
+      // Like the real services, state changes before its notification.
+      final authUpdates = ObservableValue<TwitchAuthState>(
+        current: const TwitchAuthState(status: TwitchAuthStatus.signedIn),
+      );
+      final chatUpdates = ObservableValue<ChatState>(
+        current: const ChatState(
+          status: ChatConnectionStatus.connected,
+          viewerCount: 1234,
+          items: [],
+        ),
+        sync: false,
+      );
+      addTearDown(authUpdates.dispose);
+      addTearDown(chatUpdates.dispose);
       final host = MethodChannelOverlayHost();
       final layoutStore = _LayoutStore();
       await tester.pumpWidget(
@@ -179,18 +190,8 @@ void main() {
             initialLayout: layout,
             layoutStore: layoutStore,
             overlayHost: host,
-            twitchAuth: _Auth(
-              status: TwitchAuthStatus.signedIn,
-              updates: authUpdates.stream,
-            ),
-            twitchChat: _Chat(
-              initialState: const ChatState(
-                status: ChatConnectionStatus.connected,
-                viewerCount: 1234,
-                items: [],
-              ),
-              updates: chatUpdates.stream,
-            ),
+            twitchAuth: _Auth(source: authUpdates),
+            twitchChat: _Chat(source: chatUpdates),
           ),
         ),
       );
@@ -304,7 +305,7 @@ void main() {
         expect(statusRow, flags.$1 || flags.$2 ? findsOneWidget : findsNothing);
         expect(tester.getRect(find.byType(ListView)), frame);
         if (flags == (false, false)) {
-          chatUpdates.add(
+          chatUpdates.set(
             ChatState(
               status: ChatConnectionStatus.reconnecting,
               items: [notice],
@@ -316,7 +317,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('reconnecting'), findsOneWidget);
           await host.setInteractive(false);
-          chatUpdates.add(
+          chatUpdates.set(
             const ChatState(
               status: ChatConnectionStatus.connected,
               viewerCount: 1234,
@@ -333,7 +334,7 @@ void main() {
         ChatConnectionStatus.idle: 'Waiting for connection…',
         ChatConnectionStatus.connected: 'Chat connected',
       }.entries) {
-        chatUpdates.add(ChatState(status: entry.key, items: [notice]));
+        chatUpdates.set(ChatState(status: entry.key, items: [notice]));
         await tester.pumpAndSettle();
         expect(find.bySemanticsLabel(entry.value), findsOneWidget);
         expect(find.text('Retained chat message'), findsOneWidget);
@@ -345,7 +346,7 @@ void main() {
         expect(tester.getRect(find.byType(ListView)), frame);
       }
 
-      chatUpdates.add(
+      chatUpdates.set(
         const ChatState(status: ChatConnectionStatus.connected, items: []),
       );
       await tester.pumpAndSettle();
@@ -353,7 +354,7 @@ void main() {
         find.text('No recent messages.\nNew messages will appear here.'),
         findsNothing,
       );
-      chatUpdates.add(
+      chatUpdates.set(
         const ChatState(status: ChatConnectionStatus.failure, items: []),
       );
       await tester.pumpAndSettle();
@@ -363,7 +364,7 @@ void main() {
       );
       expect(find.text('Could not connect to chat'), findsOneWidget);
 
-      authUpdates.add(
+      authUpdates.set(
         const TwitchAuthState(status: TwitchAuthStatus.signedOut),
       );
       await tester.pumpAndSettle();
@@ -391,20 +392,20 @@ void main() {
 
 class _Auth extends Fake implements TwitchAuth {
   _Auth({
-    this.status = TwitchAuthStatus.signedOut,
-    this.updates = const Stream.empty(),
+    this.source = const Observable.value(
+      TwitchAuthState(status: TwitchAuthStatus.signedOut),
+    ),
   });
 
-  final TwitchAuthStatus status;
-  final Stream<TwitchAuthState> updates;
+  final Observable<TwitchAuthState> source;
   final authorization = Completer<void>();
   bool signInCalled = false;
 
   @override
-  TwitchAuthState get state => TwitchAuthState(status: status);
+  TwitchAuthState get state => source.current;
 
   @override
-  Stream<TwitchAuthState> get states => updates;
+  Stream<TwitchAuthState> get states => source.changes;
 
   @override
   Future<void> initialize() async {}
@@ -420,18 +421,14 @@ class _Chat extends Fake implements TwitchChatSession {
   @override
   void setEmoteOptions(ThirdPartyEmoteOptions options) {}
 
-  _Chat({
-    this.initialState = const ChatState.idle(),
-    this.updates = const Stream.empty(),
-  });
+  _Chat({this.source = const Observable.value(ChatState.idle())});
 
-  final ChatState initialState;
-  final Stream<ChatState> updates;
+  final Observable<ChatState> source;
   @override
-  ChatState get state => initialState;
+  ChatState get state => source.current;
 
   @override
-  Stream<ChatState> get states => updates;
+  Stream<ChatState> get states => source.changes;
 
   @override
   Future<void> leave() async {}

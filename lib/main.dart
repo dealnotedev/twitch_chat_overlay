@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:twitch_chat_overlay/l10n/locale_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout.dart';
 import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
@@ -84,17 +85,16 @@ class TwitchChatOverlayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Locale>(
-      initialData: localeViewModel.locale.current,
-      stream: localeViewModel.locale.changes,
-      builder: (context, snapshot) => MaterialApp(
+    return ObservableBuilder<Locale>(
+      source: localeViewModel.locale,
+      builder: (context, locale, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         scrollBehavior: const MaterialScrollBehavior().copyWith(
           scrollbars: false,
         ),
         color: Colors.transparent,
         onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-        locale: snapshot.requireData,
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(

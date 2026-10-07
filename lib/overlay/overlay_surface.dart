@@ -101,25 +101,12 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
   }
 
   @override
-  Widget build(BuildContext context) => StreamBuilder<OverlayFrameState>(
-    initialData: _viewModel.frame.current,
-    stream: _viewModel.frame.changes,
-    builder: (context, frameSnapshot) => StreamBuilder<TwitchAuthState>(
-      initialData: _viewModel.authState.current,
-      stream: _viewModel.authState.changes,
-      builder: (context, authSnapshot) => _buildSurface(
-        context,
-        frameSnapshot.requireData,
-        authSnapshot.requireData,
-      ),
-    ),
+  Widget build(BuildContext context) => ObservableBuilder<OverlayFrameState>(
+    source: _viewModel.frame,
+    builder: (context, state, _) => _buildSurface(context, state),
   );
 
-  Widget _buildSurface(
-    BuildContext context,
-    OverlayFrameState state,
-    TwitchAuthState auth,
-  ) {
+  Widget _buildSurface(BuildContext context, OverlayFrameState state) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ColoredBox(
@@ -137,7 +124,7 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                     child: _VirtualChatWindow(
                       editing: state.host.interactive,
                       onCycleLocale: widget.onCycleLocale,
-                      signedIn: auth.status == TwitchAuthStatus.signedIn,
+                      signedIn: _viewModel.signedIn,
                       contentOpacity: state.layout.contentOpacity,
                       showConnectionIndicator:
                           state.layout.showConnectionIndicator,
@@ -274,7 +261,7 @@ class _VirtualChatWindow extends StatelessWidget {
   });
 
   final bool editing;
-  final bool signedIn;
+  final Observable<bool> signedIn;
   final double contentOpacity;
   final bool showConnectionIndicator;
   final int gifPlayCount;
@@ -285,7 +272,7 @@ class _VirtualChatWindow extends StatelessWidget {
   final VoidCallback onGestureEnd;
   final VoidCallback onLock;
   final VoidCallback? onCycleLocale;
-  final StreamWithInitial<ChatConnectionStatus> connectionStatus;
+  final Observable<ChatConnectionStatus> connectionStatus;
   final Widget child;
 
   @override
@@ -332,22 +319,26 @@ class _VirtualChatWindow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(editing ? 10 : 11),
                 child: Column(
                   children: [
-                    if (editing || !signedIn)
-                      Opacity(
-                        opacity: editing ? 1 : contentOpacity,
-                        child: _ChatHeader(
-                          editing: editing,
-                          showConnectionIndicator:
-                              editing || showConnectionIndicator,
-                          settingsOpen: settingsOpen,
-                          onSettings: onSettings,
-                          onMove: onMove,
-                          onGestureEnd: onGestureEnd,
-                          onLock: onLock,
-                          onCycleLocale: onCycleLocale,
-                          connectionStatus: connectionStatus,
-                        ),
-                      ),
+                    ObservableBuilder<bool>(
+                      source: signedIn,
+                      builder: (context, signedIn, _) => editing || !signedIn
+                          ? Opacity(
+                              opacity: editing ? 1 : contentOpacity,
+                              child: _ChatHeader(
+                                editing: editing,
+                                showConnectionIndicator:
+                                    editing || showConnectionIndicator,
+                                settingsOpen: settingsOpen,
+                                onSettings: onSettings,
+                                onMove: onMove,
+                                onGestureEnd: onGestureEnd,
+                                onLock: onLock,
+                                onCycleLocale: onCycleLocale,
+                                connectionStatus: connectionStatus,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     Expanded(
                       child: Opacity(
                         key: const ValueKey('chat-content-opacity'),
@@ -397,7 +388,7 @@ class _ChatHeader extends StatelessWidget {
   final VoidCallback onGestureEnd;
   final VoidCallback onLock;
   final VoidCallback? onCycleLocale;
-  final StreamWithInitial<ChatConnectionStatus> connectionStatus;
+  final Observable<ChatConnectionStatus> connectionStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -432,15 +423,14 @@ class _ChatHeader extends StatelessWidget {
               ),
             ),
             if (showConnectionIndicator)
-              StreamBuilder<ChatConnectionStatus>(
-                initialData: connectionStatus.current,
-                stream: connectionStatus.changes,
-                builder: (context, snapshot) => Container(
+              ObservableBuilder<ChatConnectionStatus>(
+                source: connectionStatus,
+                builder: (context, status, _) => Container(
                   key: const ValueKey('chat-header-connection-indicator'),
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: _connectionColor(snapshot.requireData),
+                    color: _connectionColor(status),
                     shape: BoxShape.circle,
                   ),
                 ),

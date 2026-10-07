@@ -38,6 +38,8 @@ final class TwitchAuthState {
 
 abstract interface class TwitchAuth {
   TwitchAuthState get state;
+
+  /// Broadcast: the overlay and chat panel listen independently.
   Stream<TwitchAuthState> get states;
 
   Future<void> initialize();

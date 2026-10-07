@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:observable_state/observable_state.dart';
 
 import 'launch_options.dart';
 import 'l10n/generated/updater_localizations.dart';
@@ -84,14 +85,12 @@ class _UpdaterAppState extends State<UpdaterApp> {
     supportedLocales: UpdaterLocalizations.supportedLocales,
     localizationsDelegates: UpdaterLocalizations.localizationsDelegates,
     theme: updaterTheme(),
-    home: StreamBuilder<UpdateState>(
-      key: ValueKey(_viewModel),
-      initialData: _viewModel.state.current,
-      stream: _viewModel.state.changes,
-      builder: (context, snapshot) => UpdaterView(
+    home: ObservableBuilder<UpdateState>(
+      source: _viewModel.state,
+      builder: (context, state, _) => UpdaterView(
         download: _viewModel.download,
         state: UpdatePresentation.fromState(
-          snapshot.requireData,
+          state,
           UpdaterLocalizations.of(context),
         ),
         onAction: () => unawaited(_viewModel.activate()),

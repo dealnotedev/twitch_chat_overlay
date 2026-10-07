@@ -66,6 +66,8 @@ final class ChatState {
 
 abstract interface class TwitchChatSession {
   ChatState get state;
+
+  /// Broadcast: the overlay and chat panel listen independently.
   Stream<ChatState> get states;
 
   Future<void> join({required String broadcasterId});
@@ -126,7 +128,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   String? _broadcasterId;
   int _retryAttempt = 0;
   int _generation = 0;
-  final Map<String, TwitchBadgeSet> _badgeChannels = {};
+  // Reused between emissions so unchanged badges keep their identity.
+  TwitchBadges _badges = const TwitchBadges();
   final Set<String> _badgeLoads = {};
   final Map<String, DateTime> _badgeRetryAt = {};
   Map<String, TwitchRewardAppearance> _rewards = const {};
@@ -186,7 +189,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     _streamOffline = false;
     _viewerRequest?.cancel('Chat session ended');
     _viewerRequest = null;
-    _badgeChannels.clear();
+    _badges = const TwitchBadges();
     _badgeLoads.clear();
     _badgeRetryAt.clear();
     _rewards = const {};
@@ -743,7 +746,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
 
   Future<void> _loadBadges(String channel) async {
     if (_broadcasterId == null ||
-        _badgeChannels.containsKey(channel) ||
+        _badges.channels.containsKey(channel) ||
         _badgeLoads.contains(channel)) {
       return;
     }
@@ -756,7 +759,9 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
         broadcasterId: channel.isEmpty ? null : channel,
       );
       if (generation != _generation) return;
-      _badgeChannels[channel] = badges;
+      _badges = TwitchBadges(
+        Map.unmodifiable({..._badges.channels, channel: badges}),
+      );
       _badgeRetryAt.remove(channel);
       _emit(_state.status, error: _state.error);
     } catch (_) {
@@ -806,7 +811,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       streamOffline: _streamOffline,
       items: _timeline.items,
       error: error,
-      badges: TwitchBadges(Map.unmodifiable(_badgeChannels)),
+      badges: _badges,
       rewards: _rewards,
       rewardSubscriptionFailed: _rewardSubscriptionFailed,
       emoteCatalog: _emoteCatalog,

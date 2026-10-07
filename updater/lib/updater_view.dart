@@ -112,7 +112,7 @@ class UpdaterView extends StatelessWidget {
     super.key,
   });
   final UpdatePresentation state;
-  final StreamWithInitial<DownloadProgress>? download;
+  final Observable<DownloadProgress>? download;
   final VoidCallback onAction, onCancel;
   static const textColor = Colors.white;
   static const accent = Color(0xffbc93ff);
@@ -205,12 +205,11 @@ class UpdaterView extends StatelessWidget {
                 Expanded(child: _NotesPanel(state: state)),
                 const SizedBox(height: 10),
                 if (download case final source?)
-                  StreamBuilder<DownloadProgress>(
-                    initialData: source.current,
-                    stream: source.changes,
-                    builder: (context, snapshot) => _Status(
+                  ObservableBuilder<DownloadProgress>(
+                    source: source,
+                    builder: (context, download, _) => _Status(
                       state: state,
-                      download: snapshot.requireData,
+                      download: download,
                       onCancel: onCancel,
                     ),
                   )

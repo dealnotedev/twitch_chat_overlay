@@ -111,8 +111,8 @@ final class UpdateViewModel extends BaseViewModel {
   late final ObservableValue<UpdateState> _state;
   late final ObservableValue<DownloadProgress> _download;
 
-  StreamWithInitial<UpdateState> get state => _state;
-  StreamWithInitial<DownloadProgress> get download => _download;
+  Observable<UpdateState> get state => _state;
+  Observable<DownloadProgress> get download => _download;
 
   final String directory;
   final UpdaterHost host;

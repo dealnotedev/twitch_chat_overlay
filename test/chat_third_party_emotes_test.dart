@@ -48,10 +48,10 @@ void main() {
           width: 320,
           height: 400,
           child: ChatPanel(
-            authSource: StreamWithInitial.value(
+            authSource: Observable.value(
               const TwitchAuthState(status: TwitchAuthStatus.signedIn),
             ),
-            chatSource: StreamWithInitial.value(
+            chatSource: Observable.value(
               ChatState(
                 status: ChatConnectionStatus.connected,
                 items: items,

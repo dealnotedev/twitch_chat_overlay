@@ -6,11 +6,12 @@ import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/chat/viewer_count.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 
 Widget _app({
-  required StreamWithInitial<TwitchAuthState> auth,
-  required StreamWithInitial<ChatState> chat,
+  required Observable<TwitchAuthState> auth,
+  required Observable<ChatState> chat,
   bool interactive = false,
 }) => MaterialApp(
   locale: const Locale('en'),
@@ -29,10 +30,15 @@ Widget _app({
   ),
 );
 
+final _badges = TwitchBadges(Map.unmodifiable(<String, TwitchBadgeSet>{}));
+
+// Like the real session: every emission is a new ChatState that reuses
+// unchanged badges instead of sharing a const default.
 ChatState _chat(int viewers) => ChatState(
   status: ChatConnectionStatus.connected,
   items: const [],
   viewerCount: viewers,
+  badges: _badges,
 );
 
 void main() {
@@ -44,7 +50,7 @@ void main() {
         addTearDown(chat.dispose);
         await tester.pumpWidget(
           _app(
-            auth: const StreamWithInitial.value(
+            auth: const Observable.value(
               TwitchAuthState(status: TwitchAuthStatus.signedIn),
             ),
             chat: chat,

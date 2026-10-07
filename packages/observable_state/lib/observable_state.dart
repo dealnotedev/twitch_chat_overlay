@@ -4,17 +4,27 @@ import 'dart:collection';
 import 'package:meta/meta.dart';
 
 export 'failable_process.dart';
+export 'observable_builder.dart';
 
 /// Read-only state with a synchronous snapshot and a stable change stream.
-abstract interface class StreamWithInitial<T> {
+///
+/// [current] is the source of truth; [changes] only signals that it changed.
+/// An asynchronous source can notify after [current] has already moved on, so
+/// consumers read [current] when notified instead of trusting the payload.
+abstract interface class Observable<T> {
   /// An immutable source for a value that changes when its owner replaces it.
-  const factory StreamWithInitial.value(T current) = _FixedValue<T>;
+  const factory Observable.value(T current) = _FixedValue<T>;
+
+  /// A read-only view over state owned elsewhere, such as a service's
+  /// `state`/`states` pair. Create it once so its identity stays stable.
+  factory Observable.of(T Function() read, Stream<T> changes) =
+      _DelegatedValue<T>;
 
   T get current;
   Stream<T> get changes;
 }
 
-final class _FixedValue<T> implements StreamWithInitial<T> {
+final class _FixedValue<T> implements Observable<T> {
   const _FixedValue(this.current);
   @override
   final T current;
@@ -22,21 +32,30 @@ final class _FixedValue<T> implements StreamWithInitial<T> {
   Stream<T> get changes => const Stream.empty(broadcast: true);
 }
 
-extension StreamWithInitialSelection<T> on StreamWithInitial<T> {
+final class _DelegatedValue<T> implements Observable<T> {
+  _DelegatedValue(this._read, this.changes);
+  final T Function() _read;
+  @override
+  T get current => _read();
+  @override
+  final Stream<T> changes;
+}
+
+extension ObservableSelection<T> on Observable<T> {
   /// A stable read-only projection, notifying only when its selected value changes.
   /// Create it once; it follows the source's lifetime and exposes no writes.
-  StreamWithInitial<R> select<R>(R Function(T value) select) =>
+  Observable<R> select<R>(R Function(T value) select) =>
       _SelectedValue(this, select);
 }
 
-final class _SelectedValue<T, R> implements StreamWithInitial<R> {
+final class _SelectedValue<T, R> implements Observable<R> {
   _SelectedValue(this._source, this._select) {
     changes = Stream<R>.multi((controller) {
       var previous = current;
       final subscription = _source.changes.listen(
-        (value) {
+        (_) {
           try {
-            final next = _select(value);
+            final next = current;
             if (next == previous) return;
             previous = next;
             controller.addSync(next);
@@ -51,7 +70,7 @@ final class _SelectedValue<T, R> implements StreamWithInitial<R> {
     }, isBroadcast: true);
   }
 
-  final StreamWithInitial<T> _source;
+  final Observable<T> _source;
   final R Function(T value) _select;
 
   @override
@@ -63,10 +82,10 @@ final class _SelectedValue<T, R> implements StreamWithInitial<R> {
 
 /// Owns a value with a current snapshot and change notifications.
 ///
-/// Supply [current] as StreamBuilder.initialData, including when a consumer
-/// subscribes after earlier changes. Changes are notifications, not a replay log.
+/// Setting a value equal (`==`) to the current one changes nothing. Values are
+/// immutable snapshots: publish a new object instead of mutating the current.
 /// Notifications are synchronous by default; pass `sync: false` to defer them.
-final class ObservableValue<T> implements StreamWithInitial<T> {
+final class ObservableValue<T> implements Observable<T> {
   ObservableValue({required T current, bool sync = true})
     : _current = current,
       _changes = StreamController<T>.broadcast(sync: sync);
@@ -85,6 +104,7 @@ final class ObservableValue<T> implements StreamWithInitial<T> {
 
   void set(T value, {bool notify = true}) {
     if (_disposed) throw StateError('ObservableValue is disposed');
+    if (value == _current) return;
     _current = value;
     if (!notify) return;
     _notifications.add(value);
@@ -100,14 +120,6 @@ final class ObservableValue<T> implements StreamWithInitial<T> {
       _notifying = false;
       if (_disposed) unawaited(_changes.close());
     }
-  }
-
-  /// Mutate the current collection in place and notify without copying it.
-  /// Notifications share the same collection; they are not historical copies.
-  void apply(void Function(T current) update) {
-    if (_disposed) throw StateError('ObservableValue is disposed');
-    update(_current);
-    set(_current);
   }
 
   void dispose() {

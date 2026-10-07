@@ -7,4 +7,6 @@ environment:
   sdk: ^3.13.1
 
 dependencies:
+  flutter:
+    sdk: flutter
   meta: ^1.18.3

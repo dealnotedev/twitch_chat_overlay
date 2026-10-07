@@ -248,13 +248,13 @@ Widget app(
         child: ChatPanel(
           chatFontSize: fontSize,
           chatFontWeight: fontWeight,
-          authSource: StreamWithInitial.value(
+          authSource: Observable.value(
             TwitchAuthState(
               status: TwitchAuthStatus.signedIn,
               token: fixtures.makeToken(),
             ),
           ),
-          chatSource: StreamWithInitial.value(
+          chatSource: Observable.value(
             ChatState(
               status: ChatConnectionStatus.connected,
               items: messages,

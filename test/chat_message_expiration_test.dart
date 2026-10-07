@@ -32,10 +32,10 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ChatPanel(
-                authSource: StreamWithInitial.value(
+                authSource: Observable.value(
                   const TwitchAuthState(status: TwitchAuthStatus.signedIn),
                 ),
-                chatSource: StreamWithInitial.value(
+                chatSource: Observable.value(
                   ChatState(
                     status: ChatConnectionStatus.connected,
                     items: [item],

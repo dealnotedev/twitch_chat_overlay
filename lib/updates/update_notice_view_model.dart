@@ -40,7 +40,7 @@ final class UpdateNoticeViewModel extends BaseViewModel {
 
   late final ObservableValue<UpdateNoticeState> _state;
 
-  StreamWithInitial<UpdateNoticeState> get state => _state;
+  Observable<UpdateNoticeState> get state => _state;
   final Future<void> Function(String locale) _onUpdate;
   final UpdateCheck? _check;
 

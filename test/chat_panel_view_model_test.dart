@@ -14,27 +14,53 @@ import 'twitch_emotes_test.dart' as fixtures;
 
 const _sent = SendChatResult(sent: true, messageId: 'sent', dropReason: null);
 
-ChatPanelInput _input({
-  String broadcasterId = 'sender',
-  List<ChatItem> items = const [],
-  Future<SendChatResult> Function(String, {String? replyTo})? send,
-  Future<void> Function(String)? delete,
-}) => ChatPanelInput(
-  auth: TwitchAuthState(
+final _auth = Observable.value(
+  TwitchAuthState(
     status: TwitchAuthStatus.signedIn,
     token: fixtures.makeToken(),
   ),
-  chat: ChatState(
-    status: ChatConnectionStatus.connected,
-    broadcasterId: broadcasterId,
-    items: items,
-  ),
+);
+
+ChatState _chat({
+  String broadcasterId = 'sender',
+  List<ChatItem> items = const [],
+}) => ChatState(
+  status: ChatConnectionStatus.connected,
+  broadcasterId: broadcasterId,
+  items: items,
+);
+
+ChatPanelConfig _config({
+  ChatSend? send,
+  Future<void> Function(String)? delete,
+  int messageLifetimeMinutes = 0,
+}) => ChatPanelConfig(
   interactive: true,
-  messageLifetimeMinutes: 0,
+  messageLifetimeMinutes: messageLifetimeMinutes,
   send: send ?? (_, {String? replyTo}) async => _sent,
   loadEmotes: ({bool refresh = false}) async => [],
   deleteMessage: delete,
 );
+
+ChatPanelViewModel _model({
+  Observable<ChatState>? chat,
+  ChatSend? send,
+  Future<void> Function(String)? delete,
+}) {
+  final viewModel = ChatPanelViewModel(
+    auth: _auth,
+    chat: chat ?? Observable.value(_chat()),
+    config: _config(send: send, delete: delete),
+  );
+  addTearDown(viewModel.dispose);
+  return viewModel;
+}
+
+ObservableValue<ChatState> _source({bool sync = true}) {
+  final source = ObservableValue(current: _chat(), sync: sync);
+  addTearDown(source.dispose);
+  return source;
+}
 
 ChatUserMessage _message(String id) => ChatUserMessage(
   id: id,
@@ -53,16 +79,14 @@ ChatUserMessage _message(String id) => ChatUserMessage(
 void main() {
   test('sending closes the picker in the same editor notification', () async {
     final pending = Completer<SendChatResult>();
-    final viewModel = ChatPanelViewModel(
-      _input(send: (_, {String? replyTo}) => pending.future),
-    );
-    addTearDown(viewModel.dispose);
-    viewModel.toggleEmotes();
-    final request = viewModel.editor.current.emotes.request;
+    final composer = _model(send: (_, {String? replyTo}) => pending.future)
+        .composer;
+    composer.toggleEmotes();
+    final request = composer.editor.current.emotes.request;
     final events = <ChatEditorState>[];
-    final subscription = viewModel.editor.changes.listen(events.add);
+    final subscription = composer.editor.changes.listen(events.add);
     addTearDown(subscription.cancel);
-    final sending = viewModel.send('draft');
+    final sending = composer.send('draft');
     expect(events, hasLength(1));
     expect(events.single.sending, isTrue);
     expect(events.single.emotes.open, isFalse);
@@ -72,34 +96,24 @@ void main() {
   });
 
   test('starting a reply closes the picker in one editor notification', () {
-    final viewModel = ChatPanelViewModel(_input());
-    addTearDown(viewModel.dispose);
-    viewModel.toggleEmotes();
+    final composer = _model().composer;
+    composer.toggleEmotes();
     final events = <ChatEditorState>[];
-    final subscription = viewModel.editor.changes.listen(events.add);
+    final subscription = composer.editor.changes.listen(events.add);
     addTearDown(subscription.cancel);
-    viewModel.startReply(_message('reply'));
+    composer.startReply(_message('reply'));
     expect(events, hasLength(1));
     expect(events.single.replyTo?.parentMessageId, 'reply');
     expect(events.single.emotes.open, isFalse);
   });
 
   test('the first message and hidden startup hint share one snapshot', () {
-    final input = _input();
-    final viewModel = ChatPanelViewModel(input);
-    addTearDown(viewModel.dispose);
+    final chat = _source();
+    final viewModel = _model(chat: chat);
     final events = <ChatTimelineState>[];
     final subscription = viewModel.timeline.changes.listen(events.add);
     addTearDown(subscription.cancel);
-    viewModel.update(
-      input.withSession(
-        chat: ChatState(
-          status: input.chat.status,
-          broadcasterId: input.chat.broadcasterId,
-          items: [_message('new')],
-        ),
-      ),
-    );
+    chat.set(_chat(items: [_message('new')]));
     expect(events, hasLength(1));
     expect(events.single.messages.items.single.id, 'new');
     expect(events.single.startupHint.visible, isFalse);
@@ -108,8 +122,7 @@ void main() {
   testWidgets('startup hint transitions reuse the message snapshot', (
     tester,
   ) async {
-    final viewModel = ChatPanelViewModel(_input());
-    addTearDown(viewModel.dispose);
+    final viewModel = _model();
     final messages = viewModel.timeline.current.messages;
     final events = <ChatTimelineState>[];
     final subscription = viewModel.timeline.changes.listen(events.add);
@@ -128,18 +141,15 @@ void main() {
       var fail = true;
       const exception = SocketException('private network diagnostics');
       final retry = Completer<SendChatResult>();
-      final viewModel = ChatPanelViewModel(
-        _input(
-          send: (_, {String? replyTo}) {
-            if (fail) throw exception;
-            return retry.future;
-          },
-        ),
-      );
-      addTearDown(viewModel.dispose);
+      final composer = _model(
+        send: (_, {String? replyTo}) {
+          if (fail) throw exception;
+          return retry.future;
+        },
+      ).composer;
 
-      expect(await viewModel.send('draft'), isFalse);
-      final failed = viewModel.editor.current;
+      expect(await composer.send('draft'), isFalse);
+      final failed = composer.editor.current;
       expect(failed.sendError?.failure, ChatPanelFailure.network);
       expect(failed.sendError?.details, isNull);
       expect(failed.sending, isFalse);
@@ -148,12 +158,12 @@ void main() {
       expect(process.stackTrace, isNotNull);
 
       fail = false;
-      final sending = viewModel.send('draft');
-      expect(viewModel.editor.current.sending, isTrue);
-      expect(viewModel.editor.current.sendError, isNull);
+      final sending = composer.send('draft');
+      expect(composer.editor.current.sending, isTrue);
+      expect(composer.editor.current.sendError, isNull);
       retry.complete(_sent);
       expect(await sending, isTrue);
-      expect(viewModel.editor.current.sendProcess, isA<InitialProcess<void>>());
+      expect(composer.editor.current.sendProcess, isA<InitialProcess<void>>());
       expect(failed.sendProcess, same(process));
     },
   );
@@ -163,29 +173,26 @@ void main() {
     () async {
       final pending = Completer<SendChatResult>();
       var calls = 0;
-      final viewModel = ChatPanelViewModel(
-        _input(
-          send: (_, {String? replyTo}) {
-            calls++;
-            return pending.future;
-          },
-        ),
-      );
-      addTearDown(viewModel.dispose);
-      viewModel.startReply(_message('first'));
-      final sending = viewModel.send('draft');
-      viewModel.startReply(_message('second'));
-      viewModel.emoteInserted(accepted: false);
-      expect(viewModel.editor.current.sending, isTrue);
+      final composer = _model(
+        send: (_, {String? replyTo}) {
+          calls++;
+          return pending.future;
+        },
+      ).composer;
+      composer.startReply(_message('first'));
+      final sending = composer.send('draft');
+      composer.startReply(_message('second'));
+      composer.emoteInserted(accepted: false);
+      expect(composer.editor.current.sending, isTrue);
       expect(
-        viewModel.editor.current.composerError?.failure,
+        composer.editor.current.composerError?.failure,
         ChatPanelFailure.messageTooLong,
       );
-      expect(await viewModel.send('duplicate'), isFalse);
+      expect(await composer.send('duplicate'), isFalse);
       expect(calls, 1);
       pending.complete(_sent);
       expect(await sending, isTrue);
-      expect(viewModel.editor.current.replyTo?.parentMessageId, 'second');
+      expect(composer.editor.current.replyTo?.parentMessageId, 'second');
     },
   );
 
@@ -194,10 +201,9 @@ void main() {
     () async {
       final first = Completer<void>();
       final second = Completer<void>();
-      final viewModel = ChatPanelViewModel(
-        _input(delete: (id) => id == 'first' ? first.future : second.future),
+      final viewModel = _model(
+        delete: (id) => id == 'first' ? first.future : second.future,
       );
-      addTearDown(viewModel.dispose);
       final deletingFirst = viewModel.deleteMessage(_message('first'));
       final deletingSecond = viewModel.deleteMessage(_message('second'));
       first.completeError(
@@ -228,50 +234,47 @@ void main() {
     () async {
       final pending = Completer<SendChatResult>();
       var requests = 0;
-      final viewModel = ChatPanelViewModel(
-        _input(
-          send: (_, {String? replyTo}) {
-            requests++;
-            return pending.future;
-          },
-        ),
-      );
-      addTearDown(viewModel.dispose);
-      viewModel.startReply(_message('reply'));
-      final first = viewModel.send('draft');
-      expect(viewModel.editor.current.sending, isTrue);
-      expect(await viewModel.send('duplicate'), isFalse);
+      final chat = _source();
+      final composer = _model(
+        chat: chat,
+        send: (_, {String? replyTo}) {
+          requests++;
+          return pending.future;
+        },
+      ).composer;
+      composer.startReply(_message('reply'));
+      final first = composer.send('draft');
+      expect(composer.editor.current.sending, isTrue);
+      expect(await composer.send('duplicate'), isFalse);
       expect(requests, 1);
-      viewModel.update(_input(broadcasterId: 'another'));
-      final nextSession = viewModel.editor.current;
+      chat.set(_chat(broadcasterId: 'another'));
+      final nextSession = composer.editor.current;
       expect(nextSession.sending, isFalse);
       expect(nextSession.replyTo, isNull);
       pending.complete(_sent);
       expect(await first, isFalse);
-      expect(viewModel.editor.current, same(nextSession));
+      expect(composer.editor.current, same(nextSession));
     },
   );
 
   test('disposing during a send does not accept its late success', () async {
     final pending = Completer<SendChatResult>();
-    final viewModel = ChatPanelViewModel(
-      _input(send: (_, {String? replyTo}) => pending.future),
-    );
-    final operation = viewModel.send('draft');
-    final beforeDispose = viewModel.editor.current;
+    final viewModel = _model(send: (_, {String? replyTo}) => pending.future);
+    final operation = viewModel.composer.send('draft');
+    final beforeDispose = viewModel.composer.editor.current;
     viewModel.dispose();
+    expect(viewModel.composer.isDisposed, isTrue);
     pending.complete(_sent);
     expect(await operation, isFalse);
-    expect(viewModel.editor.current, same(beforeDispose));
+    expect(viewModel.composer.editor.current, same(beforeDispose));
   });
 
   test('concurrent deletions keep independent immutable snapshots', () async {
     final first = Completer<void>();
     final second = Completer<void>();
-    final viewModel = ChatPanelViewModel(
-      _input(delete: (id) => id == 'first' ? first.future : second.future),
+    final viewModel = _model(
+      delete: (id) => id == 'first' ? first.future : second.future,
     );
-    addTearDown(viewModel.dispose);
     final firstDeletion = viewModel.deleteMessage(_message('first'));
     final processes = viewModel.deletions.current.processes;
     expect(viewModel.deletions.current.deletingIds, {'first'});
@@ -292,28 +295,22 @@ void main() {
 
   test('messages and composer notify independently with immutable message snapshots', () async {
     final pending = Completer<SendChatResult>();
-    final input = _input(send: (_, {String? replyTo}) => pending.future);
-    final viewModel = ChatPanelViewModel(input);
-    addTearDown(viewModel.dispose);
+    final chat = _source();
+    final viewModel = _model(
+      chat: chat,
+      send: (_, {String? replyTo}) => pending.future,
+    );
     final items = viewModel.timeline.current.messages.items;
     var messageChanges = 0;
     var composerChanges = 0;
     var sessionChanges = 0;
     viewModel.timeline.changes.listen((_) => messageChanges++);
-    viewModel.editor.changes.listen((_) => composerChanges++);
+    viewModel.composer.editor.changes.listen((_) => composerChanges++);
     viewModel.session.changes.listen((_) => sessionChanges++);
-    final sending = viewModel.send('draft');
+    final sending = viewModel.composer.send('draft');
     expect(composerChanges, 1);
     expect(messageChanges, 0);
-    viewModel.update(
-      input.withSession(
-        chat: ChatState(
-          status: input.chat.status,
-          broadcasterId: input.chat.broadcasterId,
-          items: [_message('new')],
-        ),
-      ),
-    );
+    chat.set(_chat(items: [_message('new')]));
     expect(messageChanges, 1);
     expect(composerChanges, 1);
     expect(sessionChanges, 0);
@@ -327,5 +324,49 @@ void main() {
     expect(await sending, isTrue);
     expect(composerChanges, 2);
     expect(messageChanges, 1);
+  });
+
+  test(
+    'a stale deferred notification cannot roll the timeline or reply back',
+    () async {
+      final chat = _source(sync: false);
+      final viewModel = _model(chat: chat);
+      final third = _message('third');
+      chat.set(_chat(items: [_message('first')]));
+      chat.set(_chat(items: [_message('first'), _message('second'), third]));
+      // A display setting change re-reads the newest snapshot before the
+      // queued notifications for both changes are delivered.
+      viewModel.update(
+        auth: _auth,
+        chat: chat,
+        config: _config(messageLifetimeMinutes: 5),
+      );
+      viewModel.composer.startReply(third);
+      await Future<void>.delayed(Duration.zero);
+      expect(viewModel.timeline.current.messages.items, hasLength(3));
+      expect(
+        viewModel.composer.editor.current.replyTo?.parentMessageId,
+        'third',
+      );
+      expect(viewModel.composer.editor.current.composerError, isNull);
+    },
+  );
+
+  test('new callbacks apply without replacing the sources', () async {
+    final sent = <String>[];
+    final chat = _source();
+    final viewModel = _model(chat: chat);
+    viewModel.update(
+      auth: _auth,
+      chat: chat,
+      config: _config(
+        send: (message, {String? replyTo}) async {
+          sent.add(message);
+          return _sent;
+        },
+      ),
+    );
+    expect(await viewModel.composer.send('hello'), isTrue);
+    expect(sent, ['hello']);
   });
 }

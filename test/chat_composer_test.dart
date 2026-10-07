@@ -370,7 +370,7 @@ Widget app({
         width: width,
         height: height,
         child: ChatPanel(
-          authSource: StreamWithInitial.value(
+          authSource: Observable.value(
             TwitchAuthState(
               status: TwitchAuthStatus.signedIn,
               token: TwitchToken(
@@ -384,7 +384,7 @@ Widget app({
               ),
             ),
           ),
-          chatSource: StreamWithInitial.value(chatState),
+          chatSource: Observable.value(chatState),
           interactive: interactive,
           onSignIn: () async {},
           onSignOut: () async {},

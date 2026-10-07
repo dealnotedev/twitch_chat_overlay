@@ -1,6 +1,7 @@
 import 'package:twitch_chat_overlay/chat/chat_readability.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:observable_state/observable_state.dart';
 import 'package:twitch_chat_overlay/overlay/background_opacity.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 
@@ -41,10 +42,9 @@ class _UpdateNoticeState extends State<UpdateNotice> {
   }
 
   @override
-  Widget build(BuildContext context) => StreamBuilder<UpdateNoticeState>(
-    initialData: _viewModel.state.current,
-    stream: _viewModel.state.changes,
-    builder: (context, snapshot) => _buildNotice(context, snapshot.requireData),
+  Widget build(BuildContext context) => ObservableBuilder<UpdateNoticeState>(
+    source: _viewModel.state,
+    builder: (context, state, _) => _buildNotice(context, state),
   );
 
   Widget _buildNotice(BuildContext context, UpdateNoticeState state) {

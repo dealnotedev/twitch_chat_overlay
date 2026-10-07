@@ -184,10 +184,10 @@ void main() {
             height: 280,
             child: ChatPanel(
               key: panelKey,
-              authSource: StreamWithInitial.value(
+              authSource: Observable.value(
                 const TwitchAuthState(status: TwitchAuthStatus.signedIn),
               ),
-              chatSource: StreamWithInitial.value(
+              chatSource: Observable.value(
                 const ChatState(
                   status: ChatConnectionStatus.connected,
                   items: [],

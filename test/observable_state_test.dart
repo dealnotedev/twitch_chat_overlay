@@ -121,11 +121,10 @@ void main() {
       value.set(2); // No listener existed when this update happened.
       final rendered = <int>[];
       await tester.pumpWidget(
-        StreamBuilder<int>(
-          initialData: value.current,
-          stream: value.changes,
-          builder: (context, snapshot) {
-            rendered.add(snapshot.requireData);
+        ObservableBuilder<int>(
+          source: value,
+          builder: (context, current, _) {
+            rendered.add(current);
             return const SizedBox.shrink();
           },
         ),
@@ -136,6 +135,97 @@ void main() {
       await tester.pumpAndSettle();
       expect(rendered.last, 3);
       await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('a builder renders the newest snapshot once for stale events', (
+    tester,
+  ) async {
+    final value = ObservableValue<int>(current: 0, sync: false);
+    addTearDown(value.dispose);
+    final rendered = <int>[];
+    await tester.pumpWidget(
+      ObservableBuilder<int>(
+        source: value,
+        builder: (context, current, _) {
+          rendered.add(current);
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+    value.set(1);
+    value.set(2);
+    await tester.pumpAndSettle();
+    expect(rendered, [0, 2]);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+    'replacing a builder source re-reads it and ignores the old one',
+    (tester) async {
+      final first = ObservableValue<int>(current: 1);
+      final second = ObservableValue<int>(current: 10);
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      Widget build(Observable<int> source) => Directionality(
+        textDirection: TextDirection.ltr,
+        child: ObservableBuilder<int>(
+          source: source,
+          builder: (context, current, _) => Text('$current'),
+        ),
+      );
+      await tester.pumpWidget(build(first));
+      await tester.pumpWidget(build(second));
+      expect(find.text('10'), findsOneWidget);
+      first.set(2);
+      await tester.pump();
+      expect(find.text('10'), findsOneWidget);
+      second.set(11);
+      await tester.pump();
+      expect(find.text('11'), findsOneWidget);
+      await tester.pumpWidget(build(const Observable.value(5)));
+      expect(find.text('5'), findsOneWidget);
+    },
+  );
+
+  test('setting an equal value changes nothing and notifies nobody', () {
+    final value = ObservableValue<String>(current: 'a');
+    addTearDown(value.dispose);
+    final received = <String>[];
+    value.changes.listen(received.add);
+    value.set('a');
+    value.set('b');
+    value.set('b');
+    expect(received, ['b']);
+  });
+
+  test('a delegated source reads its owner without copying state', () {
+    var state = 1;
+    final changes = StreamController<int>.broadcast(sync: true);
+    addTearDown(changes.close);
+    final source = Observable.of(() => state, changes.stream);
+    final selected = source.select((value) => value.isEven);
+    final events = <bool>[];
+    selected.changes.listen(events.add);
+    state = 2;
+    expect(source.current, 2);
+    expect(selected.current, isTrue);
+    changes.add(2);
+    expect(events, [true]);
+  });
+
+  test(
+    'a selection over a deferred source reports the newest value once',
+    () async {
+      final value = ObservableValue<int>(current: 0, sync: false);
+      addTearDown(value.dispose);
+      final selected = value.select((current) => current * 10);
+      final events = <int>[];
+      selected.changes.listen(events.add);
+      value.set(1);
+      value.set(2);
+      await Future<void>.delayed(Duration.zero);
+      expect(events, [20]);
     },
   );
 
@@ -189,31 +279,10 @@ void main() {
       await Future.wait([stateDone.future, listDone.future]);
       expect(viewModel.state.current, 1);
       expect(events, [1]);
-      expect(
-        () => viewModel.items.apply((items) => items.add(1)),
-        throwsStateError,
-      );
+      expect(() => viewModel.items.set([1]), throwsStateError);
       await subscription.cancel();
     },
   );
-
-  test('apply keeps the collection and notifies independent consumers', () {
-    final items = <int>[1];
-    final value = ObservableValue(current: items);
-    addTearDown(value.dispose);
-    final first = <List<int>>[];
-    final second = <List<int>>[];
-    value.changes.listen(first.add);
-    value.changes.listen(second.add);
-    value.apply((current) => current.add(2));
-    expect(value.current, same(items));
-    expect(value.current, [1, 2]);
-    expect(first.single, same(items));
-    expect(second.single, same(items));
-    value.dispose();
-    expect(() => value.apply((current) => current.clear()), throwsStateError);
-    expect(items, [1, 2]);
-  });
 }
 
 final class _ViewModel extends BaseViewModel {
