@@ -1,3 +1,28 @@
+# Twitch Chat Overlay 1.6.1
+
+## Changes
+
+- Fixed the chat moving or resizing when another monitor is connected while the original monitor remains primary.
+- Save chat placement relative to its selected monitor and restore it across application restarts.
+- Update the transparent host window when the desktop layout or DPI changes, including monitors positioned to the left of or above the primary display.
+- Temporarily show the chat on the primary display when its saved monitor is unavailable. Reconnecting the saved monitor restores its placement unless the chat was moved or resized in the meantime.
+
+## Monitor placement
+
+Existing layouts adopt the monitor containing most of the chat on the first launch after upgrading. If the chat is already on the wrong screen at that point, move it once to select the intended monitor. Position and size remain proportional when the selected monitor's resolution changes; minimum chat dimensions still apply.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — SHA-256 checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
+## Validation
+
+Automated tests cover monitor connection and disconnection, desktop origin changes, DPI conversion, and saved placement. Physical monitor hot-plug testing is still pending.
+
 # Twitch Chat Overlay 1.6.0
 
 ## Changes

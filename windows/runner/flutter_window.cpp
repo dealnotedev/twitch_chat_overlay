@@ -7,6 +7,11 @@
 #include <flutter/method_result_functions.h>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "overlay_display.h"
+
+namespace {
+constexpr UINT kNotifyDisplayChanged = WM_APP + 1;
+}
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -70,6 +75,8 @@ void FlutterWindow::RegisterOverlayChannel() {
               flutter::EncodableValue(overlay_policy_.interactive());
           state[flutter::EncodableValue("excludedFromCapture")] =
               flutter::EncodableValue(overlay_policy_.excluded_from_capture());
+          state[flutter::EncodableValue("display")] = flutter::EncodableValue(
+              ReadOverlayDisplay(flutter_controller_->view()->GetNativeWindow()));
           result->Success(flutter::EncodableValue(state));
           return;
         }
@@ -163,6 +170,15 @@ void FlutterWindow::NotifyInteractionChanged() {
   }
 }
 
+void FlutterWindow::NotifyDisplayChanged() {
+  if (overlay_channel_ && flutter_controller_) {
+    overlay_channel_->InvokeMethod(
+        "displayChanged", std::make_unique<flutter::EncodableValue>(
+                              ReadOverlayDisplay(
+                                  flutter_controller_->view()->GetNativeWindow())));
+  }
+}
+
 void FlutterWindow::OnDestroy() {
   overlay_policy_.Detach();
   overlay_channel_.reset();
@@ -177,6 +193,15 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (message == kNotifyDisplayChanged) {
+    NotifyDisplayChanged();
+    return 0;
+  }
+
+  if (message == WM_DISPLAYCHANGE || message == WM_DPICHANGED) {
+    // Publish after the child has processed its new size and DPI as well.
+    PostMessageW(hwnd, kNotifyDisplayChanged, 0, 0);
+  }
   static const UINT update_close_message =
       RegisterWindowMessageW(L"TwitchChatOverlay.PrepareForUpdate");
   if (message == update_close_message && overlay_channel_) {
@@ -199,7 +224,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     std::optional<LRESULT> result =
         flutter_controller_->HandleTopLevelWindowProc(hwnd, message, wparam,
                                                       lparam);
-    if (result) {
+    if (result && message != WM_DISPLAYCHANGE && message != WM_DPICHANGED) {
       return *result;
     }
   }

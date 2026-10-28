@@ -2,32 +2,38 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:observable_state/observable_state.dart';
+import 'package:twitch_chat_overlay/platform/overlay_display.dart';
 
 final class OverlayHostState {
   const OverlayHostState({
     required this.topmost,
     required this.interactive,
     this.excludedFromCapture = false,
+    this.display,
   });
 
   const OverlayHostState.initial()
     : topmost = true,
       interactive = false,
+      display = null,
       excludedFromCapture = false;
 
   final bool topmost;
   final bool interactive;
   final bool excludedFromCapture;
+  final OverlayDisplay? display;
 
   OverlayHostState copyWith({
     bool? topmost,
     bool? interactive,
     bool? excludedFromCapture,
+    OverlayDisplay? display,
   }) {
     return OverlayHostState(
       topmost: topmost ?? this.topmost,
       interactive: interactive ?? this.interactive,
       excludedFromCapture: excludedFromCapture ?? this.excludedFromCapture,
+      display: display ?? this.display,
     );
   }
 }
@@ -83,6 +89,7 @@ final class MethodChannelOverlayHost implements OverlayHost {
         topmost: rawState?['topmost'] as bool? ?? true,
         interactive: rawState?['interactive'] as bool? ?? false,
         excludedFromCapture: rawState?['excludedFromCapture'] as bool? ?? false,
+        display: OverlayDisplay.fromNative(rawState?['display']),
       ),
     );
     if (_state.excludedFromCapture != excludedFromCapture) {
@@ -130,6 +137,9 @@ final class MethodChannelOverlayHost implements OverlayHost {
       _closeRequests.add(null);
     } else if (call.method == 'interactionChanged') {
       _emit(_state.copyWith(interactive: call.arguments as bool));
+    } else if (call.method == 'displayChanged') {
+      final display = OverlayDisplay.fromNative(call.arguments);
+      if (display != null) _emit(_state.copyWith(display: display));
     }
   }
 

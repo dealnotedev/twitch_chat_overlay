@@ -15,7 +15,113 @@ import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 
 import 'support/fake_tray_factory.dart';
 
+Map<String, Object> _display({bool dual = false, bool left = false}) => {
+  'left': dual && left ? -1920 : 0,
+  'top': 0,
+  'width': dual ? 3840 : 1920,
+  'height': 1080,
+  'scale': 1.0,
+  'monitors': [
+    {
+      'id': 'primary',
+      'primary': true,
+      'left': 0,
+      'top': 0,
+      'width': 1920,
+      'height': 1080,
+    },
+    if (dual)
+      {
+        'id': 'secondary',
+        'primary': false,
+        'left': left ? -1920 : 1920,
+        'top': 0,
+        'width': 1920,
+        'height': 1080,
+      },
+  ],
+};
+
 void main() {
+  testWidgets('connecting a monitor keeps the locked chat on the primary', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1920, 1080));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const channel = MethodChannel('overlay/window');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (call) async => call.method == 'getState'
+          ? {'topmost': true, 'interactive': false, 'display': _display()}
+          : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: OverlaySurface(
+          initialLayout: const OverlayLayout.defaults(),
+          layoutStore: _Store(),
+          overlayHost: MethodChannelOverlayHost(),
+          twitchAuth: _Auth(),
+          twitchChat: _Chat(),
+          trayFactory: FakeTrayFactory(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final before = tester.getRect(find.byType(ChatPanel));
+    await tester.binding.setSurfaceSize(const Size(3840, 1080));
+    tester.binding.channelBuffers.push(
+      channel.name,
+      const StandardMethodCodec().encodeMethodCall(
+        MethodCall('displayChanged', _display(dual: true)),
+      ),
+      (_) {},
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byType(ChatPanel)),
+      rectMoreOrLessEquals(before),
+    );
+
+    // A screen to the left changes the host origin, not the primary's origin.
+    tester.binding.channelBuffers.push(
+      channel.name,
+      const StandardMethodCodec().encodeMethodCall(
+        MethodCall('displayChanged', _display(dual: true, left: true)),
+      ),
+      (_) {},
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byType(ChatPanel)),
+      rectMoreOrLessEquals(before.shift(const Offset(1920, 0))),
+    );
+    await tester.binding.setSurfaceSize(const Size(1920, 1080));
+    tester.binding.channelBuffers.push(
+      channel.name,
+      const StandardMethodCodec().encodeMethodCall(
+        MethodCall('displayChanged', _display()),
+      ),
+      (_) {},
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byType(ChatPanel)),
+      rectMoreOrLessEquals(before),
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
   for (final resize in [false, true]) {
     testWidgets(
       '${resize ? 'resize' : 'move'} accumulates pointer events within a frame',

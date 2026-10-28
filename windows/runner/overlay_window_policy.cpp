@@ -1,4 +1,5 @@
 #include "overlay_window_policy.h"
+#include "overlay_display.h"
 
 OverlayWindowPolicy::~OverlayWindowPolicy() {
   Detach();
@@ -119,10 +120,21 @@ bool OverlayWindowPolicy::HandleMessage(UINT message,
     return true;
   }
 
-  if (message == WM_WINDOWPOSCHANGING && topmost_enabled_) {
+  if (message == WM_WINDOWPOSCHANGING) {
     auto* position = reinterpret_cast<WINDOWPOS*>(lparam);
-    position->hwndInsertAfter = HWND_TOPMOST;
-    position->flags &= ~SWP_NOZORDER;
+    const RECT desktop = GetOverlayDesktopBounds();
+    if ((position->flags & SWP_NOMOVE) == 0) {
+      position->x = desktop.left;
+      position->y = desktop.top;
+    }
+    if ((position->flags & SWP_NOSIZE) == 0) {
+      position->cx = desktop.right - desktop.left;
+      position->cy = desktop.bottom - desktop.top;
+    }
+    if (topmost_enabled_) {
+      position->hwndInsertAfter = HWND_TOPMOST;
+      position->flags &= ~SWP_NOZORDER;
+    }
     position->flags |= SWP_NOACTIVATE;
     *result = 0;
     return true;

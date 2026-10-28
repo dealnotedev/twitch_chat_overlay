@@ -12,6 +12,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   static const String _sevenTvKey = 'overlay.integrations.sevenTv';
   static const String _betterTtvKey = 'overlay.integrations.betterTtv';
   static const String _leftKey = 'overlay.layout.left';
+  static const String _monitorKey = 'overlay.layout.monitor';
   static const String _topKey = 'overlay.layout.top';
   static const String _widthKey = 'overlay.layout.width';
   static const String _heightKey = 'overlay.layout.height';
@@ -82,6 +83,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     }
 
     return OverlayLayout(
+          monitorId: preferences.getString(_monitorKey),
           excludedFromCapture: excludedFromCapture,
           emoteOptions: emoteOptions,
           newChatterNotifications: newChatterNotifications,
@@ -114,6 +116,10 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
         layout.showConnectionIndicator,
       ),
       preferences.setDouble(_leftKey, layout.left),
+      if (layout.monitorId case final monitorId?)
+        preferences.setString(_monitorKey, monitorId)
+      else
+        preferences.remove(_monitorKey),
       preferences.setDouble(_topKey, layout.top),
       preferences.setDouble(_widthKey, layout.width),
       preferences.setDouble(_heightKey, layout.height),

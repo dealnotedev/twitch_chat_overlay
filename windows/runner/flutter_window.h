@@ -28,6 +28,7 @@ class FlutterWindow : public Win32Window {
  private:
   void RegisterOverlayChannel();
   void NotifyInteractionChanged();
+  void NotifyDisplayChanged();
 
   // The project to run.
   flutter::DartProject project_;

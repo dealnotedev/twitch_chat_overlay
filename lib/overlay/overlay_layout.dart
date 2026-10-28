@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:twitch_chat_overlay/platform/overlay_display.dart';
+
 import 'package:twitch_chat_overlay/emotes/emote_options.dart';
 
 import 'package:twitch_chat_overlay/chat/chat_font_weight.dart';
@@ -21,13 +23,14 @@ enum ResizeHandle {
   left,
 }
 
-/// The chat rectangle expressed as fractions of the fullscreen overlay host.
+/// Fractions of the selected monitor, or of the host for legacy layouts.
 final class OverlayLayout {
   const OverlayLayout({
     required this.left,
     required this.top,
     required this.width,
     required this.height,
+    this.monitorId,
     this.backgroundOpacity = defaultBackgroundOpacity,
     this.contentOpacity = defaultContentOpacity,
     this.messageLifetimeMinutes = ChatMessageRetention.defaultMinutes,
@@ -42,7 +45,8 @@ final class OverlayLayout {
   });
 
   const OverlayLayout.defaults()
-    : left = 0.69,
+    : monitorId = null,
+      left = 0.69,
       top = 0.08,
       width = 0.28,
       height = 0.72,
@@ -67,6 +71,7 @@ final class OverlayLayout {
   final double top;
   final double width;
   final double height;
+  final String? monitorId;
   final double backgroundOpacity;
   final double contentOpacity;
   final int messageLifetimeMinutes;
@@ -80,6 +85,7 @@ final class OverlayLayout {
   final ThirdPartyEmoteOptions emoteOptions;
 
   OverlayLayout withNewChatterNotifications(bool value) => OverlayLayout(
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -99,6 +105,7 @@ final class OverlayLayout {
 
   OverlayLayout withEmoteOptions(ThirdPartyEmoteOptions value) => OverlayLayout(
     excludedFromCapture: excludedFromCapture,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -116,6 +123,7 @@ final class OverlayLayout {
   );
 
   OverlayLayout withExcludedFromCapture(bool value) => OverlayLayout(
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -139,6 +147,7 @@ final class OverlayLayout {
   }) => OverlayLayout(
     excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -158,6 +167,7 @@ final class OverlayLayout {
   OverlayLayout withChatFontWeight(int value) => OverlayLayout(
     excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -176,6 +186,7 @@ final class OverlayLayout {
   OverlayLayout withChatFontSize(double value) => OverlayLayout(
     excludedFromCapture: excludedFromCapture,
     emoteOptions: emoteOptions,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -199,6 +210,7 @@ final class OverlayLayout {
     newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -220,6 +232,7 @@ final class OverlayLayout {
     newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -238,6 +251,7 @@ final class OverlayLayout {
     newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -258,6 +272,7 @@ final class OverlayLayout {
     newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
+    monitorId: monitorId,
     left: left,
     top: top,
     width: width,
@@ -271,25 +286,42 @@ final class OverlayLayout {
     ),
   );
 
-  Rect resolve(Size viewport) {
+  Rect resolve(Size viewport, {OverlayDisplay? display}) {
     if (viewport.isEmpty) return Rect.zero;
+    final monitor = monitorId != null && display != null
+        ? display.logicalBounds(display.monitorForId(monitorId!))
+        : Offset.zero & viewport;
     return _clamp(
       Rect.fromLTWH(
-        left * viewport.width,
-        top * viewport.height,
-        width * viewport.width,
-        height * viewport.height,
+        monitor.left + left * monitor.width,
+        monitor.top + top * monitor.height,
+        width * monitor.width,
+        height * monitor.height,
       ),
       viewport,
     );
   }
 
-  OverlayLayout moveBy(Offset delta, Size viewport) {
-    return _fromRect(resolve(viewport).shift(delta), viewport);
+  // Adopt the current placement once for settings saved before monitor anchoring.
+  OverlayLayout anchorToDisplay(OverlayDisplay display) => monitorId != null
+      ? this
+      : _fromRect(resolve(display.logicalSize), display.logicalSize, display);
+
+  OverlayLayout moveBy(Offset delta, Size viewport, {OverlayDisplay? display}) {
+    return _fromRect(
+      resolve(viewport, display: display).shift(delta),
+      viewport,
+      display,
+    );
   }
 
-  OverlayLayout resizeBy(ResizeHandle handle, Offset delta, Size viewport) {
-    final current = resolve(viewport);
+  OverlayLayout resizeBy(
+    ResizeHandle handle,
+    Offset delta,
+    Size viewport, {
+    OverlayDisplay? display,
+  }) {
+    final current = resolve(viewport, display: display);
     var left = current.left;
     var top = current.top;
     var right = current.right;
@@ -341,13 +373,22 @@ final class OverlayLayout {
       }
     }
 
-    return _fromRect(Rect.fromLTRB(left, top, right, bottom), viewport);
+    return _fromRect(
+      Rect.fromLTRB(left, top, right, bottom),
+      viewport,
+      display,
+    );
   }
 
-  OverlayLayout _fromRect(Rect rect, Size viewport) {
+  OverlayLayout _fromRect(Rect rect, Size viewport, OverlayDisplay? display) {
     if (viewport.isEmpty) return this;
     final clamped = _clamp(rect, viewport);
+    final monitor = display?.monitorForRect(clamped);
+    final reference = monitor != null
+        ? display!.logicalBounds(monitor)
+        : Offset.zero & viewport;
     return OverlayLayout(
+      monitorId: monitor?.id ?? monitorId,
       excludedFromCapture: excludedFromCapture,
       emoteOptions: emoteOptions,
       showViewerCount: showViewerCount,
@@ -355,10 +396,10 @@ final class OverlayLayout {
       newChatterNotifications: newChatterNotifications,
       chatFontSize: chatFontSize,
       chatFontWeight: chatFontWeight,
-      left: clamped.left / viewport.width,
-      top: clamped.top / viewport.height,
-      width: clamped.width / viewport.width,
-      height: clamped.height / viewport.height,
+      left: (clamped.left - reference.left) / reference.width,
+      top: (clamped.top - reference.top) / reference.height,
+      width: clamped.width / reference.width,
+      height: clamped.height / reference.height,
       backgroundOpacity: backgroundOpacity,
       contentOpacity: contentOpacity,
       gifPlayCount: gifPlayCount,

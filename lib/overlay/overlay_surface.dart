@@ -115,7 +115,10 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final viewport = constraints.biggest;
-            final rect = state.layout.resolve(viewport);
+            final rect = state.layout.resolve(
+              viewport,
+              display: state.host.display,
+            );
             return Stack(
               children: [
                 Positioned.fromRect(

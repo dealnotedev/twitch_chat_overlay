@@ -42,7 +42,11 @@ normal use; Debug builds also retain the development runtime and tooling.
   Close with the gear, the close button or Escape; locking also closes the panel.
   The hotkey toggles interaction without opening settings. The panel scrolls on
   small screens and never changes the saved chat dimensions.
-- Normalized layout persisted across restarts and display resolutions.
+- Layout saved relative to its monitor across restarts and display resolutions.
+  Connecting another screen preserves the chat's position and size on its chosen
+  monitor, including screens added left of or above the primary. If that monitor
+  is disconnected, the chat falls back to the primary and returns when reconnected.
+  Existing layouts adopt their current monitor on first launch after upgrading.
 - Localhost OAuth flow opened with `open_url`.
 - Twitch credentials stored as `twitch_auth` JSON in `SharedPreferences`.
 - EventSub WebSocket with keepalive, deduplication, reconnect URL, and backoff.

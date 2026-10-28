@@ -4,6 +4,7 @@
 #include <flutter_windows.h>
 
 #include "resource.h"
+#include "overlay_display.h"
 
 namespace {
 
@@ -122,16 +123,14 @@ bool Win32Window::Create(const std::wstring& title,
   const wchar_t* window_class =
       WindowClassRegistrar::GetInstance()->GetWindowClass();
 
-  const int screen_x = GetSystemMetrics(SM_XVIRTUALSCREEN);
-  const int screen_y = GetSystemMetrics(SM_YVIRTUALSCREEN);
-  const int screen_width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-  const int screen_height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+  const RECT desktop = GetOverlayDesktopBounds();
 
   HWND window = CreateWindowEx(
       WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE |
           WS_EX_TOOLWINDOW,
-      window_class, title.c_str(), WS_POPUP, screen_x, screen_y, screen_width,
-      screen_height, nullptr, nullptr, GetModuleHandle(nullptr), this);
+      window_class, title.c_str(), WS_POPUP, desktop.left, desktop.top,
+      desktop.right - desktop.left, desktop.bottom - desktop.top, nullptr,
+      nullptr, GetModuleHandle(nullptr), this);
 
   if (!window) {
     return false;
@@ -185,13 +184,14 @@ Win32Window::MessageHandler(HWND hwnd,
       }
       return 0;
 
+    case WM_DISPLAYCHANGE:
     case WM_DPICHANGED: {
-      auto newRectSize = reinterpret_cast<RECT*>(lparam);
-      LONG newWidth = newRectSize->right - newRectSize->left;
-      LONG newHeight = newRectSize->bottom - newRectSize->top;
-
-      SetWindowPos(hwnd, nullptr, newRectSize->left, newRectSize->top, newWidth,
-                   newHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+      // This host always spans the desktop. The suggested DPI rectangle is for
+      // a normal movable window and can place the overlay on another monitor.
+      const RECT desktop = GetOverlayDesktopBounds();
+      SetWindowPos(hwnd, nullptr, desktop.left, desktop.top,
+                   desktop.right - desktop.left, desktop.bottom - desktop.top,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
 
       return 0;
     }

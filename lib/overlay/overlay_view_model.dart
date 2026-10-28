@@ -50,23 +50,39 @@ final class OverlayViewModel extends BaseViewModel {
     _chat.setNewChatterNotifications(initialLayout.newChatterNotifications);
     _frame = register(
       ObservableValue(
-        current: OverlayFrameState(layout: initialLayout, host: host.state),
+        current: OverlayFrameState(
+          layout: host.state.display == null
+              ? initialLayout
+              : initialLayout.anchorToDisplay(host.state.display!),
+          host: host.state,
+        ),
       ),
     );
     observe(_host.states, (hostState) {
+      final needsAnchor =
+          _frame.current.layout.monitorId == null && hostState.display != null;
       if (!hostState.interactive && _frame.current.settingsOpen) {
         unawaited(saveLayout());
       }
       _frame.set(
         _frame.current.copyWith(
           host: hostState,
+          layout: hostState.display == null
+              ? _frame.current.layout
+              : _frame.current.layout.anchorToDisplay(hostState.display!),
           settingsOpen: hostState.interactive && _frame.current.settingsOpen,
         ),
       );
+      if (needsAnchor) {
+        unawaited(saveLayout());
+      }
     });
     observe(_auth.states, _onAuthState);
     unawaited(_initializeHost());
     unawaited(_auth.initialize());
+    if (initialLayout.monitorId == null && host.state.display != null) {
+      unawaited(saveLayout());
+    }
   }
 
   late final ObservableValue<OverlayFrameState> _frame;
@@ -148,11 +164,22 @@ final class OverlayViewModel extends BaseViewModel {
     }
   }
 
-  void move(Offset delta, Size viewport) =>
-      updateLayout(_frame.current.layout.moveBy(delta, viewport));
+  void move(Offset delta, Size viewport) => updateLayout(
+    _frame.current.layout.moveBy(
+      delta,
+      viewport,
+      display: _frame.current.host.display,
+    ),
+  );
 
-  void resize(ResizeHandle handle, Offset delta, Size viewport) =>
-      updateLayout(_frame.current.layout.resizeBy(handle, delta, viewport));
+  void resize(ResizeHandle handle, Offset delta, Size viewport) => updateLayout(
+    _frame.current.layout.resizeBy(
+      handle,
+      delta,
+      viewport,
+      display: _frame.current.host.display,
+    ),
+  );
 
   Future<void> saveLayout() => _layoutStore.save(_frame.current.layout);
 
