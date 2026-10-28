@@ -11,6 +11,30 @@ void main() {
 
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('new chatter notifications default off and persist through every layout change', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = SharedPreferencesOverlayLayoutStore();
+    expect((await store.load()).newChatterNotifications, isFalse);
+    final layout = const OverlayLayout.defaults()
+        .withNewChatterNotifications(true)
+        .withEmoteOptions(const ThirdPartyEmoteOptions(sevenTv: true))
+        .withExcludedFromCapture(true)
+        .withVisibleComponents(showViewerCount: false)
+        .withChatFontWeight(800)
+        .withChatFontSize(18)
+        .withContentOpacity(.35)
+        .withBackgroundOpacity(.2)
+        .withMessageLifetimeMinutes(5)
+        .withGifPlayCount(3)
+        .moveBy(const Offset(20, 20), viewport)
+        .resizeBy(ResizeHandle.bottomRight, const Offset(20, 20), viewport);
+    expect(layout.newChatterNotifications, isTrue);
+    await store.save(layout);
+    expect((await store.load()).newChatterNotifications, isTrue);
+    await store.save(layout.withNewChatterNotifications(false));
+    expect((await store.load()).newChatterNotifications, isFalse);
+  });
+
   test('capture exclusion defaults off for new and existing layouts', () async {
     final store = SharedPreferencesOverlayLayoutStore();
     for (final values in [

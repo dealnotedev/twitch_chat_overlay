@@ -9,6 +9,37 @@ import 'package:twitch_chat_overlay/twitch/twitch_token_store.dart';
 
 void main() {
   test(
+    'local missing permission survives validation and token refresh',
+    () async {
+      final store = MemoryStore();
+      store.token = store.token!.copyWith(
+        debugMissingScopes: ['moderator:read:chatters'],
+      );
+      final auth = TwitchAuthClient(
+        store,
+        dio: mockDio((request, handler) {
+          reply(
+            request,
+            handler,
+            request.path.endsWith('/token') ? rotated : validation,
+          );
+        }),
+      );
+      await auth.initialize();
+      expect(auth.state.status, TwitchAuthStatus.signedIn);
+      expect(
+        auth.state.token!.scopes,
+        isNot(contains('moderator:read:chatters')),
+      );
+      expect(auth.state.token!.scopes, contains('user:read:chat'));
+      final refreshed = await auth.validToken(rejectedAccessToken: 'old');
+      expect(refreshed.accessToken, 'new');
+      expect(refreshed.scopes, isNot(contains('moderator:read:chatters')));
+      expect(store.token!.debugMissingScopes, ['moderator:read:chatters']);
+    },
+  );
+
+  test(
     'startup refreshes rejected stored access token without signing out',
     () async {
       final store = MemoryStore();

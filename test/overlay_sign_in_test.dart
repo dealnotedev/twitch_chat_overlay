@@ -419,6 +419,9 @@ class _Auth extends Fake implements TwitchAuth {
 
 class _Chat extends Fake implements TwitchChatSession {
   @override
+  void setNewChatterNotifications(bool enabled) {}
+
+  @override
   void setEmoteOptions(ThirdPartyEmoteOptions options) {}
 
   _Chat({this.source = const Observable.value(ChatState.idle())});

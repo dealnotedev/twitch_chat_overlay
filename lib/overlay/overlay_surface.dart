@@ -19,6 +19,7 @@ import 'package:twitch_chat_overlay/platform/overlay_host.dart';
 import 'package:twitch_chat_overlay/platform/overlay_tray.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chatters.dart';
 import 'package:twitch_chat_overlay/updates/update_notice.dart';
 
 class OverlaySurface extends StatefulWidget {
@@ -171,19 +172,24 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                 if (state.settingsOpen && state.host.interactive)
                   Positioned.fromRect(
                     rect: OverlaySettingsPanel.placeBeside(rect, viewport),
-                    child: OverlaySettingsPanel(
-                      key: const ValueKey('overlay-settings-panel'),
-                      layout: state.layout,
-                      onChanged: _viewModel.updateLayout,
-                      onChangeEnd: _viewModel.saveLayout,
-                      onClose: _viewModel.closeSettings,
-                      onCaptureExclusionChanged: (value) =>
-                          unawaited(_viewModel.changeCaptureExclusion(value)),
-                      changingCaptureExclusion:
-                          state.captureExclusionProcess.isActive,
-                      captureExclusionFailed:
-                          state.captureExclusionProcess.error ==
-                          OverlayFailure.captureExclusion,
+                    child: ObservableBuilder<NewChatterIssue?>(
+                      source: _viewModel.newChatterIssue,
+                      builder: (context, issue, _) => OverlaySettingsPanel(
+                        key: const ValueKey('overlay-settings-panel'),
+                        layout: state.layout,
+                        onChanged: _viewModel.updateLayout,
+                        onChangeEnd: _viewModel.saveLayout,
+                        onClose: _viewModel.closeSettings,
+                        newChatterIssue: issue,
+                        onReconnectTwitch: () => unawaited(_viewModel.signIn()),
+                        onCaptureExclusionChanged: (value) =>
+                            unawaited(_viewModel.changeCaptureExclusion(value)),
+                        changingCaptureExclusion:
+                            state.captureExclusionProcess.isActive,
+                        captureExclusionFailed:
+                            state.captureExclusionProcess.error ==
+                            OverlayFailure.captureExclusion,
+                      ),
                     ),
                   ),
               ],

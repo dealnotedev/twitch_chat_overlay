@@ -1,3 +1,24 @@
+# Twitch Chat Overlay 1.6.0
+
+## Changes
+
+- Added optional new-user notifications under **Notifications → New users in chat**. The feature is off by default and works both during streams and while the channel is offline.
+- Show each new participant once per broadcast or offline session. Users already present when the feature starts and users who have already interacted do not trigger arrival notices.
+- Keep notification history in memory for the running app, including across Twitch reconnects. Restarting the app resets this history.
+- Added a **Reconnect Twitch** button for granting the required permission, styled to match the sign-in button. Monitoring updates immediately after successful reauthorization.
+- Stop participant polling and cancel pending requests when notifications are disabled.
+- Exclude development `kernel_blob.bin` files from release and update packages.
+
+Existing users may need to select **Reconnect Twitch** in the Notifications section when prompted.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — checksums for both archives.
+
+In-app updates preserve the updater folder. Your settings and Twitch sign-in remain in AppData.
+
 # Twitch Chat Overlay 1.5.3
 
 ## Changes

@@ -145,6 +145,25 @@ class RaidCard extends StatelessWidget {
   }
 }
 
+class ChatterArrivalCard extends StatelessWidget {
+  const ChatterArrivalCard({required this.arrival, super.key});
+
+  final ChatChatterArrival arrival;
+
+  @override
+  Widget build(BuildContext context) => _EventCard(
+    accent: const Color(0xFFBF94FF),
+    imageUrl: null,
+    imageLabel: arrival.userName,
+    children: [
+      Text(
+        AppLocalizations.of(context).newChatterArrived(arrival.userName),
+        style: _titleStyle(context),
+      ),
+    ],
+  );
+}
+
 TextStyle _titleStyle(BuildContext context) => TextStyle(
   fontSize: 13.5,
   fontWeight: ChatFontWeight.resolve(context, FontWeight.w700),

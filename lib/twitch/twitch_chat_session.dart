@@ -17,6 +17,8 @@ import 'package:twitch_chat_overlay/chat/chat_emote.dart';
 import 'package:twitch_chat_overlay/chat/emote_catalog.dart';
 import 'package:twitch_chat_overlay/emotes/third_party_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chatter_monitor.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chatters.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_recent_messages.dart';
 import 'package:web_socket_channel/io.dart';
@@ -34,6 +36,7 @@ final class ChatState {
     this.badges = const TwitchBadges(),
     this.rewards = const {},
     this.rewardSubscriptionFailed = false,
+    this.newChatterIssue,
     this.emoteCatalog = const EmoteCatalog.empty(),
     this.emoteOptions = const ThirdPartyEmoteOptions(),
   });
@@ -44,6 +47,7 @@ final class ChatState {
       badges = const TwitchBadges(),
       rewards = const {},
       rewardSubscriptionFailed = false,
+      newChatterIssue = null,
       emoteCatalog = const EmoteCatalog.empty(),
       emoteOptions = const ThirdPartyEmoteOptions(),
       broadcasterId = null,
@@ -60,6 +64,7 @@ final class ChatState {
   final TwitchBadges badges;
   final Map<String, TwitchRewardAppearance> rewards;
   final bool rewardSubscriptionFailed;
+  final NewChatterIssue? newChatterIssue;
   final EmoteCatalog emoteCatalog;
   final ThirdPartyEmoteOptions emoteOptions;
 }
@@ -74,6 +79,7 @@ abstract interface class TwitchChatSession {
   Future<void> leave();
   Future<List<ChatEmote>> loadEmotes({bool refresh = false});
   void setEmoteOptions(ThirdPartyEmoteOptions options);
+  void setNewChatterNotifications(bool enabled);
   Future<SendChatResult> send(String message, {String? replyTo});
   Future<void> deleteMessage(String messageId);
 }
@@ -86,7 +92,33 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     this.history,
     this.thirdPartyEmotes,
     this._emoteOptions = const ThirdPartyEmoteOptions(),
-  });
+    bool newChatterNotifications = false,
+  }) {
+    _chatterMonitor = TwitchChatterMonitor(
+      auth: _auth,
+      helix: _helix,
+      enabled: newChatterNotifications,
+      onArrivals: (broadcastId, users) {
+        for (final user in users) {
+          _applyMutation(
+            AddChatItem(
+              ChatChatterArrival(
+                id: 'chatter-arrival:$broadcastId:${user.id}',
+                receivedAt: DateTime.now().toUtc(),
+                userId: user.id,
+                userName: user.name,
+              ),
+            ),
+          );
+        }
+        _emit(_state.status, error: _state.error);
+      },
+      onIssue: (issue) {
+        _newChatterIssue = issue;
+        _emit(_state.status, error: _state.error);
+      },
+    );
+  }
 
   static const String _defaultEventSubUrl =
       'wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=10';
@@ -105,6 +137,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   final TwitchAuth _auth;
   final TwitchHelixClient _helix;
   final TwitchChatEventMapper _mapper = const TwitchChatEventMapper();
+  late final TwitchChatterMonitor _chatterMonitor;
+  NewChatterIssue? _newChatterIssue;
   final ChatTimeline _timeline = ChatTimeline();
   final Queue<String> _messageIdOrder = Queue();
   final Set<String> _messageIds = {};
@@ -148,6 +182,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     if (_broadcasterId == broadcasterId &&
         _state.status != ChatConnectionStatus.idle &&
         _state.status != ChatConnectionStatus.failure) {
+      // A fresh sign-in can grant optional scopes while chat stays connected.
+      await _chatterMonitor.refresh();
       return;
     }
 
@@ -163,6 +199,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     _messageIdOrder.clear();
     _retryAttempt = 0;
     _emit(ChatConnectionStatus.connecting);
+    _chatterMonitor.start(broadcasterId);
     unawaited(_refreshViewerCount());
     _viewerTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       unawaited(_refreshViewerCount());
@@ -178,6 +215,8 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
   Future<void> leave() async {
     final generation = ++_generation;
     _broadcasterId = null;
+    _chatterMonitor.stop();
+    _newChatterIssue = null;
     _emoteCatalog = const EmoteCatalog.empty();
     _emoteTimer?.cancel();
     _emoteTimer = null;
@@ -238,6 +277,10 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       ...results.last.where((emote) => !twitchNames.contains(emote.name)),
     ]);
   }
+
+  @override
+  void setNewChatterNotifications(bool enabled) =>
+      _chatterMonitor.setEnabled(enabled);
 
   Future<EmoteCatalog> _loadThirdPartyEmotes({bool refresh = false}) async {
     final source = thirdPartyEmotes;
@@ -452,6 +495,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       case 'session_keepalive':
         return;
       case 'notification':
+        _recordChatterActivity(envelope);
         final mutation = _mapper.map(envelope);
         if (mutation != null && _applyMutation(mutation)) {
           unawaited(_loadBadges(''));
@@ -634,6 +678,26 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
     return _timeline.apply(mutation);
   }
 
+  void _recordChatterActivity(Map<String, Object?> envelope) {
+    final payload = _map(envelope['payload']);
+    final metadata = _map(envelope['metadata']);
+    final type =
+        metadata['subscription_type'] ?? _map(payload['subscription'])['type'];
+    if (type != 'channel.chat.message' &&
+        type != 'channel.chat.notification' &&
+        type != TwitchHelixClient.rewardSubscriptionType &&
+        type != TwitchHelixClient.bitsSubscriptionType) {
+      return;
+    }
+    final event = _map(payload['event']);
+    final userId = event['chatter_user_id'] ?? event['user_id'];
+    if (userId is! String) return;
+    final at =
+        DateTime.tryParse(metadata['message_timestamp'] as String? ?? '') ??
+        DateTime.now().toUtc();
+    _chatterMonitor.recordActivity(userId, at);
+  }
+
   Future<void> _loadHistory() async {
     final source = history;
     final broadcasterId = _broadcasterId;
@@ -653,6 +717,11 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
         return source.load(login);
       })().timeout(const Duration(seconds: 20));
       if (generation != _generation) return;
+      for (final item in items) {
+        if (item case ChatUserMessage(:final userId, :final receivedAt)) {
+          _chatterMonitor.recordActivity(userId, receivedAt);
+        }
+      }
       _timeline.restoreHistory(items, journal);
       for (final item in _timeline.items) {
         final badges = switch (item) {
@@ -814,6 +883,7 @@ final class EventSubTwitchChatSession implements TwitchChatSession {
       badges: _badges,
       rewards: _rewards,
       rewardSubscriptionFailed: _rewardSubscriptionFailed,
+      newChatterIssue: _newChatterIssue,
       emoteCatalog: _emoteCatalog,
       emoteOptions: _emoteOptions,
     );

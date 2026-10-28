@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:twitch_chat_overlay/l10n/generated/app_localizations.dart';
 import 'package:twitch_chat_overlay/overlay/chat_font_size_control.dart';
 import 'package:twitch_chat_overlay/overlay/capture_exclusion_control.dart';
+import 'package:twitch_chat_overlay/overlay/chatter_notifications_control.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chatters.dart';
 import 'package:twitch_chat_overlay/overlay/chat_font_weight_control.dart';
 import 'package:twitch_chat_overlay/overlay/component_visibility_control.dart';
 import 'package:twitch_chat_overlay/overlay/gif_playback_control.dart';
@@ -22,6 +24,8 @@ class OverlaySettingsPanel extends StatefulWidget {
     required this.onCaptureExclusionChanged,
     this.changingCaptureExclusion = false,
     this.captureExclusionFailed = false,
+    this.newChatterIssue,
+    this.onReconnectTwitch,
     super.key,
   });
 
@@ -32,6 +36,8 @@ class OverlaySettingsPanel extends StatefulWidget {
   final ValueChanged<bool> onCaptureExclusionChanged;
   final bool changingCaptureExclusion;
   final bool captureExclusionFailed;
+  final NewChatterIssue? newChatterIssue;
+  final VoidCallback? onReconnectTwitch;
 
   static Rect placeBeside(Rect chat, Size viewport) {
     const margin = 12.0;
@@ -229,6 +235,21 @@ class _OverlaySettingsPanelState extends State<OverlaySettingsPanel> {
                                     onChanged: (value) => _changeAndSave(
                                       layout.withGifPlayCount(value),
                                     ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              _SettingsSection(
+                                title: l10n.settingsNotifications,
+                                icon: Icons.notifications_outlined,
+                                children: [
+                                  ChatterNotificationsControl(
+                                    enabled: layout.newChatterNotifications,
+                                    onChanged: (value) => _changeAndSave(
+                                      layout.withNewChatterNotifications(value),
+                                    ),
+                                    issue: widget.newChatterIssue,
+                                    onReconnect: widget.onReconnectTwitch,
                                   ),
                                 ],
                               ),

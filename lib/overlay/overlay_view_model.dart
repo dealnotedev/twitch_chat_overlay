@@ -7,6 +7,7 @@ import 'package:twitch_chat_overlay/overlay/overlay_layout_store.dart';
 import 'package:twitch_chat_overlay/platform/overlay_host.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chatters.dart';
 
 enum OverlayFailure { captureExclusion }
 
@@ -46,6 +47,7 @@ final class OverlayViewModel extends BaseViewModel {
     required this._chat,
   }) : _host = host {
     _chat.setEmoteOptions(initialLayout.emoteOptions);
+    _chat.setNewChatterNotifications(initialLayout.newChatterNotifications);
     _frame = register(
       ObservableValue(
         current: OverlayFrameState(layout: initialLayout, host: host.state),
@@ -79,6 +81,9 @@ final class OverlayViewModel extends BaseViewModel {
   );
   late final Observable<bool> signedIn = authState.select(
     (state) => state.status == TwitchAuthStatus.signedIn,
+  );
+  late final Observable<NewChatterIssue?> newChatterIssue = chatState.select(
+    (state) => state.newChatterIssue,
   );
   late final Observable<ChatConnectionStatus> connectionStatus = chatState
       .select((state) => state.status);
@@ -138,6 +143,9 @@ final class OverlayViewModel extends BaseViewModel {
     if (isDisposed) return;
     _frame.set(_frame.current.copyWith(layout: layout));
     if (!isDisposed) _chat.setEmoteOptions(layout.emoteOptions);
+    if (!isDisposed) {
+      _chat.setNewChatterNotifications(layout.newChatterNotifications);
+    }
   }
 
   void move(Offset delta, Size viewport) =>

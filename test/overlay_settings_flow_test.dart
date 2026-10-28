@@ -93,6 +93,15 @@ void main() {
       expect(store.saved!.excludedFromCapture, isTrue);
       expect(find.text('Keep this draft'), findsOneWidget);
       final sevenTv = find.byKey(const ValueKey('integration-7tv'));
+      final notifications = find.byKey(
+        const ValueKey('new-chatter-notifications-switch'),
+      );
+      await tester.ensureVisible(notifications);
+      await tester.pumpAndSettle();
+      await tester.tap(notifications);
+      await tester.pumpAndSettle();
+      expect(chat.notificationsEnabled, isTrue);
+      expect(store.saved!.newChatterNotifications, isTrue);
       final bttv = find.byKey(const ValueKey('integration-bttv'));
       await tester.ensureVisible(sevenTv);
       await tester.pumpAndSettle();
@@ -258,6 +267,11 @@ class _Auth extends Fake implements TwitchAuth {
 
 class _Chat extends Fake implements TwitchChatSession {
   ThirdPartyEmoteOptions? options;
+  bool notificationsEnabled = false;
+  @override
+  void setNewChatterNotifications(bool enabled) =>
+      notificationsEnabled = enabled;
+
   @override
   void setEmoteOptions(ThirdPartyEmoteOptions value) => options = value;
 

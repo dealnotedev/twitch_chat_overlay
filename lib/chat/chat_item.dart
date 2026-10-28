@@ -14,6 +14,18 @@ sealed class ChatItem {
 
 enum ChatPowerUpType { messageEffect, gigantifyEmote, celebration }
 
+final class ChatChatterArrival extends ChatItem {
+  const ChatChatterArrival({
+    required super.id,
+    required super.receivedAt,
+    required this.userId,
+    required this.userName,
+  });
+
+  final String userId;
+  final String userName;
+}
+
 final class ChatPowerUp extends ChatItem {
   const ChatPowerUp({
     required super.id,

@@ -164,6 +164,48 @@ abstract class AppLocalizations {
   /// **'Integrations'**
   String get settingsIntegrations;
 
+  /// No description provided for @settingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifications;
+
+  /// No description provided for @newChatterNotificationsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New users in chat'**
+  String get newChatterNotificationsLabel;
+
+  /// No description provided for @newChatterNotificationsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when new users appear in chat.'**
+  String get newChatterNotificationsDescription;
+
+  /// No description provided for @newChatterAuthorizationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect Twitch to allow reading the chat participant list.'**
+  String get newChatterAuthorizationRequired;
+
+  /// No description provided for @newChatterUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not check chat participants. Retrying automatically.'**
+  String get newChatterUnavailable;
+
+  /// No description provided for @reconnectTwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect Twitch'**
+  String get reconnectTwitch;
+
+  /// No description provided for @newChatterArrived.
+  ///
+  /// In en, this message translates to:
+  /// **'{user} is in chat'**
+  String newChatterArrived(String user);
+
   /// No description provided for @settingsAutosave.
   ///
   /// In en, this message translates to:

@@ -53,7 +53,7 @@ if ([Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion -ne $rele
 }
 
 $managedRoots = @(Get-ChildItem -LiteralPath $flutterOutput | Where-Object {
-    $_.Name -notin @('updater', '.overlay-update', 'overlay-update.json') -and $_.Extension -ne '.pdb'
+    $_.Name -notin @('updater', '.overlay-update', 'overlay-update.json', 'kernel_blob.bin') -and $_.Extension -ne '.pdb'
 } | ForEach-Object Name)
 foreach ($name in $managedRoots) {
     $source = Join-Path $flutterOutput $name
@@ -73,6 +73,13 @@ $bundledUpdater = Join-Path $bundle 'updater'
 [IO.Directory]::CreateDirectory($bundledUpdater) | Out-Null
 Get-ChildItem -LiteralPath $updaterOutput | Where-Object { $_.Extension -ne '.pdb' } | Copy-Item -Destination $bundledUpdater -Recurse
 
+# Release builds use AOT code; never ship leftover development bytecode.
+foreach ($stagingRoot in @($payload, $bundle)) {
+    Get-ChildItem -LiteralPath $stagingRoot -Filter 'kernel_blob.bin' -File -Recurse | ForEach-Object {
+        Remove-Item -LiteralPath $_.FullName
+    }
+}
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $updateZip = Join-Path $output 'update.zip'
 $releaseZip = Join-Path $output 'Release.zip'
@@ -81,6 +88,9 @@ $releaseZip = Join-Path $output 'Release.zip'
 foreach ($zipPath in @($updateZip, $releaseZip)) {
     $zip = [IO.Compression.ZipFile]::OpenRead($zipPath)
     try {
+        if (@($zip.Entries | Where-Object { $_.Name -ieq 'kernel_blob.bin' }).Count -gt 0) {
+            throw "Release archive contains kernel_blob.bin: $zipPath"
+        }
         if (-not $zip.GetEntry('twitch_chat_overlay.exe') -or -not $zip.GetEntry('overlay-update.json')) {
             throw "Invalid archive root: $zipPath"
         }

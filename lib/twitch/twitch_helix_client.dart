@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_actions.dart';
+import 'package:twitch_chat_overlay/twitch/twitch_chatters.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_emotes.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_rewards.dart';
@@ -42,6 +43,84 @@ final class TwitchHelixClient {
 
   final TwitchAuth _auth;
   final Dio _dio;
+
+  Future<TwitchLiveBroadcast?> getLiveBroadcast({
+    required String broadcasterId,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _request(
+      '/streams',
+      queryParameters: {'user_id': broadcasterId},
+      cancelToken: cancelToken,
+    );
+    final data = response.data?['data'];
+    if (data is! List) throw const FormatException('Invalid stream response');
+    if (data.isEmpty) return null;
+    final stream = data.first;
+    if (stream is! Map) throw const FormatException('Invalid broadcast');
+    final id = stream['id'];
+    final startedAt = DateTime.tryParse(stream['started_at'] as String? ?? '');
+    if (id is! String || id.isEmpty || startedAt == null) {
+      throw const FormatException('Invalid broadcast identity');
+    }
+    return TwitchLiveBroadcast(id: id, startedAt: startedAt);
+  }
+
+  /// Return a complete snapshot; a failed page must never look like an empty chat.
+  Future<List<TwitchChatter>> getChatters({
+    required String broadcasterId,
+    CancelToken? cancelToken,
+  }) async {
+    final token = await _auth.validToken();
+    if (token.userId != broadcasterId ||
+        !token.scopes.contains('moderator:read:chatters')) {
+      throw const TwitchChattersAuthorizationRequired();
+    }
+    final users = <String, TwitchChatter>{};
+    final cursors = <String>{};
+    String? cursor;
+    do {
+      final response = await _request(
+        '/chat/chatters',
+        actorUserId: broadcasterId,
+        queryParameters: {
+          'broadcaster_id': broadcasterId,
+          'moderator_id': broadcasterId,
+          'first': 1000,
+          'after': ?cursor,
+        },
+        cancelToken: cancelToken,
+      );
+      final data = response.data?['data'];
+      final pagination = response.data?['pagination'];
+      if (data is! List || pagination is! Map) {
+        throw const FormatException('Invalid chatters response');
+      }
+      for (final user in data) {
+        if (user is! Map ||
+            user['user_id'] is! String ||
+            (user['user_id'] as String).isEmpty ||
+            user['user_login'] is! String ||
+            (user['user_login'] as String).isEmpty ||
+            user['user_name'] is! String ||
+            (user['user_name'] as String).isEmpty) {
+          throw const FormatException('Invalid chatter');
+        }
+        final chatter = TwitchChatter(
+          id: user['user_id'] as String,
+          login: user['user_login'] as String,
+          name: user['user_name'] as String,
+        );
+        users[chatter.id] = chatter;
+      }
+      cursor = pagination['cursor'] as String?;
+      if (cursor == '') cursor = null;
+      if (cursor != null && !cursors.add(cursor)) {
+        throw StateError('Repeated chatters pagination cursor');
+      }
+    } while (cursor != null);
+    return List.unmodifiable(users.values);
+  }
 
   /// A null count means the channel is offline, not a failed request.
   Future<int?> getViewerCount({

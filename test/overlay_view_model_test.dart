@@ -151,6 +151,9 @@ class _Chat extends Fake implements TwitchChatSession {
   @override
   Stream<ChatState> get states => value.changes;
   @override
+  void setNewChatterNotifications(bool enabled) {}
+
+  @override
   void setEmoteOptions(ThirdPartyEmoteOptions options) {}
   @override
   Future<void> leave() async => value.dispose();

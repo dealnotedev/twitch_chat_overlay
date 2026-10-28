@@ -13,6 +13,36 @@ void main() {
     expect(TwitchAuthClient.oauthRedirectUrl, 'http://localhost:3000');
   });
 
+  test(
+    'local missing-scope fixture survives persistence and server scope updates',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = SharedPreferencesTwitchTokenStore();
+      final token = TwitchToken(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        clientId: 'client',
+        userId: 'owner',
+        userLogin: 'owner',
+        scopes: const ['user:read:chat', 'moderator:read:chatters'],
+        debugMissingScopes: const ['moderator:read:chatters'],
+        expiresAt: DateTime.utc(2030),
+      );
+      await store.write(token);
+      final saved = (await store.read())!;
+      expect(saved.scopes, ['user:read:chat']);
+      expect(saved.debugMissingScopes, ['moderator:read:chatters']);
+      final validated = saved.copyWith(
+        scopes: const ['user:read:chat', 'moderator:read:chatters'],
+      );
+      expect(validated.scopes, ['user:read:chat']);
+      expect(validated.accessToken, 'access');
+      expect(validated.refreshToken, 'refresh');
+      await store.write(validated);
+      expect((await store.read())!.scopes, ['user:read:chat']);
+    },
+  );
+
   test('persists and restores every Twitch session field', () async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();

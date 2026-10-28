@@ -36,6 +36,7 @@ final class OverlayLayout {
     this.chatFontWeight = ChatFontWeight.defaultWeight,
     this.showViewerCount = true,
     this.showConnectionIndicator = true,
+    this.newChatterNotifications = false,
     this.excludedFromCapture = false,
     this.emoteOptions = const ThirdPartyEmoteOptions(),
   });
@@ -53,6 +54,7 @@ final class OverlayLayout {
       chatFontWeight = ChatFontWeight.defaultWeight,
       showViewerCount = true,
       showConnectionIndicator = true,
+      newChatterNotifications = false,
       excludedFromCapture = false,
       emoteOptions = const ThirdPartyEmoteOptions();
 
@@ -73,8 +75,27 @@ final class OverlayLayout {
   final int chatFontWeight;
   final bool showViewerCount;
   final bool showConnectionIndicator;
+  final bool newChatterNotifications;
   final bool excludedFromCapture;
   final ThirdPartyEmoteOptions emoteOptions;
+
+  OverlayLayout withNewChatterNotifications(bool value) => OverlayLayout(
+    left: left,
+    top: top,
+    width: width,
+    height: height,
+    backgroundOpacity: backgroundOpacity,
+    contentOpacity: contentOpacity,
+    messageLifetimeMinutes: messageLifetimeMinutes,
+    gifPlayCount: gifPlayCount,
+    chatFontSize: chatFontSize,
+    chatFontWeight: chatFontWeight,
+    showViewerCount: showViewerCount,
+    showConnectionIndicator: showConnectionIndicator,
+    excludedFromCapture: excludedFromCapture,
+    emoteOptions: emoteOptions,
+    newChatterNotifications: value,
+  );
 
   OverlayLayout withEmoteOptions(ThirdPartyEmoteOptions value) => OverlayLayout(
     excludedFromCapture: excludedFromCapture,
@@ -90,6 +111,7 @@ final class OverlayLayout {
     chatFontWeight: chatFontWeight,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
     emoteOptions: value,
   );
 
@@ -106,6 +128,7 @@ final class OverlayLayout {
     chatFontWeight: chatFontWeight,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
     emoteOptions: emoteOptions,
     excludedFromCapture: value,
   );
@@ -129,6 +152,7 @@ final class OverlayLayout {
     showViewerCount: showViewerCount ?? this.showViewerCount,
     showConnectionIndicator:
         showConnectionIndicator ?? this.showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
   );
 
   OverlayLayout withChatFontWeight(int value) => OverlayLayout(
@@ -146,6 +170,7 @@ final class OverlayLayout {
     chatFontWeight: ChatFontWeight.normalize(value),
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
   );
 
   OverlayLayout withChatFontSize(double value) => OverlayLayout(
@@ -162,6 +187,7 @@ final class OverlayLayout {
     chatFontSize: ChatFontSize.normalize(value),
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
     chatFontWeight: chatFontWeight,
   );
 
@@ -170,6 +196,7 @@ final class OverlayLayout {
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -190,6 +217,7 @@ final class OverlayLayout {
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -207,6 +235,7 @@ final class OverlayLayout {
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -226,6 +255,7 @@ final class OverlayLayout {
     emoteOptions: emoteOptions,
     showViewerCount: showViewerCount,
     showConnectionIndicator: showConnectionIndicator,
+    newChatterNotifications: newChatterNotifications,
     chatFontSize: chatFontSize,
     chatFontWeight: chatFontWeight,
     left: left,
@@ -322,6 +352,7 @@ final class OverlayLayout {
       emoteOptions: emoteOptions,
       showViewerCount: showViewerCount,
       showConnectionIndicator: showConnectionIndicator,
+      newChatterNotifications: newChatterNotifications,
       chatFontSize: chatFontSize,
       chatFontWeight: chatFontWeight,
       left: clamped.left / viewport.width,

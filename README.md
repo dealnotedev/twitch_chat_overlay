@@ -150,6 +150,31 @@ and every minute, and refreshed immediately after reconnecting (including server
 migration). Reconnection cancels an older viewer request and ignores its late
 response. Offline channels show a localized Offline label, and unavailable counts
 show a dash. Polling stops and pending viewer requests are cancelled on sign-out.
+
+The optional **Notifications → New users in chat** setting is off by default.
+It polls Helix Get Chatters every 30 seconds, loading every page, whether the
+channel is live or offline. Get Streams only identifies the notification context;
+an empty stream response must never prevent fetching chat participants.
+Arrival cards show only the participant's name and the localized “in chat” text.
+The first complete snapshot on startup or enabling is silent. Later checks give
+each new participant one local chat card per broadcast, unless they have already sent a message,
+triggered a chat notice, redeemed Channel Points, or used Bits in events received
+by the app. Existing EventSub messages only suppress these cards; they never
+trigger arrivals. Recent message history from the current broadcast also counts
+as activity. Activity that predates the app and is absent from its loaded history
+cannot be inferred from Twitch's participant list.
+
+Suppression IDs stay in memory by broadcaster and Twitch stream ID, surviving
+reconnects within the running app. Nothing is saved to disk; restarting the app
+resets this history. Each new broadcast establishes a silent baseline. Offline
+chat uses a separate in-memory session, without overwriting live broadcast
+history. Switching between live and offline establishes a new silent baseline.
+Polling stops when disabled or signed out. Failed or
+incomplete snapshots do not announce users or clear the baseline. Twitch updates
+the participant list with a delay, so arrival cards do not represent exact join
+times. Reading chatters requires `moderator:read:chatters`; existing accounts may
+need **Reconnect Twitch** in the Notifications section to grant it.
+
 ### Composer and sender emotes
 
 The logout button stays left of the input and Send stays right; the emote button

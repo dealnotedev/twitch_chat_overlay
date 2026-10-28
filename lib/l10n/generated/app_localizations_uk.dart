@@ -45,6 +45,32 @@ class AppLocalizationsUk extends AppLocalizations {
   String get settingsIntegrations => 'Інтеграції';
 
   @override
+  String get settingsNotifications => 'Сповіщення';
+
+  @override
+  String get newChatterNotificationsLabel => 'Нові користувачі в чаті';
+
+  @override
+  String get newChatterNotificationsDescription =>
+      'Сповіщати про появу нових користувачів у чаті.';
+
+  @override
+  String get newChatterAuthorizationRequired =>
+      'Підключіть Twitch повторно, щоб дозволити читання списку учасників чату.';
+
+  @override
+  String get newChatterUnavailable =>
+      'Не вдалося перевірити учасників чату. Повторюємо автоматично.';
+
+  @override
+  String get reconnectTwitch => 'Підключити Twitch повторно';
+
+  @override
+  String newChatterArrived(String user) {
+    return '$user у чаті';
+  }
+
+  @override
   String get settingsAutosave => 'Зміни зберігаються автоматично';
 
   @override

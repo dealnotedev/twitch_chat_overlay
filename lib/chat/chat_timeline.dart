@@ -25,6 +25,7 @@ final class ChatTimeline {
             ChatUserMessage() => item.userId == userId,
             ChatRewardRedemption() => item.userId == userId,
             ChatPowerUp() => item.userId == userId,
+            ChatChatterArrival() => item.userId == userId,
             _ => false,
           },
         );

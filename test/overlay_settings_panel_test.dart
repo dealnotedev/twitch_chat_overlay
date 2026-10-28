@@ -78,6 +78,15 @@ void main() {
         await tester.tap(connection);
         await tester.pumpAndSettle();
         expect(layout.showConnectionIndicator, isFalse);
+        final notifications = find.byKey(
+          const ValueKey('new-chatter-notifications-switch'),
+        );
+        await tester.ensureVisible(notifications);
+        await tester.pumpAndSettle();
+        expect(layout.newChatterNotifications, isFalse);
+        await tester.tap(notifications);
+        await tester.pumpAndSettle();
+        expect(layout.newChatterNotifications, isTrue);
         final capture = find.byKey(const ValueKey('capture-exclusion-switch'));
         await tester.ensureVisible(capture);
         await tester.pumpAndSettle();
@@ -98,6 +107,7 @@ void main() {
         await tester.tap(bttv);
         await tester.pumpAndSettle();
         expect(layout.emoteOptions.betterTtv, isTrue);
+        expect(layout.newChatterNotifications, isTrue);
         expect(layout.excludedFromCapture, isTrue);
         expect(
           find.text(locale == 'en' ? 'Integrations' : 'Інтеграції'),

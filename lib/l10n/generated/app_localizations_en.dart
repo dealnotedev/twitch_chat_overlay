@@ -45,6 +45,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsIntegrations => 'Integrations';
 
   @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get newChatterNotificationsLabel => 'New users in chat';
+
+  @override
+  String get newChatterNotificationsDescription =>
+      'Get notified when new users appear in chat.';
+
+  @override
+  String get newChatterAuthorizationRequired =>
+      'Reconnect Twitch to allow reading the chat participant list.';
+
+  @override
+  String get newChatterUnavailable =>
+      'Could not check chat participants. Retrying automatically.';
+
+  @override
+  String get reconnectTwitch => 'Reconnect Twitch';
+
+  @override
+  String newChatterArrived(String user) {
+    return '$user is in chat';
+  }
+
+  @override
   String get settingsAutosave => 'Changes save automatically';
 
   @override

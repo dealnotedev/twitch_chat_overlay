@@ -69,6 +69,7 @@ final class TwitchAuthClient implements TwitchAuth {
     'bits:read',
     'user:read:emotes',
     'moderator:manage:chat_messages',
+    'moderator:read:chatters',
   ];
 
   final TwitchTokenStore _tokenStore;

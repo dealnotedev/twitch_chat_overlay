@@ -22,6 +22,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
   static const String _fontSizeKey = 'overlay.messages.fontSize';
   static const String _lifetimeKey = 'overlay.messages.lifetimeMinutes';
   static const String _viewerCountKey = 'overlay.components.viewerCount';
+  static const String _newChatterKey = 'overlay.notifications.newChatters';
   static const String _connectionIndicatorKey =
       'overlay.components.connectionIndicator';
 
@@ -35,6 +36,8 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       betterTtv: preferences.getBool(_betterTtvKey) ?? false,
     );
     final showViewerCount = preferences.getBool(_viewerCountKey) ?? true;
+    final newChatterNotifications =
+        preferences.getBool(_newChatterKey) ?? false;
     final showConnectionIndicator =
         preferences.getBool(_connectionIndicatorKey) ?? true;
     final fontWeight =
@@ -65,6 +68,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       return const OverlayLayout.defaults()
           .withExcludedFromCapture(excludedFromCapture)
           .withEmoteOptions(emoteOptions)
+          .withNewChatterNotifications(newChatterNotifications)
           .withVisibleComponents(
             showViewerCount: showViewerCount,
             showConnectionIndicator: showConnectionIndicator,
@@ -80,6 +84,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
     return OverlayLayout(
           excludedFromCapture: excludedFromCapture,
           emoteOptions: emoteOptions,
+          newChatterNotifications: newChatterNotifications,
           left: left,
           top: top,
           width: width,
@@ -103,6 +108,7 @@ final class SharedPreferencesOverlayLayoutStore implements OverlayLayoutStore {
       preferences.setBool(_sevenTvKey, layout.emoteOptions.sevenTv),
       preferences.setBool(_betterTtvKey, layout.emoteOptions.betterTtv),
       preferences.setBool(_viewerCountKey, layout.showViewerCount),
+      preferences.setBool(_newChatterKey, layout.newChatterNotifications),
       preferences.setBool(
         _connectionIndicatorKey,
         layout.showConnectionIndicator,
