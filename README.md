@@ -1,4 +1,72 @@
+<div align="center">
+
+<img src="windows/runner/resources/app_icon.png" width="80" alt="Twitch Chat Overlay icon">
+
 # Twitch Chat Overlay
+
+**Your chat. In the game.**
+
+A native Windows overlay that keeps your Twitch community close while you play.
+
+**Windows** &nbsp; / &nbsp; **Flutter + Skia** &nbsp; / &nbsp; **English & Ukrainian**
+
+[Quick start](#run) &nbsp; · &nbsp; [Preview](#preview) &nbsp; · &nbsp; [Features](#implemented) &nbsp; · &nbsp; [Updates](#updates)
+
+</div>
+
+## Preview
+
+![Twitch chat over a decorated night landscape, with colorful usernames, Twitch emotes, a reply, a broadcaster mention, and the live viewer count.](docs/images/chat-overlay.png)
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+**Stay in play**
+
+Transparent, always-on-top chat with click-through controls. Press **Ctrl+Shift+O**
+to move, resize, or interact.
+
+</td>
+<td width="33%" valign="top">
+
+**Keep the personality**
+
+Colorful names, Twitch emotes, replies, broadcaster mentions, subscriptions,
+Channel Points, and raids.
+
+</td>
+<td width="33%" valign="top">
+
+**Make it yours**
+
+Adjust opacity, text size and weight, message lifetime, and optional 7TV and
+BetterTTV emotes. Settings save automatically.
+
+</td>
+</tr>
+</table>
+
+![A close-up of the Flutter chat UI showing a subscription, a highlighted broadcaster mention, a Hydrate Channel Points redemption, an incoming raid, and the message composer.](docs/images/chat-highlights.png)
+
+<p align="center"><sub>Actual Flutter chat widgets with an illustrative English conversation.
+The landscape and surrounding presentation are decorative; names, messages, and counts are demo data.</sub></p>
+
+<details>
+<summary>How these previews are made</summary>
+
+Both images render the application's chat widgets with local fixtures and bundled
+fonts. No Twitch account or live connection is needed. To regenerate them, run:
+
+```powershell
+flutter test tool/readme_previews.dart
+```
+
+See [preview assets](docs/images/README.md) for source attribution and rendering details.
+
+</details>
+
+## About
 
 Native Flutter Twitch chat rendered over Windows games. It does not use a
 WebView: EventSub events are mapped to a typed timeline and rendered by Flutter.
