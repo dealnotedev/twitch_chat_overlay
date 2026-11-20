@@ -1,3 +1,17 @@
+# Twitch Chat Overlay 1.7.0
+
+## Changes
+
+- New messages appear from the top while they fit in the overlay. Once the list fills the available height, the latest messages follow the bottom edge and older messages are available by scrolling up.
+- The list returns to the top when messages are removed or the overlay is resized and the remaining messages fit.
+- GIF playback keeps its place when the list switches layout. The chat has 12 pixels of padding at both the top and bottom.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — SHA-256 checksums for both archives.
+
 # Twitch Chat Overlay 1.6.1
 
 ## Changes

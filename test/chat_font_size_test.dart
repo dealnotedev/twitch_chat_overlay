@@ -115,7 +115,7 @@ void main() {
           .toList();
       final timelineText = find.descendant(
         of: find.descendant(
-          of: find.byType(ListView),
+          of: find.byType(CustomScrollView),
           matching: find.byType(Text),
         ),
         matching: find.byType(RichText),

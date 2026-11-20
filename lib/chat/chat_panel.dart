@@ -32,6 +32,7 @@ import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_badges.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_chat_session.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
+import 'package:twitch_chat_overlay/widgets/adaptive_list_view.dart';
 
 typedef _ChatAccessState = ({
   TwitchAuthState auth,
@@ -374,8 +375,9 @@ class _ChatPanelState extends State<ChatPanel> {
                   shadows: chatTextShadows,
                   fontWeight: ChatFontWeight.resolve(context),
                 ),
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                child: AdaptiveListView.builder(
+                  key: const ValueKey('chat-message-area'),
+                  padding: const EdgeInsets.all(12),
                   itemCount: items.length,
                   reverse: true,
                   findChildIndexCallback: (key) =>

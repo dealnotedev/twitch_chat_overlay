@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:observable_state/observable_state.dart';
+import 'package:twitch_chat_overlay/chat/chat_item.dart';
 import 'package:twitch_chat_overlay/chat/chat_panel.dart';
 import 'package:twitch_chat_overlay/chat/chat_composer.dart';
 import 'package:twitch_chat_overlay/chat/viewer_count.dart';
@@ -57,13 +58,18 @@ void main() {
             interactive: interactive,
           ),
         );
-        final timeline = tester.widget<ListView>(find.byType(ListView));
+        final timeline = tester.widget<CustomScrollView>(
+          find.byType(CustomScrollView),
+        );
         final editor = interactive
             ? tester.widget<ChatComposer>(find.byType(ChatComposer))
             : null;
         chat.set(_chat(2));
         await tester.pump();
-        expect(tester.widget<ListView>(find.byType(ListView)), same(timeline));
+        expect(
+          tester.widget<CustomScrollView>(find.byType(CustomScrollView)),
+          same(timeline),
+        );
         if (interactive) {
           expect(
             tester.widget<ChatComposer>(find.byType(ChatComposer)),
@@ -76,6 +82,97 @@ void main() {
       },
     );
   }
+
+  testWidgets('reversed messages switch layout without replacing rows', (
+    tester,
+  ) async {
+    const shortWindow = Size(320, 120);
+    const verticalPadding = 12.0;
+    await tester.binding.setSurfaceSize(shortWindow);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final items = List<ChatItem>.generate(
+      6,
+      (index) => ChatNotice(
+        id: 'message-$index',
+        receivedAt: DateTime.now(),
+        noticeType: 'announcement',
+        systemMessage: 'Message $index',
+        userName: null,
+        color: null,
+        badges: const [],
+        fragments: const [],
+      ),
+    );
+    final chat = ObservableValue<ChatState>(
+      current: ChatState(
+        status: ChatConnectionStatus.connected,
+        items: items.take(1).toList(),
+      ),
+    );
+    addTearDown(chat.dispose);
+
+    void showMessages(int count) => chat.set(
+      ChatState(
+        status: ChatConnectionStatus.connected,
+        items: items.take(count).toList(),
+      ),
+    );
+
+    await tester.pumpWidget(
+      _app(
+        auth: const Observable.value(
+          TwitchAuthState(status: TwitchAuthStatus.signedIn),
+        ),
+        chat: chat,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollView = find.byType(CustomScrollView);
+    final first = find.byKey(const ValueKey('message-0'));
+    final second = find.byKey(const ValueKey('message-1'), skipOffstage: false);
+    final latest = find.byKey(const ValueKey('message-5'));
+    expect(tester.widget<CustomScrollView>(scrollView).reverse, isTrue);
+    expect(tester.widget<CustomScrollView>(scrollView).shrinkWrap, isTrue);
+    expect(tester.getTopLeft(first).dy, closeTo(verticalPadding, 0.001));
+
+    showMessages(2);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(first).dy, closeTo(verticalPadding, 0.001));
+    expect(tester.getTopLeft(second).dy, tester.getBottomLeft(first).dy);
+    final retained = tester.element(second);
+
+    showMessages(items.length);
+    await tester.pumpAndSettle();
+    expect(tester.widget<CustomScrollView>(scrollView).shrinkWrap, isFalse);
+    expect(
+      tester.getBottomLeft(latest).dy,
+      closeTo(shortWindow.height - verticalPadding, 0.001),
+    );
+    expect(tester.element(second), same(retained));
+
+    await tester.binding.setSurfaceSize(const Size(320, 480));
+    await tester.pumpAndSettle();
+    expect(tester.widget<CustomScrollView>(scrollView).shrinkWrap, isTrue);
+    expect(tester.getTopLeft(first).dy, closeTo(verticalPadding, 0.001));
+    expect(tester.element(second), same(retained));
+
+    await tester.binding.setSurfaceSize(shortWindow);
+    await tester.pumpAndSettle();
+    expect(tester.widget<CustomScrollView>(scrollView).shrinkWrap, isFalse);
+    final position = tester
+        .state<ScrollableState>(find.byType(Scrollable))
+        .position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(first).dy, closeTo(verticalPadding, 0.001));
+
+    showMessages(2);
+    await tester.pumpAndSettle();
+    expect(tester.widget<CustomScrollView>(scrollView).shrinkWrap, isTrue);
+    expect(tester.getTopLeft(first).dy, closeTo(verticalPadding, 0.001));
+    expect(tester.element(second), same(retained));
+  });
 
   testWidgets('replacing auth source follows new events and ignores old ones', (
     tester,

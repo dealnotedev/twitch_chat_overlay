@@ -198,9 +198,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final frame = layout.resolve(viewport).deflate(1);
+      final chatArea = find.byKey(const ValueKey('chat-message-area'));
       expect(find.text('TWITCH CHAT'), findsNothing);
       expect(tester.getRect(find.byType(ChatPanel)), frame);
-      expect(tester.getRect(find.byType(ListView)), frame);
+      expect(tester.getRect(chatArea), frame);
       expect(find.bySemanticsLabel('Chat connected'), findsOneWidget);
       final dot = find.byKey(const ValueKey('chat-connected-dot'));
       final indicator = tester.getRect(dot);
@@ -256,7 +257,7 @@ void main() {
       await tester.tap(find.byTooltip('Lock overlay'));
       await tester.pumpAndSettle();
       expect(find.text('TWITCH CHAT'), findsNothing);
-      expect(tester.getRect(find.byType(ListView)), frame);
+      expect(tester.getRect(chatArea), frame);
 
       final notice = ChatNotice(
         id: 'retained',
@@ -303,7 +304,7 @@ void main() {
         );
         expect(dot, flags.$2 ? findsOneWidget : findsNothing);
         expect(statusRow, flags.$1 || flags.$2 ? findsOneWidget : findsNothing);
-        expect(tester.getRect(find.byType(ListView)), frame);
+        expect(tester.getRect(chatArea), frame);
         if (flags == (false, false)) {
           chatUpdates.set(
             ChatState(
@@ -343,7 +344,7 @@ void main() {
           findsNothing,
         );
         expect(find.text('TWITCH CHAT'), findsNothing);
-        expect(tester.getRect(find.byType(ListView)), frame);
+        expect(tester.getRect(chatArea), frame);
       }
 
       chatUpdates.set(

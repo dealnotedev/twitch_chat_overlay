@@ -216,7 +216,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), null);
       final notice = tester.getRect(find.byType(UpdateNotice));
-      final messages = tester.getRect(find.byType(ListView));
+      final messages = tester.getRect(
+        find.byKey(const ValueKey('chat-message-area')),
+      );
       final panel = tester.getRect(find.byType(ChatPanel));
       expect(notice.top, messages.bottom);
       expect(notice.left, panel.left);
