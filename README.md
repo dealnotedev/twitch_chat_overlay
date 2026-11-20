@@ -115,8 +115,8 @@ normal use; Debug builds also retain the development runtime and tooling.
   monitor, including screens added left of or above the primary. If that monitor
   is disconnected, the chat falls back to the primary and returns when reconnected.
   Existing layouts adopt their current monitor on first launch after upgrading.
-- Localhost OAuth flow opened with `open_url`.
-- Twitch credentials stored as `twitch_auth` JSON in `SharedPreferences`.
+- Twitch Device Code OAuth opened in the default browser with `open_url`.
+- Twitch credentials stored as `twitch_oauth_device` JSON in `SharedPreferences`.
 - EventSub WebSocket with keepalive, deduplication, reconnect URL, and backoff.
 - Message sending through the Helix Chat API.
 - Compact Twitch-style composer with sender-specific Twitch emotes, 7TV/BetterTTV
@@ -332,9 +332,11 @@ OAuth sign-in also requests `moderator:manage:chat_messages` for message deletio
 
 ### Session recovery
 
-Startup validation refreshes rejected access tokens before requesting login.
+The overlay validates the access token at startup and hourly while signed in.
+Validation refreshes rejected access tokens before requesting login.
 Helix retries a request once after a 401, sharing one refresh across concurrent
-requests and persisting rotated credentials before further validation. Network
+requests and persisting the replacement pair before validating it. Public Twitch
+refresh tokens are single-use. Network
 failures, rate limits and server outages retain the account and retry through
 the existing reconnect loop. Signing out invalidates pending refresh work.
 WebSocket handshakes, welcome messages and subscription setup have separate
@@ -350,9 +352,10 @@ Revoked authorization requires signing in again. Removed users or unsupported
 chat subscription versions show a connection failure instead of a connected
 indicator; an unavailable optional rewards subscription leaves ordinary chat
 working. Helix requests have network and overall deadlines and cancel on timeout.
-Twitch sessions use one JSON format in `twitch_oauth`: access and refresh tokens,
-client/user IDs, login, scopes and expiration time. Other stored formats are
-rejected and require signing in again; no migration is performed.
+Device Code sessions store the access and refresh tokens, client and user IDs,
+login, scopes, and expiration time as JSON in `twitch_oauth_device`. The previous
+`twitch_oauth` entry is left in place. The first Device Code sign-in starts a
+fresh session.
 
 ### Differences from Twitch web chat
 
@@ -400,7 +403,8 @@ flutter run -d windows
 ```
 
 1. Press `Ctrl+Shift+O` to make the overlay interactive.
-2. Select **Sign in with Twitch** and finish OAuth in the browser.
+2. Select **Sign in with Twitch** and confirm the displayed code in the browser.
+   If needed, open `twitch.tv/activate` and enter the code shown in the overlay.
 3. Drag the header or resize the window from any edge or corner. Open the gear
    button in the header to adjust settings in the panel beside the chat.
    The background transparency slider adjusts backgrounds from 0% to 100%
@@ -424,17 +428,12 @@ The current milestone connects to the signed-in user's channel. The composer
 and Twitch sign-out action are available in setup mode. `Alt+F4` or the tray
 menu's **Вийти** command closes the app.
 
-## Temporary credentials
+## Twitch OAuth configuration
 
-`lib/secrets.dart` was copied from the reference project as requested and is
-excluded from Git. Credentials are stored in `SharedPreferences` without
-encryption. The current desktop flow temporarily embeds a client secret. Before
-distributing the application, replace it with a flow that does not embed a
-secret in the client binary, then revoke the old secret.
-
-The redirect URL in the Twitch Developer Console must exactly match
-`http://localhost:3000`. The website redirect stored in the copied secrets file
-is intentionally not used by the desktop callback server.
+The Windows overlay uses a Twitch application of type **Public**. The public
+Client ID is configured in `lib/twitch/twitch_auth.dart`. Device Code OAuth
+obtains and refreshes user tokens directly from Twitch. For a new registration,
+use `http://localhost` as the redirect URL in the Developer Console.
 
 ## Structure
 
@@ -452,5 +451,4 @@ is intentionally not used by the desktop callback server.
 - Select any channel by login instead of only the signed-in channel.
 - Official cheermote images and native rendering of special messages/events.
 - Additional moderation actions and channel controls.
-- Device Code OAuth and production packaging/signing.
-- Integration tests for the OAuth callback.
+- Production packaging/signing.

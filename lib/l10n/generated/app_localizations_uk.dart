@@ -175,7 +175,17 @@ class AppLocalizationsUk extends AppLocalizations {
   String get checkingTwitchSession => 'Перевіряємо сесію Twitch…';
 
   @override
-  String get finishSignInInBrowser => 'Завершіть вхід у браузері…';
+  String get preparingTwitchSignIn => 'Підключаємося до Twitch…';
+
+  @override
+  String get twitchDeviceInstructions =>
+      'Підтвердьте цей код на twitch.tv/activate';
+
+  @override
+  String get openTwitchInBrowser => 'Відкрити Twitch у браузері';
+
+  @override
+  String get cancelTwitchSignIn => 'Скасувати вхід';
 
   @override
   String get connectingEventSub => 'Підключаємося до EventSub…';
@@ -311,14 +321,23 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String storedSessionExpired(String details) {
-    return 'Збережена сесія Twitch завершилася: $details';
-  }
+  String get storedSessionExpired =>
+      'Сесія Twitch завершилася. Увійдіть знову.';
 
   @override
-  String twitchAuthorizationFailed(String details) {
-    return 'Не вдалося авторизуватися у Twitch: $details';
-  }
+  String get twitchAuthorizationFailed =>
+      'Не вдалося увійти в Twitch. Спробуйте ще раз.';
+
+  @override
+  String get twitchDeviceCodeExpired =>
+      'Термін дії коду Twitch минув. Увійдіть знову, щоб отримати новий код.';
+
+  @override
+  String get twitchAuthorizationDenied => 'Дозвіл на вхід у Twitch відхилено.';
+
+  @override
+  String get twitchSessionStorageUnavailable =>
+      'Не вдалося отримати доступ до збереженої сесії Twitch.';
 
   @override
   String subscriptionRevoked(String type, String status) {

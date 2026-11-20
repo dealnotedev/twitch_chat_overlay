@@ -5,11 +5,13 @@ class TwitchAuthButton extends StatelessWidget {
   const TwitchAuthButton({
     required this.label,
     required this.onPressed,
+    this.icon = Icons.login_rounded,
     super.key,
   });
 
   final String label;
   final VoidCallback onPressed;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +58,7 @@ class TwitchAuthButton extends StatelessWidget {
         splashFactory: NoSplash.splashFactory,
         animationDuration: const Duration(milliseconds: 120),
       ),
-      icon: const Icon(Icons.login_rounded),
+      icon: Icon(icon),
       label: Text(label, textAlign: TextAlign.center),
     );
   }

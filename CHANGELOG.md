@@ -1,3 +1,19 @@
+# Twitch Chat Overlay 1.7.1
+
+## Changes
+
+- Twitch sign-in now uses a device code. The overlay opens Twitch in your browser and shows the code to confirm.
+- Unlock the overlay with `Ctrl+Shift+O` to reopen the browser or cancel a pending sign-in.
+- The overlay checks your Twitch session at startup and hourly while signed in.
+
+After updating, select **Sign in with Twitch** to connect again. Your overlay settings are preserved.
+
+## Downloads
+
+- **Release.zip** — complete Windows application, including the updater. Extract the entire archive.
+- **update.zip** — overlay-only package for in-app updates.
+- **SHA256SUMS.txt** — SHA-256 checksums for both archives.
+
 # Twitch Chat Overlay 1.7.0
 
 ## Changes

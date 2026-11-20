@@ -34,9 +34,6 @@ migrate_working_dir/
 /updater/build/
 /coverage/
 
-# Local Twitch application credentials. Never commit these.
-/lib/secrets.dart
-
 # Symbolication related
 app.*.symbols
 

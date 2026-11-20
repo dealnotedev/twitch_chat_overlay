@@ -228,6 +228,10 @@ final class OverlayViewModel extends BaseViewModel {
 
   Future<void> signOut() => _auth.signOut();
 
+  Future<void> openVerificationPage() => _auth.openVerificationPage();
+
+  Future<void> cancelSignIn() => _auth.cancelSignIn();
+
   void _onAuthState(TwitchAuthState value) {
     final token = value.token;
     if (value.status == TwitchAuthStatus.signedIn && token != null) {

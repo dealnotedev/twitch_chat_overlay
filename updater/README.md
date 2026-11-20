@@ -67,8 +67,8 @@ The build creates a fresh `build/releases/<version>-<timestamp>/` directory:
 
 Default invocation creates local artifacts. `-Publish` creates a GitHub Release
 for the clean, pushed source commit and attaches both archives. Existing tags are
-not overwritten. The project's existing ignored `lib/secrets.dart` remains a
-local prerequisite for overlay builds; it must not be committed.
+not overwritten. The overlay build uses the public Twitch Client ID in the
+application source.
 
 Install the complete `Release.zip`, then use the tray for subsequent updates.
 

@@ -55,7 +55,10 @@
   "backgroundTransparency": "Прозорість фону",
   "lockOverlay": "Заблокувати оверлей",
   "checkingTwitchSession": "Перевіряємо сесію Twitch…",
-  "finishSignInInBrowser": "Завершіть вхід у браузері…",
+  "preparingTwitchSignIn": "Підключаємося до Twitch…",
+  "twitchDeviceInstructions": "Підтвердьте цей код на twitch.tv/activate",
+  "openTwitchInBrowser": "Відкрити Twitch у браузері",
+  "cancelTwitchSignIn": "Скасувати вхід",
   "connectingEventSub": "Підключаємося до EventSub…",
   "reconnectingChat": "Перепідключаємо чат…",
   "chatConnectionFailed": "Не вдалося підключити чат",
@@ -105,18 +108,11 @@
       "message": {"type": "String"}
     }
   },
-  "storedSessionExpired": "Збережена сесія Twitch завершилася: {details}",
-  "@storedSessionExpired": {
-    "placeholders": {
-      "details": {"type": "String"}
-    }
-  },
-  "twitchAuthorizationFailed": "Не вдалося авторизуватися у Twitch: {details}",
-  "@twitchAuthorizationFailed": {
-    "placeholders": {
-      "details": {"type": "String"}
-    }
-  },
+  "storedSessionExpired": "Сесія Twitch завершилася. Увійдіть знову.",
+  "twitchAuthorizationFailed": "Не вдалося увійти в Twitch. Спробуйте ще раз.",
+  "twitchDeviceCodeExpired": "Термін дії коду Twitch минув. Увійдіть знову, щоб отримати новий код.",
+  "twitchAuthorizationDenied": "Дозвіл на вхід у Twitch відхилено.",
+  "twitchSessionStorageUnavailable": "Не вдалося отримати доступ до збереженої сесії Twitch.",
   "subscriptionRevoked": "Twitch вимкнув підписку {type}: {status}",
   "@subscriptionRevoked": {
     "placeholders": {

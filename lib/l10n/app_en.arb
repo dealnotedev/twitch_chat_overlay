@@ -55,7 +55,10 @@
   "backgroundTransparency": "Background transparency",
   "lockOverlay": "Lock overlay",
   "checkingTwitchSession": "Checking Twitch session…",
-  "finishSignInInBrowser": "Finish signing in in your browser…",
+  "preparingTwitchSignIn": "Connecting to Twitch…",
+  "twitchDeviceInstructions": "Confirm this code at twitch.tv/activate",
+  "openTwitchInBrowser": "Open Twitch in browser",
+  "cancelTwitchSignIn": "Cancel sign-in",
   "connectingEventSub": "Connecting to EventSub…",
   "reconnectingChat": "Reconnecting chat…",
   "chatConnectionFailed": "Could not connect to chat",
@@ -105,18 +108,11 @@
       "message": {"type": "String"}
     }
   },
-  "storedSessionExpired": "Your saved Twitch session has expired: {details}",
-  "@storedSessionExpired": {
-    "placeholders": {
-      "details": {"type": "String"}
-    }
-  },
-  "twitchAuthorizationFailed": "Twitch authorization failed: {details}",
-  "@twitchAuthorizationFailed": {
-    "placeholders": {
-      "details": {"type": "String"}
-    }
-  },
+  "storedSessionExpired": "Your Twitch session has expired. Sign in again.",
+  "twitchAuthorizationFailed": "Could not sign in to Twitch. Try again.",
+  "twitchDeviceCodeExpired": "This Twitch code has expired. Sign in again for a new code.",
+  "twitchAuthorizationDenied": "Twitch sign-in was declined.",
+  "twitchSessionStorageUnavailable": "Could not access your saved Twitch session.",
   "subscriptionRevoked": "Twitch disabled the {type} subscription: {status}",
   "@subscriptionRevoked": {
     "placeholders": {

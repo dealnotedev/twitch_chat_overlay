@@ -8,6 +8,208 @@ import 'package:twitch_chat_overlay/twitch/twitch_helix_client.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_token_store.dart';
 
 void main() {
+  testWidgets('device sign-in polls with backoff and validates before saving', (
+    tester,
+  ) async {
+    final store = MemoryStore()..token = null;
+    final opened = <Uri>[];
+    final tokenRequests = <RequestOptions>[];
+    RequestOptions? deviceRequest;
+    RequestOptions? validationRequest;
+    TwitchToken? tokenBeforeValidation;
+    final auth = TwitchAuthClient(
+      store,
+      openBrowser: (uri) async => opened.add(uri),
+      dio: mockDio((request, handler) {
+        if (request.path.endsWith('/validate')) {
+          validationRequest = request;
+          tokenBeforeValidation = store.token;
+          reply(request, handler, validation);
+          return;
+        }
+        if (request.path.endsWith('/device')) {
+          deviceRequest = request;
+          reply(request, handler, deviceChallenge);
+          return;
+        }
+        tokenRequests.add(request);
+        switch (tokenRequests.length) {
+          case 1:
+            reject(request, handler, 400, message: 'authorization_pending');
+          case 2:
+            reject(request, handler, 400, message: 'slow_down');
+          default:
+            reply(request, handler, rotated);
+        }
+      }),
+    );
+    await auth.initialize();
+    final signingIn = auth.signIn();
+    await tester.pump(Duration.zero);
+    final parameters = {
+      'client_id': TwitchAuthClient.clientId,
+      'scopes': TwitchAuthClient.authorizationScopes.join(' '),
+    };
+    expect(deviceRequest?.path, 'https://id.twitch.tv/oauth2/device');
+    expect(deviceRequest?.contentType, Headers.formUrlEncodedContentType);
+    expect(Uri.splitQueryString(deviceRequest!.data as String), parameters);
+    expect(auth.state.devicePrompt?.userCode, 'ABCD1234');
+    final verificationUri = Uri.parse(
+      deviceChallenge['verification_uri'] as String,
+    );
+    expect(opened, [verificationUri]);
+    await auth.openVerificationPage();
+    expect(opened, [verificationUri, verificationUri]);
+
+    await tester.pump(const Duration(seconds: 4));
+    expect(tokenRequests, isEmpty);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(Duration.zero);
+    expect(tokenRequests, hasLength(1));
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(Duration.zero);
+    expect(tokenRequests, hasLength(2));
+    await tester.pump(const Duration(seconds: 9));
+    expect(tokenRequests, hasLength(2));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(Duration.zero);
+    await signingIn;
+    expect(tokenRequests, hasLength(3));
+    for (final request in tokenRequests) {
+      expect(request.path, 'https://id.twitch.tv/oauth2/token');
+      expect(request.contentType, Headers.formUrlEncodedContentType);
+      expect(Uri.splitQueryString(request.data as String), {
+        ...parameters,
+        'device_code': 'device-code',
+        'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
+      });
+    }
+    expect(validationRequest?.headers['Authorization'], 'OAuth new');
+    expect(tokenBeforeValidation, isNull);
+    expect(auth.state.status, TwitchAuthStatus.signedIn);
+    expect(auth.state.devicePrompt, isNull);
+    expect(store.token?.userId, 'owner');
+    expect(store.token?.refreshToken, 'new-refresh');
+    await auth.signOut();
+  });
+
+  for (final (error, failure) in [
+    ('access_denied', TwitchAuthFailure.authorizationDenied),
+    ('authorization_pending', TwitchAuthFailure.deviceCodeExpired),
+  ]) {
+    testWidgets('device authorization stops on $failure', (tester) async {
+      final store = MemoryStore()..token = null;
+      var polls = 0;
+      final auth = TwitchAuthClient(
+        store,
+        openBrowser: (_) async => throw StateError('Browser unavailable'),
+        dio: mockDio((request, handler) {
+          if (request.path.endsWith('/device')) {
+            reply(request, handler, {...deviceChallenge, 'expires_in': 9});
+          } else {
+            polls++;
+            reject(request, handler, 400, message: error);
+          }
+        }),
+      );
+      await auth.initialize();
+      final signingIn = auth.signIn();
+      await tester.pump(Duration.zero);
+      expect(auth.state.devicePrompt?.userCode, 'ABCD1234');
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 4));
+      await signingIn;
+      expect(auth.state.status, TwitchAuthStatus.failure);
+      expect(auth.state.failure, failure);
+      expect(auth.state.devicePrompt, isNull);
+      expect(store.token, isNull);
+      await tester.pump(const Duration(seconds: 20));
+      expect(polls, 1);
+    });
+  }
+
+  test(
+    'cancellation discards a late grant and permits a new attempt',
+    () async {
+      final store = MemoryStore()..token = null;
+      final pending = Completer<(RequestOptions, RequestInterceptorHandler)>();
+      var challenges = 0;
+      final auth = TwitchAuthClient(
+        store,
+        openBrowser: (_) async {},
+        dio: mockDio((request, handler) {
+          if (request.path.endsWith('/device')) {
+            challenges++;
+            reply(request, handler, {
+              ...deviceChallenge,
+              'interval': 1,
+              'user_code': 'CODE$challenges',
+            });
+          } else if (!pending.isCompleted) {
+            pending.complete((request, handler));
+          } else {
+            reject(request, handler, 400, message: 'authorization_pending');
+          }
+        }),
+      );
+      await auth.initialize();
+      final firstAttempt = auth.signIn();
+      final (request, handler) = await pending.future.timeout(
+        const Duration(seconds: 5),
+      );
+      expect(request.path.endsWith('/token'), isTrue);
+      expect(request.cancelToken?.isCancelled, isFalse);
+
+      await auth.cancelSignIn();
+      expect(auth.state.status, TwitchAuthStatus.signedOut);
+      expect(request.cancelToken?.isCancelled, isTrue);
+      final secondPrompt = auth.states
+          .firstWhere((state) => state.devicePrompt != null)
+          .timeout(const Duration(seconds: 5));
+      final secondAttempt = auth.signIn();
+      reply(request, handler, rotated);
+      await firstAttempt;
+      expect((await secondPrompt).devicePrompt?.userCode, 'CODE2');
+      expect(store.token, isNull);
+      await auth.cancelSignIn();
+      await secondAttempt;
+    },
+  );
+
+  testWidgets(
+    'an idle session is validated hourly and detects revoked access',
+    (tester) async {
+      final store = MemoryStore();
+      var validations = 0;
+      final auth = TwitchAuthClient(
+        store,
+        dio: mockDio((request, handler) {
+          if (request.path.endsWith('/validate')) {
+            if (++validations == 1) {
+              reply(request, handler, validation);
+            } else {
+              reject(request, handler, 401);
+            }
+          } else {
+            reject(request, handler, 400, message: 'Invalid refresh token');
+          }
+        }),
+      );
+      final initializing = auth.initialize();
+      await tester.pump(Duration.zero);
+      await initializing;
+      await tester.pump(const Duration(minutes: 59));
+      expect(validations, 1);
+      await tester.pump(const Duration(minutes: 1));
+      expect(validations, 2);
+      expect(auth.state.status, TwitchAuthStatus.signedOut);
+      expect(auth.state.failure, TwitchAuthFailure.storedSessionExpired);
+      expect(store.token, isNull);
+      await tester.pump(const Duration(hours: 1));
+      expect(validations, 2);
+    },
+  );
+
   test(
     'local missing permission survives validation and token refresh',
     () async {
@@ -165,8 +367,11 @@ void main() {
           if (request.path.endsWith('/token')) {
             refreshes++;
             final body = Uri.splitQueryString(request.data as String);
-            expect(body['client_id'], 'client');
-            expect(body['refresh_token'], 'refresh');
+            expect(body, {
+              'client_id': TwitchAuthClient.clientId,
+              'grant_type': 'refresh_token',
+              'refresh_token': 'refresh',
+            });
             reply(request, handler, rotated);
           } else {
             reject(
@@ -397,7 +602,7 @@ void main() {
   });
 
   test(
-    'refresh response without rotation retains the previous refresh token',
+    'refresh response without a new token ends the single-use session',
     () async {
       final store = MemoryStore();
       final auth = TwitchAuthClient(
@@ -413,14 +618,28 @@ void main() {
         }),
       );
       await auth.initialize();
-      await auth.validToken(rejectedAccessToken: 'old');
-      expect(store.token?.accessToken, 'new');
-      expect(store.token?.refreshToken, 'refresh');
+      await expectLater(
+        auth.validToken(rejectedAccessToken: 'old'),
+        throwsA(isA<Exception>()),
+      );
+      expect(auth.state.status, TwitchAuthStatus.signedOut);
+      expect(auth.state.failure, TwitchAuthFailure.storedSessionExpired);
+      expect(store.token, isNull);
     },
   );
 }
 
+const deviceChallenge = <String, Object?>{
+  'device_code': 'device-code',
+  'user_code': 'ABCD1234',
+  'verification_uri':
+      'https://www.twitch.tv/activate?public=true&device-code=ABCD1234',
+  'interval': 5,
+  'expires_in': 1800,
+};
+
 const validation = <String, Object?>{
+  'client_id': TwitchAuthClient.clientId,
   'user_id': 'owner',
   'login': 'owner',
   'expires_in': 3600,
@@ -474,7 +693,7 @@ class MemoryStore implements TwitchTokenStore {
   TwitchToken? token = TwitchToken(
     accessToken: 'old',
     refreshToken: 'refresh',
-    clientId: 'client',
+    clientId: TwitchAuthClient.clientId,
     userId: 'owner',
     userLogin: 'streamer',
     scopes: const ['user:read:chat', 'user:write:chat'],

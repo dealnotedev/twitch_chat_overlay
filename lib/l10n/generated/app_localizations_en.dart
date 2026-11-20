@@ -174,7 +174,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkingTwitchSession => 'Checking Twitch session…';
 
   @override
-  String get finishSignInInBrowser => 'Finish signing in in your browser…';
+  String get preparingTwitchSignIn => 'Connecting to Twitch…';
+
+  @override
+  String get twitchDeviceInstructions =>
+      'Confirm this code at twitch.tv/activate';
+
+  @override
+  String get openTwitchInBrowser => 'Open Twitch in browser';
+
+  @override
+  String get cancelTwitchSignIn => 'Cancel sign-in';
 
   @override
   String get connectingEventSub => 'Connecting to EventSub…';
@@ -302,14 +312,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String storedSessionExpired(String details) {
-    return 'Your saved Twitch session has expired: $details';
-  }
+  String get storedSessionExpired =>
+      'Your Twitch session has expired. Sign in again.';
 
   @override
-  String twitchAuthorizationFailed(String details) {
-    return 'Twitch authorization failed: $details';
-  }
+  String get twitchAuthorizationFailed =>
+      'Could not sign in to Twitch. Try again.';
+
+  @override
+  String get twitchDeviceCodeExpired =>
+      'This Twitch code has expired. Sign in again for a new code.';
+
+  @override
+  String get twitchAuthorizationDenied => 'Twitch sign-in was declined.';
+
+  @override
+  String get twitchSessionStorageUnavailable =>
+      'Could not access your saved Twitch session.';
 
   @override
   String subscriptionRevoked(String type, String status) {

@@ -83,6 +83,7 @@ void main() {
             Response(
               requestOptions: request,
               data: <String, Object?>{
+                'client_id': TwitchAuthClient.clientId,
                 'user_id': 'owner',
                 'login': 'owner',
                 'expires_in': 3600,
@@ -102,7 +103,7 @@ void main() {
 final _token = TwitchToken(
   accessToken: 'test-token',
   refreshToken: 'test-refresh',
-  clientId: 'client',
+  clientId: TwitchAuthClient.clientId,
   userId: 'owner',
   userLogin: 'owner',
   scopes: TwitchAuthClient.authorizationScopes,

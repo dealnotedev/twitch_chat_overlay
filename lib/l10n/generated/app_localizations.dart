@@ -404,11 +404,29 @@ abstract class AppLocalizations {
   /// **'Checking Twitch session…'**
   String get checkingTwitchSession;
 
-  /// No description provided for @finishSignInInBrowser.
+  /// No description provided for @preparingTwitchSignIn.
   ///
   /// In en, this message translates to:
-  /// **'Finish signing in in your browser…'**
-  String get finishSignInInBrowser;
+  /// **'Connecting to Twitch…'**
+  String get preparingTwitchSignIn;
+
+  /// No description provided for @twitchDeviceInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm this code at twitch.tv/activate'**
+  String get twitchDeviceInstructions;
+
+  /// No description provided for @openTwitchInBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Twitch in browser'**
+  String get openTwitchInBrowser;
+
+  /// No description provided for @cancelTwitchSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel sign-in'**
+  String get cancelTwitchSignIn;
 
   /// No description provided for @connectingEventSub.
   ///
@@ -623,14 +641,32 @@ abstract class AppLocalizations {
   /// No description provided for @storedSessionExpired.
   ///
   /// In en, this message translates to:
-  /// **'Your saved Twitch session has expired: {details}'**
-  String storedSessionExpired(String details);
+  /// **'Your Twitch session has expired. Sign in again.'**
+  String get storedSessionExpired;
 
   /// No description provided for @twitchAuthorizationFailed.
   ///
   /// In en, this message translates to:
-  /// **'Twitch authorization failed: {details}'**
-  String twitchAuthorizationFailed(String details);
+  /// **'Could not sign in to Twitch. Try again.'**
+  String get twitchAuthorizationFailed;
+
+  /// No description provided for @twitchDeviceCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This Twitch code has expired. Sign in again for a new code.'**
+  String get twitchDeviceCodeExpired;
+
+  /// No description provided for @twitchAuthorizationDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Twitch sign-in was declined.'**
+  String get twitchAuthorizationDenied;
+
+  /// No description provided for @twitchSessionStorageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not access your saved Twitch session.'**
+  String get twitchSessionStorageUnavailable;
 
   /// No description provided for @subscriptionRevoked.
   ///

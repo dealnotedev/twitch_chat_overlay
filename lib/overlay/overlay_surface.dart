@@ -158,6 +158,8 @@ class _OverlaySurfaceState extends State<OverlaySurface> {
                         interactive: state.host.interactive,
                         onSignIn: _viewModel.signIn,
                         onSignOut: _viewModel.signOut,
+                        onOpenVerificationPage: _viewModel.openVerificationPage,
+                        onCancelSignIn: _viewModel.cancelSignIn,
                         onSend: widget.twitchChat.send,
                         onDeleteMessage: widget.twitchChat.deleteMessage,
                         onLoadEmotes: widget.twitchChat.loadEmotes,

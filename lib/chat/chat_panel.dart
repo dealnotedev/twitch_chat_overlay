@@ -57,6 +57,8 @@ class ChatPanel extends StatefulWidget {
     required this.interactive,
     required this.onSignIn,
     required this.onSignOut,
+    this.onOpenVerificationPage,
+    this.onCancelSignIn,
     required this.onSend,
     required this.onLoadEmotes,
     this.onDeleteMessage,
@@ -80,6 +82,8 @@ class ChatPanel extends StatefulWidget {
   final bool interactive;
   final Future<void> Function() onSignIn;
   final Future<void> Function() onSignOut;
+  final Future<void> Function()? onOpenVerificationPage;
+  final Future<void> Function()? onCancelSignIn;
   final Future<SendChatResult> Function(String message, {String? replyTo})
   onSend;
   final Future<void> Function(String messageId)? onDeleteMessage;
@@ -170,9 +174,9 @@ class _ChatPanelState extends State<ChatPanel> {
         text: l10n.checkingTwitchSession,
         progress: true,
       ),
-      TwitchAuthStatus.authorizing => _CenteredStatus(
-        text: l10n.finishSignInInBrowser,
-        progress: true,
+      TwitchAuthStatus.authorizing => _authorizationPanel(
+        l10n,
+        viewSession.auth,
       ),
       TwitchAuthStatus.signedOut || TwitchAuthStatus.failure => _SignedOutPanel(
         interactive: widget.interactive,
@@ -297,6 +301,49 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _authorizationPanel(AppLocalizations l10n, TwitchAuthState auth) {
+    final prompt = auth.devicePrompt;
+    if (prompt == null) {
+      return _CenteredStatus(text: l10n.preparingTwitchSignIn, progress: true);
+    }
+
+    final open = widget.onOpenVerificationPage;
+    final cancel = widget.onCancelSignIn;
+    return _CenteredStatus(
+      text: l10n.twitchDeviceInstructions,
+      detail: Text(
+        prompt.userCode,
+        style: const TextStyle(
+          shadows: chatTextShadows,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2,
+        ),
+      ),
+      hint: widget.interactive ? null : l10n.openControlsShortcut,
+      actions: widget.interactive
+          ? Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
+                if (open != null)
+                  TwitchAuthButton(
+                    label: l10n.openTwitchInBrowser,
+                    icon: Icons.open_in_new_rounded,
+                    onPressed: () => unawaited(open()),
+                  ),
+                if (cancel != null)
+                  TextButton(
+                    onPressed: () => unawaited(cancel()),
+                    child: Text(l10n.cancelTwitchSignIn),
+                  ),
+              ],
+            )
+          : null,
     );
   }
 
@@ -550,18 +597,16 @@ String? _chatPanelError(AppLocalizations strings, ChatPanelError? error) =>
         ChatPanelFailure.sendFailed => strings.sendFailed,
       };
 
-String? _authError(AppLocalizations l10n, TwitchAuthState state) {
-  final details = state.errorDetails ?? l10n.unknownError;
-  return switch (state.failure) {
-    TwitchAuthFailure.storedSessionExpired => l10n.storedSessionExpired(
-      details,
-    ),
-    TwitchAuthFailure.authorizationFailed => l10n.twitchAuthorizationFailed(
-      details,
-    ),
-    null => null,
-  };
-}
+String? _authError(AppLocalizations l10n, TwitchAuthState state) =>
+    switch (state.failure) {
+      TwitchAuthFailure.storedSessionExpired => l10n.storedSessionExpired,
+      TwitchAuthFailure.authorizationFailed => l10n.twitchAuthorizationFailed,
+      TwitchAuthFailure.deviceCodeExpired => l10n.twitchDeviceCodeExpired,
+      TwitchAuthFailure.authorizationDenied => l10n.twitchAuthorizationDenied,
+      TwitchAuthFailure.sessionStorageUnavailable =>
+        l10n.twitchSessionStorageUnavailable,
+      null => null,
+    };
 
 class _SignedOutPanel extends StatelessWidget {
   const _SignedOutPanel({
@@ -622,11 +667,19 @@ class _SignedOutPanel extends StatelessWidget {
 }
 
 class _CenteredStatus extends StatelessWidget {
-  const _CenteredStatus({required this.text, this.progress = false, this.hint});
+  const _CenteredStatus({
+    required this.text,
+    this.progress = false,
+    this.hint,
+    this.detail,
+    this.actions,
+  });
 
   final String text;
   final bool progress;
   final String? hint;
+  final Widget? detail;
+  final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -652,6 +705,7 @@ class _CenteredStatus extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
+            if (detail case final detail?) ...[const Gap(8), detail],
             if (hint != null) ...[
               const Gap(12),
               Text(
@@ -664,6 +718,7 @@ class _CenteredStatus extends StatelessWidget {
                 ),
               ),
             ],
+            if (actions case final actions?) ...[const Gap(8), actions],
           ],
         ),
       ),

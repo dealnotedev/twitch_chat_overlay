@@ -2,16 +2,27 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:twitch_chat_overlay/twitch/twitch_auth.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_token.dart';
 import 'package:twitch_chat_overlay/twitch/twitch_token_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('OAuth callback uses the configured localhost endpoint', () {
-    expect(TwitchAuthClient.oauthRedirectUrl, 'http://localhost:3000');
-  });
+  test(
+    'device sign-in starts fresh and leaves the old key untouched',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'twitch_oauth': 'old-session',
+        'locale': 'uk',
+      });
+      final preferences = await SharedPreferences.getInstance();
+      final store = SharedPreferencesTwitchTokenStore(preferences);
+      expect(await store.read(), isNull);
+      await store.clear();
+      expect(preferences.getString('twitch_oauth'), 'old-session');
+      expect(preferences.getString('locale'), 'uk');
+    },
+  );
 
   test(
     'local missing-scope fixture survives persistence and server scope updates',

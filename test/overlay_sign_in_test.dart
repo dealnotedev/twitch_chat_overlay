@@ -32,7 +32,11 @@ void main() {
     final messenger = tester.binding.defaultBinaryMessenger;
     final locked = Completer<void>();
     final host = MethodChannelOverlayHost();
-    final auth = _Auth();
+    final authState = ObservableValue(
+      current: const TwitchAuthState(status: TwitchAuthStatus.signedOut),
+    );
+    addTearDown(authState.dispose);
+    final auth = _Auth(source: authState);
     final layoutStore = _LayoutStore();
     final interactionRequests = <bool>[];
     messenger.setMockMethodCallHandler(hostChannel, (call) async {
@@ -137,6 +141,28 @@ void main() {
     );
     expect(auth.signInCalled, isTrue);
     expect(auth.authorization.isCompleted, isFalse);
+
+    authState.set(
+      TwitchAuthState(
+        status: TwitchAuthStatus.authorizing,
+        devicePrompt: TwitchDevicePrompt(
+          userCode: 'ABCD1234',
+          verificationUri: Uri.https('www.twitch.tv', '/activate'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('ABCD1234'), findsOneWidget);
+    expect(find.text('Open Twitch in browser'), findsNothing);
+    expect(find.text('Cancel sign-in'), findsNothing);
+
+    await host.setInteractive(true);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Twitch in browser'));
+    await tester.tap(find.text('Cancel sign-in'));
+    expect(auth.browserOpens, 1);
+    expect(auth.cancellations, 1);
+    await host.setInteractive(false);
 
     auth.authorization.complete();
     await tester.pump();
@@ -401,6 +427,8 @@ class _Auth extends Fake implements TwitchAuth {
   final Observable<TwitchAuthState> source;
   final authorization = Completer<void>();
   bool signInCalled = false;
+  int browserOpens = 0;
+  int cancellations = 0;
 
   @override
   TwitchAuthState get state => source.current;
@@ -416,6 +444,12 @@ class _Auth extends Fake implements TwitchAuth {
     signInCalled = true;
     return authorization.future;
   }
+
+  @override
+  Future<void> openVerificationPage() async => browserOpens++;
+
+  @override
+  Future<void> cancelSignIn() async => cancellations++;
 }
 
 class _Chat extends Fake implements TwitchChatSession {
